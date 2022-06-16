@@ -65,7 +65,6 @@ if (!sessionStorage.getItem("username") && getCookie("token")) {
 
 function update() {
     axios.get("/api/profiles/online").then(res => {
-        console.log(res);
         document.getElementById("online-count").innerText = res.data.length + " en ligne";
 
         var table = document.querySelector("#online-container > table");
