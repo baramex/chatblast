@@ -1,0 +1,30 @@
+* {
+    outline: none;
+    color: #3f4952;
+}
+
+body {
+    background-color: #7AE7C7;
+    width: 100vw;
+    height: 100vh;
+    overflow-x: hidden;
+}
+
+.title {
+    color: #1fa57d;
+    font-size: 3.5rem;
+}
+
+.form-inset:hover, .form-inset:focus {
+    box-shadow: inset 0 0 5px 2px rgba(0, 0, 0, .2);
+}
+
+#chat {
+    background-color: #FFFEF4;
+}
+
+
+/* 
+@media screen and (max-width: ;) {
+    
+} */
