@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"
+        integrity="sha384-fKnu0iswBIqkjxrhQCTZ7qlLHOFEgNkRmK2vaO/LbTZSXdJfAu6ewRBdwHPhBo/H"
+        crossorigin="anonymous"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-0evHe/X+R7YkIZDRvuzKMRqM+OrBnVFBL6DOitfPri4tjfHxaWutUpFmBp4vmVor" crossorigin="anonymous">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.0.0-alpha.1/axios.min.js"
+        integrity="sha512-xIPqqrfvUAc/Cspuj7Bq0UtHNo/5qkdyngx6Vwt+tmbvTLDszzXM0G6c91LXmGrRx8KEPulT+AfOOez+TeVylg=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <meta name="description"
+        content="ChatBlast est une chatbox publique, anonyme et commune à tous les utilisateurs. Vous discutez avec tout le monde en même, cela peut être plutôt amusant !">
+    <meta name="theme-color" content="#7AE7C7">
+    <title>ChatBlast | login</title>
+</head>
+
+<body style="background-color: #7AE7C7;">
+    <form id="login-form" class="position-absolute top-50 start-50 translate-middle container" style="width: 35%;">
+        <div class="fs-1 text-center">
+            <label class="mb-4" for="username" class="form-label">Bienvenue sur <strong>ChatBlast</strong></label>
+            <input type="text" class="form-control fs-4" id="username" placeholder="Nom d'utilisateur" name="username">
+        </div>
+        <div class="text-center mt-4">
+            <input type="submit" class="btn btn-outline-dark fs-5 px-4" value="Continuer">
+        </div>
+    </form>
+
+    <script src="/scripts/main.js"></script>
+</body>
+
+</html>
