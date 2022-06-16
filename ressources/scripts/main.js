@@ -29,7 +29,7 @@ socket.on("message.send", data => {
 
     var p1 = document.createElement("p");
     p1.style.float = "right";
-    p1.classList.add("mt-2", "mx-2");
+    p1.classList.add("mt-2", "mx-2", "date");
     p1.innerText = new Date().toLocaleTimeString("fr");
 
     var p2 = document.createElement("p");
