@@ -94,7 +94,8 @@ app.post("/api/profile", rateLimit({
         var username = req.body.username;
         if (!username || !FIELD_REGEX.test(username)) throw new Error("Nom d'utilisateur invalide.");
 
-        var profile = new Profile(username.trim(), req.fingerprint, req.ipInfo?.id);
+        var profile = new Profile(username.trim(), req.fingerprint, req.ipInfo?.ip);
+        console.log(Profile.profiles);
 
         res.status(200).cookie("token", profile.token, { expires: new Date(profile.date.getTime() + profile.expireIn * 1000) }).send({ username, id } = profile);
     }
@@ -111,6 +112,8 @@ app.delete("/api/profile", (req, res) => {
         if (!profile) return res.status(403).send("Non autorisé.");
 
         Profile.delete(profile.id);
+
+        console.log(Profile.profiles);
 
         res.sendStatus(200);
     } catch (err) {

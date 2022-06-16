@@ -8,6 +8,7 @@ socket.on("message.send", data => {
 
     var div = document.createElement("div");
     div.classList.add("pb-2", "my-4", "rounded-3", "border", "border-secondary");
+    if (author == sessionStorage.getItem("username")) div.classList.add("bg-light");
 
     var div1 = document.createElement("div");
     div1.classList.add("d-flex", "justify-content-between");
@@ -17,7 +18,7 @@ socket.on("message.send", data => {
     div2.style.borderBottomRightRadius = "var(--bs-border-radius-lg)";
 
     var img = document.createElement("img");
-    img.classList.add("mx-2");
+    img.classList.add("mx-2", "contrast");
     img.width = 30;
     img.src = "/images/user.png";
     img.alt = "avatar";
@@ -75,7 +76,7 @@ function update() {
             td.classList.add("py-3", "px-4");
             var img = document.createElement("img");
             img.src = "/images/user.png";
-            img.classList.add("me-2");
+            img.classList.add("me-2", "contrast");
             img.width = "60";
             var span = document.createElement("span");
             span.classList.add("fs-5");
@@ -111,7 +112,7 @@ document.getElementById("send-message").addEventListener("submit", ev => {
     });
 });
 
-document.getElementById("disconnect").addEventListener("click", function () {
+function disconnect() {
     this.disabled = true;
     axios.delete("/api/profile").then(res => {
         resetProfile();
@@ -120,4 +121,4 @@ document.getElementById("disconnect").addEventListener("click", function () {
         showError(err);
         this.disabled = false;
     });
-});
+}

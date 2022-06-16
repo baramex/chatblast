@@ -12,6 +12,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.0.0-alpha.1/axios.min.js"
         integrity="sha512-xIPqqrfvUAc/Cspuj7Bq0UtHNo/5qkdyngx6Vwt+tmbvTLDszzXM0G6c91LXmGrRx8KEPulT+AfOOez+TeVylg=="
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <meta name="description"
+        content="ChatBlast est une chatbox publique, anonyme et commune à tous les utilisateurs. Vous discutez avec tout le monde en même, cela peut être plutôt amusant !">
+    <meta name="keywords" content="chatbox,public,worldwide,world,chat,online-chat,online,fun,talk,tell">
+    <meta name="theme-color" content="#44b996">
     <title>ChatBlast</title>
 </head>
 
@@ -23,10 +27,14 @@
     <script src="/scripts/util.js"></script>
 
     <header class="text-center position-relative">
-        <h1 class="title d-inline-block">ChatBlast</h1>
-        <button id="disconnect"
+        <h1 class="title d-inline-block ms-5">ChatBlast</h1>
+        <button onclick="disconnect();" id="disconnect"
             class="btn btn-danger btn-lg position-absolute end-0 top-50 translate-middle-y me-5 px-4">Se
             déconnecter</button>
+        <button onclick="disconnect();" id="disconnect-img"
+            class="position-absolute end-0 top-50 translate-middle-y me-5 border-0 bg-transparent" hidden>
+            <img src="/images/logout.png">
+        </button>
     </header>
 
     <div class="bg-light position-fixed top-0 left-0 translate-start slide-menu-container rounded-br-3"
@@ -45,7 +53,8 @@
 
     <div id="chat" class="mx-5 mt-3 mb-4 h-100 d-flex flex-column rounded-3 position-relative">
         <div id="message-container" class="px-5 py-4 mt-2 overflow-auto h-100 position-relative" style="flex: 1 0px;">
-            <p class="position-absolute top-50 start-50 translate-middle fs-4 text-secondary" id="nomes">aucun message
+            <p class="position-absolute top-50 start-50 translate-middle fs-4 text-secondary text-center" id="nomes">
+                aucun message
             </p>
         </div>
 
@@ -59,13 +68,12 @@
         </form>
     </div>
 
-    <footer class="w-100 py-3 bottom-0 text-center p-3">
-        <a href="https://www.github.com/baramex/chatbox" target="_blank" class="float-start">Projet Github</a>
-        <p class="mb-0 text-white d-inline">Développé par <a href="https://www.github.com/baramex"
-                target="_blank">Baramex</a> &
+    <footer class="w-100 py-3 bottom-0 text-center p-3 d-flex">
+        <a href="https://www.github.com/baramex/chatbox" target="_blank">Projet Github</a>
+        <p class="mb-0 text-white">Développé par <a href="https://www.github.com/baramex" target="_blank">Baramex</a> &
             <a href="mailto:arnaud.desarnaulds@gmail.com">VipeX</a>
         </p>
-        <a href="/terms" class="float-end">Conditions d'utilisation</a>
+        <a href="/terms">Conditions d'utilisation</a>
     </footer>
 
     <script src="/scripts/main.js"></script>
