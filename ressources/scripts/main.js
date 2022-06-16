@@ -32,14 +32,19 @@ socket.on("message.send", data => {
     p1.innerText = new Date().toLocaleString("fr").replace(",", "");
 
     var p2 = document.createElement("p");
-    p2.classList.add("my-4", "mx-4", "fs-5");
+    p2.classList.add("my-4", "mx-4", "fs-5", "text-break");
     p2.innerText = message;
+
+    var p3 = document.createElement("p");
+    p3.classList.add("text-end", "mb-2", "me-3");
+    p3.innerText = "Transféré à " + data.count + " utilisateurs";
 
     div.appendChild(div1);
     div1.appendChild(div2);
     div2.append(img, p);
     div1.appendChild(p1);
     div.appendChild(p2);
+    div.appendChild(p3);
 
     document.getElementById("message-container").appendChild(div);
     div.scrollIntoView({ behavior: "smooth" });
@@ -59,11 +64,34 @@ if (!sessionStorage.getItem("username") && getCookie("token")) {
 
 function update() {
     axios.get("/api/profiles/online").then(res => {
-        document.getElementById("online").innerText = "En ligne: " + res.data.count;
+        document.getElementById("online-count").innerText = res.data.length + " en ligne";
+
+        var table = document.querySelector("#online-container > table");
+        table.innerHTML = "";
+
+        res.data.forEach((user, i) => {
+            var tr = document.createElement("tr");
+            var td = document.createElement("td");
+            td.classList.add("py-3", "px-4");
+            var img = document.createElement("img");
+            img.src = "/images/user.png";
+            img.classList.add("me-2");
+            img.width = "60";
+            var span = document.createElement("span");
+            span.classList.add("fs-5");
+            td.append(img, span);
+            tr.appendChild(td);
+            table.appendChild(tr);
+            span.innerText = user;
+        });
     }, console.error);
     setTimeout(update, 1000 * 60);
 }
 update();
+
+document.getElementById("show-online").addEventListener("click", ev => {
+    document.getElementById("show-online").parentElement.classList.toggle("active");
+});
 
 document.getElementById("send-message").addEventListener("submit", ev => {
     ev.preventDefault();
@@ -80,5 +108,16 @@ document.getElementById("send-message").addEventListener("submit", ev => {
         showError(err?.response?.data || "Erreur inattendue");
     }).finally(() => {
         btn.disabled = false;
+    });
+});
+
+document.getElementById("disconnect").addEventListener("click", function () {
+    this.disabled = true;
+    axios.delete("/api/profile").then(res => {
+        resetProfile();
+        showSuccess("Déconnecté !", () => document.location.href = "/login");
+    }, err => {
+        showError(err);
+        this.disabled = false;
     });
 });

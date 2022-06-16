@@ -67,7 +67,12 @@ app.get("/terms", (req, res) => {
 /* api */
 // utilisateurs en ligne
 app.get("/api/profiles/online", (req, res) => {
-    res.status(200).send({ count: io.sockets.sockets.size + 1 });
+    var profile = Profile.getProfile(req.cookies?.token, req.fingerprint);
+    if (!profile) return res.status(403).send("Non autorisé.");
+
+    Profile.setOnline(profile.id);
+
+    res.status(200).send(Profile.getOnlines().map(a => a.username));
 });
 
 // récupérer profile
@@ -81,7 +86,7 @@ app.get("/api/profile/@me", (req, res) => {
 // créer profile
 app.post("/api/profile", rateLimit({
     windowMs: 1000 * 60 * 5,
-    max: 3,
+    max: 5,
     standardHeaders: true,
     legacyHeaders: false
 }), (req, res) => {
@@ -89,22 +94,18 @@ app.post("/api/profile", rateLimit({
         var username = req.body.username;
         if (!username || !FIELD_REGEX.test(username)) throw new Error("Nom d'utilisateur invalide.");
 
-        var profile = new Profile(username, req.fingerprint, req.ipInfo);
+        var profile = new Profile(username.trim(), req.fingerprint, req.ipInfo?.id);
 
         res.status(200).cookie("token", profile.token, { expires: new Date(profile.date.getTime() + profile.expireIn * 1000) }).send({ username, id } = profile);
     }
     catch (err) {
+        console.log(err);
         res.status(400).send(err.message || "Erreur inattendue");
     }
 });
 
 // supprimer profile
-app.delete("/api/profile", rateLimit({
-    windowMs: 1000 * 60 * 5,
-    max: 3,
-    standardHeaders: true,
-    legacyHeaders: false
-}), (req, res) => {
+app.delete("/api/profile", (req, res) => {
     try {
         var profile = Profile.getProfile(req.cookies?.token, req.fingerprint);
         if (!profile) return res.status(403).send("Non autorisé.");
@@ -136,7 +137,7 @@ app.put("/api/message", rateLimit({
         var profile = Profile.getProfile(req.cookies.token, req.fingerprint);
         if (!profile) return res.status(403).send("Non autorisé.");
 
-        io.sockets.emit("message.send", { author: { id, username } = profile, message });
+        io.sockets.emit("message.send", { author: { id, username } = profile, message, count: io.sockets.sockets.size });
         res.sendStatus(201);
     } catch (err) {
         res.status(400).send(err.message || "Erreur inattendue");
