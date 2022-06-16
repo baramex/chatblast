@@ -5,88 +5,41 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"
+        integrity="sha384-fKnu0iswBIqkjxrhQCTZ7qlLHOFEgNkRmK2vaO/LbTZSXdJfAu6ewRBdwHPhBo/H"
+        crossorigin="anonymous"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-0evHe/X+R7YkIZDRvuzKMRqM+OrBnVFBL6DOitfPri4tjfHxaWutUpFmBp4vmVor" crossorigin="anonymous">
-    <!-- <script src="https://cdn.socket.io/4.5.0/socket.io.min.js" integrity="sha384-7EyYLQZgWBi67fBtVxw60/OWl1kjsfrPFcaU0pp0nAh+i8FD068QogUvg85Ewy1k" crossorigin="anonymous"></script> -->
-    <link rel="stylesheet" href="/ressources/styles/main.css">
-    <!-- <script src="/ressources/scripts/main.js" defer></script> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.0.0-alpha.1/axios.min.js"
+        integrity="sha512-xIPqqrfvUAc/Cspuj7Bq0UtHNo/5qkdyngx6Vwt+tmbvTLDszzXM0G6c91LXmGrRx8KEPulT+AfOOez+TeVylg=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" href="/styles/main.css">
     <link rel="shortcut icon" href="" type="image/x-icon">
     <title>ChatBlast</title>
 </head>
 
-<body class="p-4 d-flex flex-column">
+<body class="d-flex flex-column">
+    <script src="/scripts/util.js"></script>
+    <h1 class="text-center mt-3 mb-2 title">ChatBlast</h1>
 
+    <div id="chat" class="mx-5 mt-3 mb-4 h-100 d-flex flex-column rounded-3 position-relative">
+        <span class="position-absolute top-0 left-0 mx-3 my-2 text-dark" id="online">En ligne: 0</span>
 
-    <h1 class="text-center m-0 mb-2 title">ChatBlast</h1>
-
-    <div id="chat" class="mx-5 border border-dark mt-3 h-100 d-flex flex-column">
-
-        <div class="px-5 overflow-auto h-100">
-
-            <div class="pb-2 mt-5 rounded-3 border border-dark">
-                <div class="d-flex justify-content-between">
-                    <div class="d-flex align-items-center" style="border-right: 2px dashed #c7d2db; border-bottom: 2px dashed #c7d2db;">
-                        <img class="mx-2" width="30px" height="30px" src="/ressources/images/user.png" alt="avatar">
-                        <p class="pe-3 ps-1 py-1 fs-5 m-auto">User</p>
-                    </div>
-                    <p style="float: right;" class="mt-2 me-3">15/06/2022 | 23:24</p>
-                </div>
-                <p class="my-4 mx-4">Lorem ipsum dolor sit amet consectetur adipisicing elit. Doloribus sequi voluptatibus deleniti exercitationem dignissimos illo nihil inventore adipisci laborum dolorem provident, accusamus tempora ea possimus suscipit corrupti nisi quidem. Odio possimus consequatur asperiores esse excepturi voluptas explicabo itaque. Blanditiis officiis odio libero iure, veniam totam culpa voluptatem quas veritatis odit!</p>
-            </div>
-            <div class="pb-2 mt-5 rounded-3 border border-dark">
-                <div class="d-flex justify-content-between">
-                    <div class="d-flex align-items-center" style="border-right: 2px dashed #c7d2db; border-bottom: 2px dashed #c7d2db;">
-                        <img class="mx-2" width="30px" height="30px" src="/ressources/images/user.png" alt="avatar">
-                        <p class="pe-3 ps-1 py-1 fs-5 m-auto">User</p>
-                    </div>
-                    <p style="float: right;" class="mt-2 me-3">15/06/2022 | 23:24</p>
-                </div>
-                <p class="my-4 mx-4">Lorem ipsum dolor sit amet consectetur adipisicing elit. Doloribus sequi voluptatibus deleniti exercitationem dignissimos illo nihil inventore adipisci laborum dolorem provident, accusamus tempora ea possimus suscipit corrupti nisi quidem. Odio possimus consequatur asperiores esse excepturi voluptas explicabo itaque. Blanditiis officiis odio libero iure, veniam totam culpa voluptatem quas veritatis odit!</p>
-            </div>
-            <div class="pb-2 mt-5 rounded-3 border border-dark">
-                <div class="d-flex justify-content-between">
-                    <div class="d-flex align-items-center" style="border-right: 2px dashed #c7d2db; border-bottom: 2px dashed #c7d2db;">
-                        <img class="mx-2" width="30px" height="30px" src="/ressources/images/user.png" alt="avatar">
-                        <p class="pe-3 ps-1 py-1 fs-5 m-auto">User</p>
-                    </div>
-                    <p style="float: right;" class="mt-2 me-3">15/06/2022 | 23:24</p>
-                </div>
-                <p class="my-4 mx-4">Lorem ipsum dolor sit amet consectetur adipisicing elit. Doloribus sequi voluptatibus deleniti exercitationem dignissimos illo nihil inventore adipisci laborum dolorem provident, accusamus tempora ea possimus suscipit corrupti nisi quidem. Odio possimus consequatur asperiores esse excepturi voluptas explicabo itaque. Blanditiis officiis odio libero iure, veniam totam culpa voluptatem quas veritatis odit!</p>
-            </div>
-            <div class="pb-2 mt-5 rounded-3 border border-dark">
-                <div class="d-flex justify-content-between">
-                    <div class="d-flex align-items-center" style="border-right: 2px dashed #c7d2db; border-bottom: 2px dashed #c7d2db;">
-                        <img class="mx-2" width="30px" height="30px" src="/ressources/images/user.png" alt="avatar">
-                        <p class="pe-3 ps-1 py-1 fs-5 m-auto">User</p>
-                    </div>
-                    <p style="float: right;" class="mt-2 me-3">15/06/2022 | 23:24</p>
-                </div>
-                <p class="my-4 mx-4">Lorem ipsum dolor sit amet consectetur adipisicing elit. Doloribus sequi voluptatibus deleniti exercitationem dignissimos illo nihil inventore adipisci laborum dolorem provident, accusamus tempora ea possimus suscipit corrupti nisi quidem. Odio possimus consequatur asperiores esse excepturi voluptas explicabo itaque. Blanditiis officiis odio libero iure, veniam totam culpa voluptatem quas veritatis odit!</p>
-            </div>
-            <div class="pb-2 mt-5 rounded-3 border border-dark">
-                <div class="d-flex justify-content-between">
-                    <div class="d-flex align-items-center" style="border-right: 2px dashed #c7d2db; border-bottom: 2px dashed #c7d2db;">
-                        <img class="mx-2" width="30px" height="30px" src="/ressources/images/user.png" alt="avatar">
-                        <p class="pe-3 ps-1 py-1 fs-5 m-auto">User</p>
-                    </div>
-                    <p style="float: right;" class="mt-2 me-3">15/06/2022 | 23:24</p>
-                </div>
-                <p class="my-4 mx-4">Lorem ipsum dolor sit amet consectetur adipisicing elit. Doloribus sequi voluptatibus deleniti exercitationem dignissimos illo nihil inventore adipisci laborum dolorem provident, accusamus tempora ea possimus suscipit corrupti nisi quidem. Odio possimus consequatur asperiores esse excepturi voluptas explicabo itaque. Blanditiis officiis odio libero iure, veniam totam culpa voluptatem quas veritatis odit!</p>
-            </div>
+        <div id="message-container" class="px-5 py-4 mt-2 overflow-auto h-100" style="flex: 1 0px;">
+            <p class="position-absolute top-50 start-50 translate-middle fs-4" id="nomes">aucun message</p>
         </div>
 
         <form id="send-message" class="d-flex p-4">
-
             <div class="input-group me-3">
-                <span class="input-group-text" id="inputGroup-sizing-default">Message</span>
-                <input type="text" class="form-control form-inset" aria-label="Message">
+                <span class="input-group-text fs-5" id="inputGroup-sizing-default">Message</span>
+                <input type="text" class="form-control form-inset fs-5" id="message" name="message"
+                    aria-label="Message">
             </div>
-            <input type="submit" class="px-3 btn btn-success">
-
+            <input type="submit" class="px-3 btn btn-success fs-5">
         </form>
-
     </div>
 
+    <script src="/scripts/main.js"></script>
 </body>
 
 </html>
