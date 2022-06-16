@@ -117,6 +117,10 @@ footer a:hover {
     color: #b8b8b8;
 }
 
+#message::placeholder {
+    opacity: 0;
+}
+
 @keyframes online-circle {
     0% {
         transform: scale(0.95);
@@ -166,11 +170,27 @@ footer a:hover {
     #disconnect-img {
         display: block !important;
     }
+
+    .input-group-text {
+        display: none;
+    }
+
+    #message::placeholder {
+        opacity: 1;
+    }
 }
 
 @media screen and (max-width: 650px) {
     header {
         margin-top: 60px;
+    }
+
+    #send-message {
+        flex-direction: column;
+    }
+
+    #send-message input[type="text"] {
+        margin-bottom: 10px;
     }
 }
 
