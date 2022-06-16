@@ -59,6 +59,11 @@ app.get("/login", (req, res) => {
     res.sendFile(path.join(__dirname, "pages", "login.html"));
 });
 
+app.get("/terms", (req, res) => {
+    if (req.cookies?.token && Profile.getProfile(req.cookies?.token, req.fingerprint)) return res.redirect("/");
+    res.sendFile(path.join(__dirname, "pages", "terms.html"));
+});
+
 /* api */
 // utilisateurs en ligne
 app.get("/api/profiles/online", (req, res) => {
