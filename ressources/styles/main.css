@@ -4,25 +4,39 @@
 }
 
 body {
-    background-color: #7AE7C7;
+    background-color: #44b996;
     width: 100vw;
     height: 100vh;
     overflow-x: hidden;
+    scroll-behavior: smooth;
 }
 
 .title {
-    color: #1fa57d;
+    color: #bdf5e4;
     font-size: 3.5rem;
 }
 
-.form-inset:hover, .form-inset:focus {
+.form-inset:hover,
+.form-inset:focus {
     box-shadow: inset 0 0 5px 2px rgba(0, 0, 0, .2);
 }
 
 #chat {
     background-color: #FFFEF4;
+    box-shadow: 0 0 10px 1px rgba(0, 0, 0, .2);
 }
 
+#send-message {
+    background-color: #ddddd9;
+    box-shadow: 0 -5px 10px 0px rgba(0, 0, 0, .3);
+    border-bottom-left-radius: var(--bs-border-radius-lg) !important;
+    border-bottom-right-radius: var(--bs-border-radius-lg) !important;
+}
+
+.border-dashed {
+    border-right: 2px dashed #aab4bd;
+    border-bottom: 2px dashed #aab4bd;
+}
 
 /* 
 @media screen and (max-width: ;) {

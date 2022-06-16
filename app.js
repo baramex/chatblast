@@ -1,7 +1,6 @@
 /* constantes */
 const PORT = 1500;
 const FIELD_REGEX = /^[a-z]{1,32}$/i;
-const MESSAGE_REGEX = /^([a-z][0-9]){1,256}$/i;
 
 /* modules */
 // express
@@ -14,6 +13,14 @@ var cors = require('cors');
 app.use("/api/*", cors({
     origin: "self"
 }));
+const rateLimit = require('express-rate-limit');
+const baseLimiter = rateLimit({
+    windowMs: 1000 * 5,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false
+});
+app.use(baseLimiter);
 const bodyParser = require('body-parser');
 app.use(bodyParser.json());
 const cookieParser = require('cookie-parser');
@@ -43,34 +50,39 @@ server.listen(PORT, () => {
 
 /* routes */
 app.get("/", (req, res) => {
-    if (!req.cookies.token || !Profile.getProfile(req.cookies.token, req.fingerprint)) return res.redirect("/login");
+    if (!req.cookies?.token || !Profile.getProfile(req.cookies?.token, req.fingerprint)) return res.redirect("/login");
     res.sendFile(path.join(__dirname, "pages", "index.html"));
 });
 
 app.get("/login", (req, res) => {
-    if (req.cookies.token && Profile.getProfile(req.cookies.token, req.fingerprint)) return res.redirect("/");
+    if (req.cookies?.token && Profile.getProfile(req.cookies?.token, req.fingerprint)) return res.redirect("/");
     res.sendFile(path.join(__dirname, "pages", "login.html"));
 });
 
 /* api */
 // utilisateurs en ligne
 app.get("/api/profiles/online", (req, res) => {
-    res.status(200).send({ count: io.sockets.sockets.size });
+    res.status(200).send({ count: io.sockets.sockets.size + 1 });
 });
 
 // récupérer profile
 app.get("/api/profile/@me", (req, res) => {
-    var profile = Profile.getProfile(req.cookies.token, req.fingerprint);
+    var profile = Profile.getProfile(req.cookies?.token, req.fingerprint);
     if (!profile) return res.status(403).send("Non autorisé.");
 
     res.status(200).send({ username, id } = profile);
 });
 
 // créer profile
-app.post("/api/profile", (req, res) => {
+app.post("/api/profile", rateLimit({
+    windowMs: 1000 * 60 * 5,
+    max: 3,
+    standardHeaders: true,
+    legacyHeaders: false
+}), (req, res) => {
     try {
         var username = req.body.username;
-        if (!FIELD_REGEX.test(username)) throw new Error("Nom d'utilisateur invalide.");
+        if (!username || !FIELD_REGEX.test(username)) throw new Error("Nom d'utilisateur invalide.");
 
         var profile = new Profile(username, req.fingerprint, req.ipInfo);
 
@@ -82,30 +94,46 @@ app.post("/api/profile", (req, res) => {
 });
 
 // supprimer profile
-app.delete("/api/profile", (req, res) => {
+app.delete("/api/profile", rateLimit({
+    windowMs: 1000 * 60 * 5,
+    max: 3,
+    standardHeaders: true,
+    legacyHeaders: false
+}), (req, res) => {
     try {
-        var profile = Profile.getProfile(req.cookies.token, req.fingerprint);
+        var profile = Profile.getProfile(req.cookies?.token, req.fingerprint);
         if (!profile) return res.status(403).send("Non autorisé.");
 
         Profile.delete(profile.id);
 
         res.sendStatus(200);
-    } catch (error) {
+    } catch (err) {
         res.status(400).send(err.message || "Erreur inattendue");
     }
 });
 
 // post message
-app.put("/api/message", (req, res) => {
+app.put("/api/message", rateLimit({
+    windowMs: 1000 * 5,
+    max: 3,
+    standardHeaders: true,
+    legacyHeaders: false
+}), rateLimit({
+    windowMs: 1000 * 60,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false
+}), (req, res) => {
     try {
-        var message = req.body.message;
-        if (!MESSAGE_REGEX.test(message)) throw new Error("Message invalide.");
+        var message = req.body.message?.trim();
+        if (!message || message.length < 1 || message.length > 256) throw new Error("Message invalide.");
 
         var profile = Profile.getProfile(req.cookies.token, req.fingerprint);
         if (!profile) return res.status(403).send("Non autorisé.");
 
         io.sockets.emit("message.send", { author: { id, username } = profile, message });
-    } catch (error) {
+        res.sendStatus(201);
+    } catch (err) {
         res.status(400).send(err.message || "Erreur inattendue");
     }
 });
