@@ -60,7 +60,6 @@ app.get("/login", (req, res) => {
 });
 
 app.get("/terms", (req, res) => {
-    if (req.cookies?.token && Profile.getProfile(req.cookies?.token, req.fingerprint)) return res.redirect("/");
     res.sendFile(path.join(__dirname, "pages", "terms.html"));
 });
 
