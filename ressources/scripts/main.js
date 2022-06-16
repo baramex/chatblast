@@ -7,14 +7,14 @@ socket.on("message.send", data => {
     var message = data.message;
 
     var div = document.createElement("div");
-    div.classList.add("pb-2", "my-4", "rounded-3", "border", "border-secondary");
+    div.classList.add("pb-2", "my-4", "rounded-3", "border", "border-secondary", "message");
     if (author == sessionStorage.getItem("username")) div.classList.add("bg-light");
 
     var div1 = document.createElement("div");
-    div1.classList.add("d-flex", "justify-content-between");
+    div1.classList.add("d-flex", "justify-content-between", "username-container");
 
     var div2 = document.createElement("div");
-    div2.classList.add("d-flex", "align-items-center", "border-dashed");
+    div2.classList.add("d-flex", "align-items-center", "border-dashed", "username");
     div2.style.borderBottomRightRadius = "var(--bs-border-radius-lg)";
 
     var img = document.createElement("img");
@@ -29,11 +29,11 @@ socket.on("message.send", data => {
 
     var p1 = document.createElement("p");
     p1.style.float = "right";
-    p1.classList.add("mt-2", "me-3");
+    p1.classList.add("mt-2", "mx-2");
     p1.innerText = new Date().toLocaleString("fr").replace(",", "");
 
     var p2 = document.createElement("p");
-    p2.classList.add("my-4", "mx-4", "fs-5", "text-break");
+    p2.classList.add("my-4", "mx-4", "fs-5", "text-break", "text");
     p2.innerText = message;
 
     var p3 = document.createElement("p");

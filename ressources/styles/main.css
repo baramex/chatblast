@@ -199,3 +199,31 @@ footer a:hover {
         text-align: left !important;
     }
 }
+
+@media screen and (max-width: 460px) {
+    .message .username {
+        border-bottom-right-radius: 0 !important;
+        border-right: none;
+    }
+
+    .message .text {
+        margin: 1rem 1.5rem !important;
+        margin-top: 0 !important;
+    }
+
+    .message .username-container {
+        flex-direction: column;
+    }
+}
+
+@media screen and (max-width: 390px) {
+    header.position-relative {
+        position: static !important;
+    }
+
+    #disconnect-img {
+        top: 0 !important;
+        transform: translateY(0) !important;
+        margin-top: 5px;
+    }
+}
