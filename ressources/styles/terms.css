@@ -1,0 +1,40 @@
+* {
+    outline: none;
+    color: white;
+}
+
+body {
+    background-color: #44b996;
+    width: 100vw;
+    height: 100vh;
+    overflow-x: hidden !important;
+}
+
+.title {
+    color: #bdf5e4;
+    font-size: 3.5rem;
+}
+
+.container {
+    padding-bottom: 100px;
+}
+
+ol {
+    list-style-type: none;
+}
+
+ol.contain-articles {
+    border-radius: 5px;
+}
+
+footer {
+    background-color: #2e886d;
+}
+
+footer p a {
+    text-decoration: none;
+}
+
+footer p a:hover {
+    text-decoration: underline;
+}
