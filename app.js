@@ -9,7 +9,7 @@ const { Profile } = require("./profile");
 const { app, io } = require("./server");
 
 io.on("connection", (socket) => {
-    var token = socket.handshake.headers.cookie.split("; ").find(a => a.startsWith("token=")).replace("token=", "");
+    var token = socket.handshake.headers.cookie?.split("; ").find(a => a.startsWith("token=")).replace("token=", "");
     if (token) {
         var profile = Profile.getProfileByToken(token);
         if (profile) {
