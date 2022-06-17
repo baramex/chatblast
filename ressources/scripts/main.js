@@ -25,8 +25,8 @@ socket.on("message.typing", (res) => {
 function updateTyping() {
     var typing = JSON.parse(sessionStorage.getItem("isTyping") || "[]");
     typing = typing.filter(a => a != sessionStorage.getItem("username"));
-    if(typing == 0) return document.getElementById("typing").innerHTML = ""
-    document.getElementById("typing").innerHTML = `${ typing.join(", ") } ${typing.length > 1 ? "sont" : "est"} en train d'écrire...`;
+    if (typing == 0) return document.getElementById("typing").innerHTML = ""
+    document.getElementById("typing").innerHTML = `${typing.join(", ")} ${typing.length > 1 ? "sont" : "est"} en train d'écrire...`;
 }
 
 function pushMessage(id, username, message, transfered = null) {
@@ -183,6 +183,7 @@ document.getElementById("send-message").addEventListener("submit", ev => {
     btn.disabled = true;
 
     axios.put("/api/message", { message: msg.trim() }).then(() => {
+        axios.put("/api/typing", { isTyping: false });
         document.getElementById("message").value = "";
     }).catch(err => {
         if (err.response?.status == 403) {
@@ -202,7 +203,7 @@ document.getElementById("message").addEventListener("input", e => {
     if ((e.inputType == "insertText" && e.target.value.length == 1) || e.inputType == "insertFromPaste") {
         axios.put("/api/typing", { isTyping: true });
     } else if (e.target.value.length == 0) {
-        axios.put("/api/typing", { isTyping: false })
+        axios.put("/api/typing", { isTyping: false });
     }
 });
 
