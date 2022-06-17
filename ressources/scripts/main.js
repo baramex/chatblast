@@ -130,6 +130,13 @@ socket.on("profile.leave", data => {
     online.splice(profile, 1);
     sessionStorage.setItem("online", JSON.stringify(online));
     updateOnline();
+
+    var typing = JSON.parse(sessionStorage.getItem("isTyping") || "[]");
+    var profile = typing.indexOf(username);
+    if (profile == -1) return;
+    typing.splice(profile, 1);
+    sessionStorage.setItem("isTyping", JSON.stringify(typing));
+    updateTyping();
 });
 
 if (!sessionStorage.getItem("username") && getCookie("token")) {
