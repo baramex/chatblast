@@ -36,8 +36,6 @@ app.use(Fingerprint({
         Fingerprint.geoip
     ]
 }));
-const expressip = require('express-ip');
-app.use(expressip().getIpInfoMiddleware);
 
 /* serveur/socket.io */
 const http = require('http');

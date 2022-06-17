@@ -17,7 +17,6 @@ class Profile {
      */
     constructor(username, fingerprint, ip) {
         if (Profile.isUsernameExist(username)) throw new Error("Le nom d'utilisateur existe déjà.");
-        if (Profile.fingerprintHasProfile(fingerprint)) Profile.deleteFromFP(fingerprint);
 
         this.ip = ip;
         this.id = randomWebToken.generate("onlyNumbers", 10);

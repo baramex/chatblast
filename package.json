@@ -21,7 +21,6 @@
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "express-fingerprint": "^1.2.2",
-    "express-ip": "^1.0.4",
     "express-rate-limit": "^6.4.0",
     "random-web-token": "^1.6.0",
     "socket.io": "^4.5.1"

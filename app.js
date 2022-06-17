@@ -63,7 +63,8 @@ app.post("/api/profile", rateLimit({
 
         if (USERNAMES_NOT_ALLOWED.includes(username)) throw new Error("Nom d'utilisateur non autorisé.");
 
-        var profile = new Profile(username, req.fingerprint, req.ipInfo?.ip);
+        var ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress
+        var profile = new Profile(username, req.fingerprint, ip);
 
         res.status(200).cookie("token", profile.token, { expires: new Date(profile.date.getTime() + profile.expireIn * 1000) }).send({ username, id } = profile);
     }
