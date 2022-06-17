@@ -11,11 +11,11 @@ socket.on("message.send", data => {
 function pushMessage(id, username, message, transfered = null) {
     if (document.getElementById("nomes")) document.getElementById("nomes").remove();
 
-    let isServer = username == "SERVER";
+    let isSystem = username == "SYSTEM";
 
     let div = document.createElement("div");
     div.classList.add("pb-2", "my-4", "rounded-3", "border", "border-secondary", "message");
-    if (!isServer && id == sessionStorage.getItem("id")) div.classList.add("bg-light");
+    if (!isSystem && id == sessionStorage.getItem("id")) div.classList.add("bg-light");
 
     let div1 = document.createElement("div");
     div1.classList.add("d-flex", "justify-content-between", "username-container");
@@ -27,7 +27,7 @@ function pushMessage(id, username, message, transfered = null) {
     let img = document.createElement("img");
     img.classList.add("mx-2", "contrast");
     img.width = 30;
-    img.src = isServer ? "/images/server.png" : "/images/user.png";
+    img.src = isSystem ? "/images/system.png" : "/images/user.png";
     img.alt = "avatar";
 
     let p = document.createElement("p");
@@ -41,7 +41,7 @@ function pushMessage(id, username, message, transfered = null) {
 
     let p2 = document.createElement("p");
     p2.classList.add("my-4", "mx-4", "fs-5", "text-break", "text");
-    if (isServer) p2.innerHTML = message;
+    if (isSystem) p2.innerHTML = message;
     else p2.innerText = message;
 
     if (transfered) {
@@ -89,7 +89,7 @@ socket.on("profile.join", data => {
     var id = data.id;
     var username = data.username;
 
-    pushMessage(id, "SERVER", `<b>${username}</b> a rejoint la session.`);
+    pushMessage(id, "SYSTEM", `<b>${username}</b> a rejoint la session.`);
 
     var online = JSON.parse(sessionStorage.getItem("online") || "[]");
     online.push(username);
@@ -101,7 +101,7 @@ socket.on("profile.leave", data => {
     var id = data.id;
     var username = data.username;
 
-    pushMessage(id, "SERVER", `<b>${username}</b> a quitté la session.`);
+    pushMessage(id, "SYSTEM", `<b>${username}</b> a quitté la session.`);
 
     var online = JSON.parse(sessionStorage.getItem("online") || "[]");
     online = online.splice(online.indexOf(username), 1);

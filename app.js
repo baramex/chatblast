@@ -1,6 +1,6 @@
 /* constantes */
 const FIELD_REGEX = /^[a-z]{1,32}$/;
-const USERNAMES_NOT_ALLOWED = ["server"];
+const USERNAMES_NOT_ALLOWED = ["system"];
 
 /* modules */
 const rateLimit = require("express-rate-limit");
