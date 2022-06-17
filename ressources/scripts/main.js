@@ -106,7 +106,7 @@ socket.on("profile.leave", data => {
     var online = JSON.parse(sessionStorage.getItem("online") || "[]");
     var profile = online.indexOf(username);
     if (profile == -1) return;
-    online = online.splice(profile, 1);
+    online.splice(profile, 1);
     sessionStorage.setItem("online", JSON.stringify(online));
     updateOnline();
 });
