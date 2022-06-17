@@ -57,12 +57,13 @@
                 L'historique des messages n'est pas accessible
             </p>
         </div>
-
-        <form id="send-message" class="d-flex p-4">
+        
+        <form id="send-message" class="d-flex p-4 position-relative">
+            <span id="typing" class="position-absolute left-0 mb-3 text-secondary" style="top: -35px;"></span>
             <div class="input-group me-3">
                 <span class="input-group-text fs-5" id="inputGroup-sizing-default">Message</span>
                 <input type="text" autocomplete="off" placeholder="Message..." class="form-control form-inset fs-5"
-                    id="message" name="message" aria-label="Message">
+                id="message" name="message" aria-label="Message">
             </div>
             <input type="submit" class="px-3 btn btn-success fs-5">
         </form>

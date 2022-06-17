@@ -3,7 +3,7 @@ const { io } = require("./server");
 
 class Profile {
     /**
-     * @type {{id: String, hash: String, token: String, ip: String, username: String, lastPing: Date, expireIn: Number, date: Date}[]}
+     * @type {{id: String, hash: String, token: String, ip: String, username: String, lastPing: Date, expireIn: Number, date: Date, isTyping: boolean}[]}
      */
     static profiles = [];
 
@@ -23,6 +23,7 @@ class Profile {
         this.hash = fingerprint.hash;
         this.token = randomWebToken.generate("extra", 30);
         this.username = username;
+        this.isTyping = false;
 
         var p = Profile.pushProfile(this.id, this.hash, this.token, this.ip, this.username);
         this.date = p.date;
@@ -72,7 +73,7 @@ class Profile {
     static pushProfile(id, hash, token, ip, username) {
         if (Profile.profiles.find(a => a.id == id) || Profile.profiles.find(a => a.token == token)) throw new Error("Impossible de créer le profil.");
         io.to("authenticated").emit("profile.join", { id, username });
-        return Profile.profiles[Profile.profiles.push({ id, hash, token, ip, username, lastPing: new Date(), date: new Date() }) - 1];
+        return Profile.profiles[Profile.profiles.push({ id, hash, token, ip, username, lastPing: new Date(), date: new Date(), isTyping: false }) - 1];
     }
 
     static getProfile(token, fingerprint) {
@@ -83,6 +84,10 @@ class Profile {
 
     static getProfileByToken(token) {
         return Profile.profiles.find(a => a.token == token);
+    }
+
+    static getProfileByID(id) {
+        return Profile.profiles.find(a => a.id == id);
     }
 
     static update() {
