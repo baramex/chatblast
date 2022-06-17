@@ -8,6 +8,27 @@ socket.on("message.send", data => {
     pushMessage(id, username, message, data.count);
 });
 
+socket.on("message.typing", (res) => {
+    var typing = JSON.parse(sessionStorage.getItem("isTyping") || "[]");
+    if (res.isTyping) {
+        typing.push(res.username)
+    } else {
+        var profile = typing.indexOf(res.username);
+        if (profile == -1) return;
+        typing.splice(profile, 1);
+    }
+
+    sessionStorage.setItem("isTyping", JSON.stringify(typing));
+    updateTyping();
+});
+
+function updateTyping() {
+    var typing = JSON.parse(sessionStorage.getItem("isTyping") || "[]");
+    typing = typing.filter(a => a != sessionStorage.getItem("username"));
+    if(typing == 0) return document.getElementById("typing").innerHTML = ""
+    document.getElementById("typing").innerHTML = `${ typing.join(", ") } ${typing.length > 1 ? "sont" : "est"} en train d'écrire...`;
+}
+
 function pushMessage(id, username, message, transfered = null) {
     if (document.getElementById("nomes")) document.getElementById("nomes").remove();
 
@@ -123,6 +144,8 @@ if (!sessionStorage.getItem("username") && getCookie("token")) {
     });
 }
 
+axios.put("/api/typing", { isTyping: false });
+
 function update() {
     axios.get("/api/profiles/online").then(res => {
         sessionStorage.setItem("online", JSON.stringify(res.data));
@@ -136,6 +159,12 @@ function update() {
             });
         }
     });
+
+    axios.get("/api/typing").then(res => {
+        sessionStorage.setItem("isTyping", JSON.stringify(res.data));
+        updateTyping();
+    });
+
     setTimeout(update, 1000 * 60);
 }
 update();
@@ -167,6 +196,14 @@ document.getElementById("send-message").addEventListener("submit", ev => {
     }).finally(() => {
         btn.disabled = false;
     });
+});
+
+document.getElementById("message").addEventListener("input", e => {
+    if ((e.inputType == "insertText" && e.target.value.length == 1) || e.inputType == "insertFromPaste") {
+        axios.put("/api/typing", { isTyping: true });
+    } else if (e.target.value.length == 0) {
+        axios.put("/api/typing", { isTyping: false })
+    }
 });
 
 function disconnect() {

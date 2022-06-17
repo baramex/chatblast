@@ -20,7 +20,7 @@ app.use(cors({
 const rateLimit = require('express-rate-limit');
 const baseLimiter = rateLimit({
     windowMs: 1000 * 5,
-    max: 10,
+    max: 20,
     standardHeaders: true,
     legacyHeaders: false
 });

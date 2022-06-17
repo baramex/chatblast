@@ -9,10 +9,11 @@ const { Profile } = require("./profile");
 const { app, io } = require("./server");
 
 io.on("connection", (socket) => {
-    var token = socket.handshake.headers.cookie?.split("; ").find(a => a.startsWith("token=")).replace("token=", "");
+    var token = socket.handshake.headers.cookie?.split("; ")?.find(a => a.startsWith("token="))?.replace("token=", "");
     if (token) {
         var profile = Profile.getProfileByToken(token);
         if (profile) {
+            socket.userID = profile.id;
             socket.join(["authenticated", "userid:" + profile.id]);
         }
     }
@@ -120,6 +121,30 @@ app.put("/api/message", rateLimit({
 
         res.sendStatus(201);
     } catch (err) {
+        res.status(400).send(err.message || "Erreur inattendue");
+    }
+});
+
+app.get("/api/typing", (req, res) => {
+    try {
+        var profile = Profile.getProfile(req.cookies.token, req.fingerprint);
+        if (!profile) return res.status(403).send("Non autorisé.");
+        res.status(200).json(Profile.profiles.filter(a => a.isTyping).map(b => b.username));
+    }catch(err) {
+        res.status(400).send(err.message || "Erreur inattendue");
+    }
+});
+
+app.put("/api/typing", (req, res) => {
+    try {
+        var profile = Profile.getProfile(req.cookies.token, req.fingerprint);
+        if (!profile) return res.status(403).send("Non autorisé.");
+        var isTyping = req.body.isTyping ? true : false;
+        if(profile.isTyping == isTyping) return res.sendStatus(200);
+        profile.isTyping = isTyping;
+        io.to("authenticated").emit("message.typing", { isTyping, username: profile.username });
+        res.sendStatus(201);
+    }catch(err) {
         res.status(400).send(err.message || "Erreur inattendue");
     }
 });
