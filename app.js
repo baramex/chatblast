@@ -39,7 +39,7 @@ app.get("/api/profiles/online", (req, res) => {
     var profile = Profile.getProfile(req.cookies?.token, req.fingerprint);
     if (!profile) return res.status(403).send("Non autorisé.");
 
-    res.status(200).send(Profile.getOnlines().map(a => a.username));
+    res.status(200).send(Profile.profiles.map(a => a.username));
 });
 
 // récupérer profile
@@ -66,7 +66,7 @@ app.post("/api/profile", rateLimit({
         var ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress
         var profile = new Profile(username, req.fingerprint, ip);
 
-        res.status(200).cookie("token", profile.token, { expires: new Date(profile.date.getTime() + profile.expireIn * 1000) }).send({ username, id } = profile);
+        res.status(200).cookie("token", profile.token, { expires: new Date(profile.date.getTime() + 1000 * 60 * 60 * 24) }).send({ username, id } = profile);
     }
     catch (err) {
         console.error(err);
@@ -115,7 +115,9 @@ app.put("/api/message", rateLimit({
             users.push(room);
             return true;
         });
+
         io.to("authenticated").emit("message.send", { author: { id, username } = profile, message, count: sockets.length });
+
         res.sendStatus(201);
     } catch (err) {
         res.status(400).send(err.message || "Erreur inattendue");
