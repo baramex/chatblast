@@ -1,51 +1,21 @@
 /* constantes */
-const PORT = 1500;
-const FIELD_REGEX = /^[a-z]{1,32}$/i;
+const FIELD_REGEX = /^[a-z]{1,32}$/;
+const USERNAMES_NOT_ALLOWED = ["server"];
 
 /* modules */
-// express
-const express = require("express");
-const app = express();
-app.use(express.static("./ressources"))
-
-// middleware
-var cors = require('cors');
-app.use("/api/*", cors({
-    origin: "self"
-}));
-const rateLimit = require('express-rate-limit');
-const baseLimiter = rateLimit({
-    windowMs: 1000 * 5,
-    max: 10,
-    standardHeaders: true,
-    legacyHeaders: false
-});
-app.use(baseLimiter);
-const bodyParser = require('body-parser');
-app.use(bodyParser.json());
-const cookieParser = require('cookie-parser');
-app.use(cookieParser());
-const Fingerprint = require('express-fingerprint');
-app.use(Fingerprint({
-    parameters: [
-        Fingerprint.useragent,
-        Fingerprint.geoip
-    ]
-}));
-const expressip = require('express-ip');
-app.use(expressip().getIpInfoMiddleware);
-
-// autres modules
+const rateLimit = require("express-rate-limit");
 const path = require("path");
-
-// serveur/socket.io
-const http = require('http');
-const server = http.createServer(app);
-const { Server } = require("socket.io");
 const { Profile } = require("./profile");
-const io = new Server(server);
-server.listen(PORT, () => {
-    console.log("Serveur lancé sur le port: " + PORT);
+const { app, io } = require("./server");
+
+io.on("connection", (socket) => {
+    var token = socket.handshake.headers.cookie.split("; ").find(a => a.startsWith("token=")).replace("token=", "");
+    if (token) {
+        var profile = Profile.getProfileByToken(token);
+        if (profile) {
+            socket.join(["authenticated", "userid:" + profile.id]);
+        }
+    }
 });
 
 /* routes */
@@ -69,8 +39,6 @@ app.get("/api/profiles/online", (req, res) => {
     var profile = Profile.getProfile(req.cookies?.token, req.fingerprint);
     if (!profile) return res.status(403).send("Non autorisé.");
 
-    Profile.setOnline(profile.id);
-
     res.status(200).send(Profile.getOnlines().map(a => a.username));
 });
 
@@ -90,15 +58,17 @@ app.post("/api/profile", rateLimit({
     legacyHeaders: false
 }), (req, res) => {
     try {
-        var username = req.body.username;
+        var username = req.body.username?.toLowerCase()?.trim();
         if (!username || !FIELD_REGEX.test(username)) throw new Error("Nom d'utilisateur invalide.");
 
-        var profile = new Profile(username.trim(), req.fingerprint, req.ipInfo?.ip);
+        if (USERNAMES_NOT_ALLOWED.includes(username)) throw new Error("Nom d'utilisateur non autorisé.");
+
+        var profile = new Profile(username, req.fingerprint, req.ipInfo?.ip);
 
         res.status(200).cookie("token", profile.token, { expires: new Date(profile.date.getTime() + profile.expireIn * 1000) }).send({ username, id } = profile);
     }
     catch (err) {
-        console.log(err);
+        console.error(err);
         res.status(400).send(err.message || "Erreur inattendue");
     }
 });
@@ -128,15 +98,23 @@ app.put("/api/message", rateLimit({
     max: 20,
     standardHeaders: true,
     legacyHeaders: false
-}), (req, res) => {
+}), async (req, res) => {
     try {
-        var message = req.body.message?.trim();
-        if (!message || message.length < 1 || message.length > 256) throw new Error("Message invalide.");
-
         var profile = Profile.getProfile(req.cookies.token, req.fingerprint);
         if (!profile) return res.status(403).send("Non autorisé.");
 
-        io.sockets.emit("message.send", { author: { id, username } = profile, message, count: io.sockets.sockets.size });
+        var message = req.body.message?.trim();
+        if (!message || message.length < 1 || message.length > 256) throw new Error("Message invalide.");
+
+        var sockets = await io.to("authenticated").fetchSockets();
+        var users = [];
+        sockets = sockets.filter(a => {
+            var room = Array.from(a.rooms.values()).find(b => b.startsWith("userid:"));
+            if (users.includes(room)) return false;
+            users.push(room);
+            return true;
+        });
+        io.to("authenticated").emit("message.send", { author: { id, username } = profile, message, count: sockets.length });
         res.sendStatus(201);
     } catch (err) {
         res.status(400).send(err.message || "Erreur inattendue");

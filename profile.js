@@ -1,4 +1,5 @@
 const randomWebToken = require("random-web-token");
+const { io } = require("./server");
 
 class Profile {
     /**
@@ -39,6 +40,7 @@ class Profile {
         var index = Profile.profiles.findIndex(a => a.id == id);
         if (index == -1) throw new Error("Profil introuvable.");
 
+        Profile.setOffline(Profile.profiles[index].id);
         return Profile.profiles.splice(index, 1);
     }
 
@@ -99,7 +101,12 @@ class Profile {
         var p = Profile.profiles.find(a => a.id == id);
         if (!p) throw new Error("Profil introuvable.");
 
-        p.online = true;
+        if (!p.online) {
+            p.online = true;
+
+            io.sockets.emit("profile.join", { id: p.id, username: p.username });
+        }
+
         p.lastPing = new Date();
         return p;
     }
@@ -108,7 +115,12 @@ class Profile {
         var p = Profile.profiles.find(a => a.id == id);
         if (!p) throw new Error("Profil introuvable.");
 
-        p.online = false;
+        if (p.online) {
+            p.online = false;
+
+            io.sockets.emit("profile.leave", { id: p.id, username: p.username });
+        }
+
         return p;
     }
 
@@ -122,11 +134,17 @@ class Profile {
      */
     static pushProfile(id, hash, token, ip, username) {
         if (Profile.profiles.find(a => a.id == id) || Profile.profiles.find(a => a.token == token)) throw new Error("Impossible de créer le profil.");
-        return Profile.profiles[Profile.profiles.push({ id, hash, token, ip, username, online: true, lastPing: new Date(), expireIn: 60 * 60 * 2, date: new Date() }) - 1];
+        return Profile.profiles[Profile.profiles.push({ id, hash, token, ip, username, online: false, lastPing: new Date(), expireIn: 60 * 60 * 2, date: new Date() }) - 1];
     }
 
     static getProfile(token, fingerprint) {
-        return Profile.profiles.find(a => a.token == token && a.hash == fingerprint.hash);
+        var profile = Profile.profiles.find(a => a.token == token && a.hash == fingerprint.hash);
+        if (!profile) return null;
+        return Profile.setOnline(profile.id);
+    }
+
+    static getProfileByToken(token) {
+        return Profile.profiles.find(a => a.token == token);
     }
 
     static update() {

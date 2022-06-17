@@ -4,7 +4,7 @@
 }
 
 img.contrast {
-    filter: contrast(0.6);
+    filter: contrast(.9);
 }
 
 body {

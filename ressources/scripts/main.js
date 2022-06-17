@@ -1,54 +1,112 @@
 const socket = io();
 
 socket.on("message.send", data => {
-    if (document.getElementById("nomes")) document.getElementById("nomes").remove();
-
-    var author = data.author.username;
+    var id = data.author.id;
+    var username = data.author.username;
     var message = data.message;
 
-    var div = document.createElement("div");
-    div.classList.add("pb-2", "my-4", "rounded-3", "border", "border-secondary", "message");
-    if (author == sessionStorage.getItem("username")) div.classList.add("bg-light");
+    pushMessage(id, username, message, data.count);
+});
 
-    var div1 = document.createElement("div");
+function pushMessage(id, username, message, transfered = null) {
+    if (document.getElementById("nomes")) document.getElementById("nomes").remove();
+
+    let isServer = username == "SERVER";
+
+    let div = document.createElement("div");
+    div.classList.add("pb-2", "my-4", "rounded-3", "border", "border-secondary", "message");
+    if (!isServer && id == sessionStorage.getItem("id")) div.classList.add("bg-light");
+
+    let div1 = document.createElement("div");
     div1.classList.add("d-flex", "justify-content-between", "username-container");
 
-    var div2 = document.createElement("div");
+    let div2 = document.createElement("div");
     div2.classList.add("d-flex", "align-items-center", "border-dashed", "username");
     div2.style.borderBottomRightRadius = "var(--bs-border-radius-lg)";
 
-    var img = document.createElement("img");
+    let img = document.createElement("img");
     img.classList.add("mx-2", "contrast");
     img.width = 30;
-    img.src = "/images/user.png";
+    img.src = isServer ? "/images/server.png" : "/images/user.png";
     img.alt = "avatar";
 
-    var p = document.createElement("p");
+    let p = document.createElement("p");
     p.classList.add("pe-3", "ps-1", "py-1", "fs-5", "m-auto");
-    p.innerText = author;
+    p.innerText = username;
 
-    var p1 = document.createElement("p");
+    let p1 = document.createElement("p");
     p1.style.float = "right";
     p1.classList.add("mt-2", "mx-2", "date");
     p1.innerText = new Date().toLocaleTimeString("fr");
 
-    var p2 = document.createElement("p");
+    let p2 = document.createElement("p");
     p2.classList.add("my-4", "mx-4", "fs-5", "text-break", "text");
-    p2.innerText = message;
+    if (isServer) p2.innerHTML = message;
+    else p2.innerText = message;
 
-    var p3 = document.createElement("p");
-    p3.classList.add("text-end", "mb-2", "me-3");
-    p3.innerText = "Transféré à " + data.count + " utilisateurs";
+    if (transfered) {
+        var p3 = document.createElement("p");
+        p3.classList.add("text-end", "mb-2", "me-3");
+        p3.innerText = "Transféré à " + transfered + " utilisateurs";
+    }
 
     div.appendChild(div1);
     div1.appendChild(div2);
     div2.append(img, p);
     div1.appendChild(p1);
     div.appendChild(p2);
-    div.appendChild(p3);
+    if (p3) div.appendChild(p3);
 
-    document.getElementById("message-container").appendChild(div);
-    div.scrollIntoView({ behavior: "smooth" });
+    document.getElementById("message-container").appendChild(div).scrollIntoView({ behavior: "smooth" });
+}
+
+function updateOnline() {
+    var online = JSON.parse(sessionStorage.getItem("online"));
+
+    document.getElementById("online-count").innerText = online.length + " en ligne";
+
+    var table = document.querySelector("#online-container > table");
+    table.innerHTML = "";
+
+    online.forEach((user, i) => {
+        var tr = document.createElement("tr");
+        var td = document.createElement("td");
+        td.classList.add("py-3", "px-4");
+        var img = document.createElement("img");
+        img.src = "/images/user.png";
+        img.classList.add("me-2", "contrast");
+        img.width = "60";
+        var span = document.createElement("span");
+        span.classList.add("fs-5");
+        td.append(img, span);
+        tr.appendChild(td);
+        table.appendChild(tr);
+        span.innerText = user;
+    });
+}
+
+socket.on("profile.join", data => {
+    var id = data.id;
+    var username = data.username;
+
+    pushMessage(id, "SERVER", `<b>${username}</b> a rejoint la session.`);
+
+    var online = JSON.parse(sessionStorage.getItem("online") || "[]");
+    online.push(username);
+    sessionStorage.setItem("online", JSON.stringify(online));
+    updateOnline();
+});
+
+socket.on("profile.leave", data => {
+    var id = data.id;
+    var username = data.username;
+
+    pushMessage(id, "SERVER", `<b>${username}</b> a quitté la session.`);
+
+    var online = JSON.parse(sessionStorage.getItem("online") || "[]");
+    online = online.splice(online.indexOf(username), 1);
+    sessionStorage.setItem("online", JSON.stringify(online));
+    updateOnline();
 });
 
 if (!sessionStorage.getItem("username") && getCookie("token")) {
@@ -65,27 +123,17 @@ if (!sessionStorage.getItem("username") && getCookie("token")) {
 
 function update() {
     axios.get("/api/profiles/online").then(res => {
-        document.getElementById("online-count").innerText = res.data.length + " en ligne";
+        sessionStorage.setItem("online", JSON.stringify(res.data));
 
-        var table = document.querySelector("#online-container > table");
-        table.innerHTML = "";
-
-        res.data.forEach((user, i) => {
-            var tr = document.createElement("tr");
-            var td = document.createElement("td");
-            td.classList.add("py-3", "px-4");
-            var img = document.createElement("img");
-            img.src = "/images/user.png";
-            img.classList.add("me-2", "contrast");
-            img.width = "60";
-            var span = document.createElement("span");
-            span.classList.add("fs-5");
-            td.append(img, span);
-            tr.appendChild(td);
-            table.appendChild(tr);
-            span.innerText = user;
-        });
-    }, console.error);
+        updateOnline();
+    }, err => {
+        if (err.response?.status == 403) {
+            resetProfile();
+            showError(err.response?.data || "Erreur inattendue", () => {
+                document.location.href = "/login";
+            });
+        }
+    });
     setTimeout(update, 1000 * 60);
 }
 update();
@@ -106,7 +154,14 @@ document.getElementById("send-message").addEventListener("submit", ev => {
     axios.put("/api/message", { message: msg.trim() }).then(() => {
         document.getElementById("message").value = "";
     }).catch(err => {
-        showError(err?.response?.data || "Erreur inattendue");
+        if (err.response?.status == 403) {
+            resetProfile();
+            showError(err.response?.data || "Erreur inattendue", () => {
+                document.location.href = "/login";
+            });
+            return;
+        }
+        showError(err.response?.data || "Erreur inattendue");
     }).finally(() => {
         btn.disabled = false;
     });
