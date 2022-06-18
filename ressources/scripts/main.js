@@ -222,7 +222,7 @@ function pushMessage(id, username, message, transfered = null) {
   
     if (!inPage || isSystem) {
         var sound = new Audio("/sounds/notification.mp3");
-        sound.volume = 0.1;
+        sound.volume = 0.4;
         sound.play();
     } 
 }
