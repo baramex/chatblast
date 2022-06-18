@@ -41,11 +41,11 @@ socket.on("message.typing", (res) => {
     updateTyping();
 });
 
-document.body.addEventListener("mouseenter", (e) => {
+document.body.addEventListener("mouseenter", () => {
     inPage = true;
 });
 
-document.body.addEventListener("mouseleave", (e) => {
+document.body.addEventListener("mouseleave", () => {
     inPage = false;
 });
 
@@ -219,10 +219,10 @@ function pushMessage(id, username, message, transfered = null) {
     if (p3) div.appendChild(p3);
 
     document.getElementById("message-container").appendChild(div).scrollIntoView({ behavior: "smooth" });
-  
+
     if (!inPage || isSystem) {
         var sound = new Audio("/sounds/notification.mp3");
         sound.volume = 0.4;
         sound.play();
-    } 
+    }
 }
