@@ -1,5 +1,6 @@
 // main script
 const socket = io();
+var inPage = true;
 
 if ((!localStorage.getItem("username") || !localStorage.getItem("id")) && getCookie("token")) {
     api("/profile/@me", "get", undefined, true).then(res => {
@@ -38,6 +39,14 @@ socket.on("message.typing", (res) => {
 
     sessionStorage.setItem("typing", JSON.stringify(typing));
     updateTyping();
+});
+
+document.body.addEventListener("mouseenter", (e) => {
+    inPage = true;
+});
+
+document.body.addEventListener("mouseleave", (e) => {
+    inPage = false;
 });
 
 socket.on("profile.join", data => {
@@ -210,4 +219,10 @@ function pushMessage(id, username, message, transfered = null) {
     if (p3) div.appendChild(p3);
 
     document.getElementById("message-container").appendChild(div).scrollIntoView({ behavior: "smooth" });
+  
+    if (!inPage || isSystem) {
+        var sound = new Audio("/sounds/notification.mp3");
+        sound.volume = 0.1;
+        sound.play();
+    } 
 }
