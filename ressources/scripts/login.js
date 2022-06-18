@@ -1,4 +1,4 @@
-if (sessionStorage.getItem("username")) resetProfile();
+if (localStorage.getItem("username") && localStorage.getItem("id")) attemptToRefreshProfile();
 
 document.getElementById("login-form").addEventListener("submit", ev => {
     ev.preventDefault();
@@ -13,11 +13,9 @@ document.getElementById("login-form").addEventListener("submit", ev => {
         });
     }
 
-    axios.post("/api/profile", { username }).then(res => {
-        sessionStorage.setItem("username", res.data.username.trim());
-        sessionStorage.setItem("id", res.data.id);
+    api("/profile", "post", { username }, true).then(res => {
+        localStorage.setItem("username", res.username.trim());
+        localStorage.setItem("id", res.id);
         document.location.href = "/";
-    }, err => {
-        showError(err?.response?.data || "Erreur inattendue");
     });
 });

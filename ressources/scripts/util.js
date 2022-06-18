@@ -1,5 +1,7 @@
 function resetProfile() {
-    sessionStorage.clear();
+    var terms = localStorage.getItem("terms");
+    localStorage.clear();
+    localStorage.setItem("terms", terms ? true : false);
     deleteCookie("token");
 }
 
@@ -97,4 +99,62 @@ function openPopup(type, text, action = null) {
     };
 
     hiddentab.onclick = button.onclick;
+}
+
+var pending_request = false;
+function api(endpoint, method, data = undefined, isShowError = false, errorAction = undefined, successMessage = undefined, successAction = undefined) {
+    return new Promise((res, rej) => {
+        if (pending_request) return setTimeout(() => api(endpoint, method, data, isShowError, errorAction, successAction, successAction).then(res).catch(rej), 10);
+
+        var copyData = data ? { ...data } : undefined;
+        pending_request = true;
+        axios({
+            method,
+            url: "/api" + endpoint,
+            data
+        }).then(response => {
+            if (successMessage) {
+                showSuccess(successMessage, successAction);
+            }
+            res(response.data);
+        }).catch(err => {
+            var response = err.response;
+            if (!response) return rej();
+            var status = response.status;
+            if (status == 401) {
+                attemptToRefreshProfile().then(res_ => {
+                    api(endpoint, method, copyData, isShowError, errorAction, successAction, successAction).then(res).catch(rej);
+                }).catch(err_ => {
+                    document.location.href = "/login";
+                    rej(err_);
+                });
+            }
+            else {
+                var data = response.data;
+                if (isShowError) {
+                    showError(data, errorAction);
+                }
+                rej(data);
+            }
+        }).finally(() => {
+            pending_request = false;
+        });
+    });
+}
+
+function attemptToRefreshProfile() {
+    return new Promise((res, rej) => {
+        var username = localStorage.getItem("username");
+        var id = localStorage.getItem("id");
+        if (!username || !id) return rej("Nom d'utilisateur ou identifiant non existant");
+        api("/profile/refresh", "post", { username, id }).then(res_ => {
+            localStorage.setItem("username", username);
+            localStorage.setItem("id", id);
+            if (res_.type == "new") document.location.reload();
+            res(res_);
+        }).catch(err => {
+            resetProfile();
+            rej(err);
+        });
+    });
 }

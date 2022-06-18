@@ -1,15 +1,33 @@
+// main script
 const socket = io();
 
+if ((!localStorage.getItem("username") || !localStorage.getItem("id")) && getCookie("token")) {
+    api("/profile/@me", "get", undefined, true).then(res => {
+        localStorage.setItem("username", res.username);
+        localStorage.setItem("id", res.id);
+    });
+}
+update();
+
+// socket handling
 socket.on("message.send", data => {
     var id = data.author.id;
     var username = data.author.username;
     var message = data.message;
 
+    var typing = JSON.parse(sessionStorage.getItem("typing") || "[]");
+    var profile = typing.indexOf(username);
+    if (profile != -1) {
+        typing.splice(profile, 1);
+        sessionStorage.setItem("typing", JSON.stringify(typing));
+        updateTyping();
+    }
+
     pushMessage(id, username, message, data.count);
 });
 
 socket.on("message.typing", (res) => {
-    var typing = JSON.parse(sessionStorage.getItem("isTyping") || "[]");
+    var typing = JSON.parse(sessionStorage.getItem("typing") || "[]");
     if (res.isTyping) {
         typing.push(res.username)
     } else {
@@ -18,13 +36,126 @@ socket.on("message.typing", (res) => {
         typing.splice(profile, 1);
     }
 
-    sessionStorage.setItem("isTyping", JSON.stringify(typing));
+    sessionStorage.setItem("typing", JSON.stringify(typing));
     updateTyping();
 });
 
+socket.on("profile.join", data => {
+    var id = data.id;
+    var username = data.username;
+
+    pushMessage(id, "SYSTEM", `<b>${username}</b> a rejoint la session.`);
+
+    var online = JSON.parse(sessionStorage.getItem("online") || "[]");
+    online.push(username);
+    sessionStorage.setItem("online", JSON.stringify(online));
+    updateOnline();
+});
+
+socket.on("profile.leave", data => {
+    var id = data.id;
+    var username = data.username;
+
+    pushMessage(id, "SYSTEM", `<b>${username}</b> a quitté la session.`);
+
+    var online = JSON.parse(sessionStorage.getItem("online") || "[]");
+    var profile = online.indexOf(username);
+    if (profile == -1) return;
+    online.splice(profile, 1);
+    sessionStorage.setItem("online", JSON.stringify(online));
+    updateOnline();
+
+    var typing = JSON.parse(sessionStorage.getItem("typing") || "[]");
+    var profile = typing.indexOf(username);
+    if (profile == -1) return;
+    typing.splice(profile, 1);
+    sessionStorage.setItem("typing", JSON.stringify(typing));
+    updateTyping();
+});
+
+// events
+document.getElementById("show-online").addEventListener("click", ev => {
+    document.getElementById("show-online").parentElement.classList.toggle("active");
+});
+
+document.getElementById("send-message").addEventListener("submit", ev => {
+    ev.preventDefault();
+
+    var msg = document.getElementById("message").value.trim();
+    if (msg.length == 0) return;
+
+    var btn = document.getElementById("send-message").querySelector("input[type=submit]");
+    btn.disabled = true;
+
+    api("/message", "put", { message: msg }, true).then(res => {
+        document.getElementById("message").value = "";
+    }).finally(() => {
+        btn.disabled = false;
+    });
+});
+
+document.getElementById("message").addEventListener("input", e => {
+    if ((e.inputType == "insertText" && e.target.value.length == 1) || e.inputType == "insertFromPaste") {
+        api("/typing", "put", { isTyping: true });
+    } else if (e.target.value.length == 0) {
+        api("/typing", "put", { isTyping: false });
+    }
+});
+
+// functions
+function disconnect() {
+    this.disabled = true;
+    api("/profile", "delete", undefined, true, undefined, "Déconnecté !", () => document.location.href = "/login").then(() => {
+        resetProfile();
+    }).catch(() => {
+        this.disabled = false;
+    });
+}
+
+async function update() {
+    await api("/profiles/online", "get", undefined, true).then(res => {
+        sessionStorage.setItem("online", JSON.stringify(res));
+
+        updateOnline();
+    });
+
+    await api("/profiles/typing", "get", undefined, true).then(res => {
+        sessionStorage.setItem("typing", JSON.stringify(res));
+
+        updateTyping();
+    });
+
+    setTimeout(update, 1000 * 60);
+}
+
+function updateOnline() {
+    var online = JSON.parse(sessionStorage.getItem("online"));
+
+    document.getElementById("online-count").innerText = online.length + " en ligne";
+
+    var table = document.querySelector("#online-container > table");
+    table.innerHTML = "";
+
+    online.forEach((user, i) => {
+        var tr = document.createElement("tr");
+        var td = document.createElement("td");
+        td.classList.add("py-3", "px-4");
+        var img = document.createElement("img");
+        img.src = "/images/user.png";
+        img.classList.add("me-2", "contrast");
+        img.width = "60";
+        var span = document.createElement("span");
+        span.classList.add("fs-5");
+        td.append(img, span);
+        tr.appendChild(td);
+        table.appendChild(tr);
+        span.innerText = user;
+    });
+}
+
 function updateTyping() {
-    var typing = JSON.parse(sessionStorage.getItem("isTyping") || "[]");
-    typing = typing.filter(a => a != sessionStorage.getItem("username"));
+    var typing = JSON.parse(sessionStorage.getItem("typing") || "[]");
+    typing = typing.filter(a => a != localStorage.getItem("username"));
     if (typing == 0) return document.getElementById("typing").innerHTML = ""
     document.getElementById("typing").innerHTML = `${typing.join(", ")} ${typing.length > 1 ? "sont" : "est"} en train d'écrire...`;
 }
@@ -36,7 +167,7 @@ function pushMessage(id, username, message, transfered = null) {
 
     let div = document.createElement("div");
     div.classList.add("pb-2", "my-4", "rounded-3", "border", "border-secondary", "message");
-    if (!isSystem && id == sessionStorage.getItem("id")) div.classList.add("bg-light");
+    if (!isSystem && id == localStorage.getItem("id")) div.classList.add("bg-light");
 
     let div1 = document.createElement("div");
     div1.classList.add("d-flex", "justify-content-between", "username-container");
@@ -79,148 +210,4 @@ function pushMessage(id, username, message, transfered = null) {
     if (p3) div.appendChild(p3);
 
     document.getElementById("message-container").appendChild(div).scrollIntoView({ behavior: "smooth" });
-}
-
-function updateOnline() {
-    var online = JSON.parse(sessionStorage.getItem("online"));
-
-    document.getElementById("online-count").innerText = online.length + " en ligne";
-
-    var table = document.querySelector("#online-container > table");
-    table.innerHTML = "";
-
-    online.forEach((user, i) => {
-        var tr = document.createElement("tr");
-        var td = document.createElement("td");
-        td.classList.add("py-3", "px-4");
-        var img = document.createElement("img");
-        img.src = "/images/user.png";
-        img.classList.add("me-2", "contrast");
-        img.width = "60";
-        var span = document.createElement("span");
-        span.classList.add("fs-5");
-        td.append(img, span);
-        tr.appendChild(td);
-        table.appendChild(tr);
-        span.innerText = user;
-    });
-}
-
-socket.on("profile.join", data => {
-    var id = data.id;
-    var username = data.username;
-
-    pushMessage(id, "SYSTEM", `<b>${username}</b> a rejoint la session.`);
-
-    var online = JSON.parse(sessionStorage.getItem("online") || "[]");
-    online.push(username);
-    sessionStorage.setItem("online", JSON.stringify(online));
-    updateOnline();
-});
-
-socket.on("profile.leave", data => {
-    var id = data.id;
-    var username = data.username;
-
-    pushMessage(id, "SYSTEM", `<b>${username}</b> a quitté la session.`);
-
-    var online = JSON.parse(sessionStorage.getItem("online") || "[]");
-    var profile = online.indexOf(username);
-    if (profile == -1) return;
-    online.splice(profile, 1);
-    sessionStorage.setItem("online", JSON.stringify(online));
-    updateOnline();
-
-    var typing = JSON.parse(sessionStorage.getItem("isTyping") || "[]");
-    var profile = typing.indexOf(username);
-    if (profile == -1) return;
-    typing.splice(profile, 1);
-    sessionStorage.setItem("isTyping", JSON.stringify(typing));
-    updateTyping();
-});
-
-if (!sessionStorage.getItem("username") && getCookie("token")) {
-    axios.get("/api/profile/@me").then(res => {
-        sessionStorage.setItem("username", res.data.username);
-        sessionStorage.setItem("id", res.data.id);
-    }, () => {
-        resetProfile();
-        showError("Session terminée, veuillez vous reconnecter", () => {
-            document.location.href = "/login";
-        });
-    });
-}
-
-axios.put("/api/typing", { isTyping: false });
-
-function update() {
-    axios.get("/api/profiles/online").then(res => {
-        sessionStorage.setItem("online", JSON.stringify(res.data));
-
-        updateOnline();
-    }, err => {
-        if (err.response?.status == 403) {
-            resetProfile();
-            showError(err.response?.data || "Erreur inattendue", () => {
-                document.location.href = "/login";
-            });
-        }
-    });
-
-    axios.get("/api/typing").then(res => {
-        sessionStorage.setItem("isTyping", JSON.stringify(res.data));
-        updateTyping();
-    });
-
-    setTimeout(update, 1000 * 60);
-}
-update();
-
-document.getElementById("show-online").addEventListener("click", ev => {
-    document.getElementById("show-online").parentElement.classList.toggle("active");
-});
-
-document.getElementById("send-message").addEventListener("submit", ev => {
-    ev.preventDefault();
-
-    var msg = document.getElementById("message").value;
-    if (msg.trim().length == 0) return;
-
-    var btn = document.getElementById("send-message").querySelector("input[type=submit]");
-    btn.disabled = true;
-
-    axios.put("/api/message", { message: msg.trim() }).then(() => {
-        axios.put("/api/typing", { isTyping: false });
-        document.getElementById("message").value = "";
-    }).catch(err => {
-        if (err.response?.status == 403) {
-            resetProfile();
-            showError(err.response?.data || "Erreur inattendue", () => {
-                document.location.href = "/login";
-            });
-            return;
-        }
-        showError(err.response?.data || "Erreur inattendue");
-    }).finally(() => {
-        btn.disabled = false;
-    });
-});
-
-document.getElementById("message").addEventListener("input", e => {
-    if ((e.inputType == "insertText" && e.target.value.length == 1) || e.inputType == "insertFromPaste") {
-        axios.put("/api/typing", { isTyping: true });
-    } else if (e.target.value.length == 0) {
-        axios.put("/api/typing", { isTyping: false });
-    }
-});
-
-function disconnect() {
-    this.disabled = true;
-    axios.delete("/api/profile").then(res => {
-        resetProfile();
-        showSuccess("Déconnecté !", () => document.location.href = "/login");
-    }, err => {
-        showError(err);
-        this.disabled = false;
-    });
 }

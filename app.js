@@ -17,6 +17,17 @@ io.on("connection", (socket) => {
             socket.join(["authenticated", "userid:" + profile.id]);
         }
     }
+
+    socket.on("disconnect", () => {
+        var userID = socket.userID;
+        if (!userID) return;
+        var profile = Profile.getProfileByID(userID);
+        if (!profile) return;
+        if (profile.isTyping) {
+            profile.isTyping = false;
+            io.to("authenticated").emit("message.typing", { isTyping: false, username: profile.username });
+        }
+    });
 });
 
 /* routes */
@@ -38,20 +49,42 @@ app.get("/terms", (req, res) => {
 // utilisateurs en ligne
 app.get("/api/profiles/online", (req, res) => {
     var profile = Profile.getProfile(req.cookies?.token, req.fingerprint);
-    if (!profile) return res.status(403).send("Non autorisé.");
+    if (!profile) return res.sendStatus(401);
 
     res.status(200).send(Profile.profiles.map(a => a.username));
 });
 
-// récupérer profile
+// récupérer profil
 app.get("/api/profile/@me", (req, res) => {
     var profile = Profile.getProfile(req.cookies?.token, req.fingerprint);
-    if (!profile) return res.status(403).send("Non autorisé.");
+    if (!profile) return res.sendStatus(401);
 
     res.status(200).send({ username, id } = profile);
 });
 
-// créer profile
+// actualiser profil
+app.post("/api/profile/refresh", (req, res) => {
+    try {
+        var username = req.body.username;
+        var id = req.body.id;
+        if (!username || !FIELD_REGEX.test(username) || !id) throw new Error("Requête invalide.");
+        var socket = Array.from(io.sockets.sockets.values()).find(a => a.userID == id && !a.rooms.has("authenticated"));
+        var type = "refresh";
+        if (!socket) type = "new";
+
+        var ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+        var profile = new Profile(username, req.fingerprint, ip, type == "refresh" ? id : undefined);
+
+        if (socket) socket.join("authenticated");
+
+        res.status(200).cookie("token", profile.token, { expires: new Date(profile.date.getTime() + 1000 * 60 * 60 * 24) }).send({ username: profile.username, id: profile.id, type });
+    } catch (error) {
+        console.error(error);
+        res.status(400).send(error.message || "Erreur inattendue");
+    }
+});
+
+// créer profil
 app.post("/api/profile", rateLimit({
     windowMs: 1000 * 60 * 5,
     max: 5,
@@ -64,28 +97,29 @@ app.post("/api/profile", rateLimit({
 
         if (USERNAMES_NOT_ALLOWED.includes(username)) throw new Error("Nom d'utilisateur non autorisé.");
 
-        var ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress
+        var ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
         var profile = new Profile(username, req.fingerprint, ip);
 
         res.status(200).cookie("token", profile.token, { expires: new Date(profile.date.getTime() + 1000 * 60 * 60 * 24) }).send({ username, id } = profile);
     }
-    catch (err) {
-        console.error(err);
-        res.status(400).send(err.message || "Erreur inattendue");
+    catch (error) {
+        console.error(error);
+        res.status(400).send(error.message || "Erreur inattendue");
     }
 });
 
-// supprimer profile
+// supprimer profil
 app.delete("/api/profile", (req, res) => {
     try {
         var profile = Profile.getProfile(req.cookies?.token, req.fingerprint);
-        if (!profile) return res.status(403).send("Non autorisé.");
+        if (!profile) return res.sendStatus(401);
 
         Profile.delete(profile.id);
 
         res.sendStatus(200);
-    } catch (err) {
-        res.status(400).send(err.message || "Erreur inattendue");
+    } catch (error) {
+        console.error(error);
+        res.status(400).send(error.message || "Erreur inattendue");
     }
 });
 
@@ -103,7 +137,7 @@ app.put("/api/message", rateLimit({
 }), async (req, res) => {
     try {
         var profile = Profile.getProfile(req.cookies.token, req.fingerprint);
-        if (!profile) return res.status(403).send("Non autorisé.");
+        if (!profile) return res.sendStatus(401);
 
         var message = req.body.message?.trim();
         if (!message || message.length < 1 || message.length > 256) throw new Error("Message invalide.");
@@ -111,40 +145,44 @@ app.put("/api/message", rateLimit({
         var sockets = await io.to("authenticated").fetchSockets();
         var users = [];
         sockets = sockets.filter(a => {
-            var room = Array.from(a.rooms.values()).find(b => b.startsWith("userid:"));
-            if (users.includes(room)) return false;
-            users.push(room);
+            var id = a.userID;
+            if (users.includes(id)) return false;
+            users.push(id);
             return true;
         });
 
         io.to("authenticated").emit("message.send", { author: { id, username } = profile, message, count: sockets.length });
+        profile.isTyping = false;
 
         res.sendStatus(201);
-    } catch (err) {
-        res.status(400).send(err.message || "Erreur inattendue");
+    } catch (error) {
+        console.error(error);
+        res.status(400).send(error.message || "Erreur inattendue");
     }
 });
 
-app.get("/api/typing", (req, res) => {
+app.get("/api/profiles/typing", (req, res) => {
     try {
         var profile = Profile.getProfile(req.cookies.token, req.fingerprint);
-        if (!profile) return res.status(403).send("Non autorisé.");
+        if (!profile) return res.sendStatus(401);
         res.status(200).json(Profile.profiles.filter(a => a.isTyping).map(b => b.username));
-    }catch(err) {
-        res.status(400).send(err.message || "Erreur inattendue");
+    } catch (error) {
+        console.error(error);
+        res.status(400).send(error.message || "Erreur inattendue");
     }
 });
 
 app.put("/api/typing", (req, res) => {
     try {
         var profile = Profile.getProfile(req.cookies.token, req.fingerprint);
-        if (!profile) return res.status(403).send("Non autorisé.");
+        if (!profile) return res.sendStatus(401);
         var isTyping = req.body.isTyping ? true : false;
-        if(profile.isTyping == isTyping) return res.sendStatus(200);
+        if (profile.isTyping == isTyping) return res.sendStatus(200);
         profile.isTyping = isTyping;
         io.to("authenticated").emit("message.typing", { isTyping, username: profile.username });
         res.sendStatus(201);
-    }catch(err) {
-        res.status(400).send(err.message || "Erreur inattendue");
+    } catch (error) {
+        console.error(error);
+        res.status(400).send(error.message || "Erreur inattendue");
     }
 });
