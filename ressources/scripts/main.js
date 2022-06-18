@@ -1,4 +1,5 @@
 const socket = io();
+var inPage = true;
 
 socket.on("message.send", data => {
     var id = data.author.id;
@@ -22,11 +23,19 @@ socket.on("message.typing", (res) => {
     updateTyping();
 });
 
+document.body.addEventListener("mouseenter", (e) => {
+    inPage = true;
+});
+
+document.body.addEventListener("mouseleave", (e) => {
+    inPage = false;
+});
+
 function updateTyping() {
     var typing = JSON.parse(sessionStorage.getItem("isTyping") || "[]");
     typing = typing.filter(a => a != sessionStorage.getItem("username"));
-    if(typing == 0) return document.getElementById("typing").innerHTML = ""
-    document.getElementById("typing").innerHTML = `${ typing.join(", ") } ${typing.length > 1 ? "sont" : "est"} en train d'écrire...`;
+    if (typing == 0) return document.getElementById("typing").innerHTML = ""
+    document.getElementById("typing").innerHTML = `${typing.join(", ")} ${typing.length > 1 ? "sont" : "est"} en train d'écrire...`;
 }
 
 function pushMessage(id, username, message, transfered = null) {
@@ -79,6 +88,13 @@ function pushMessage(id, username, message, transfered = null) {
     if (p3) div.appendChild(p3);
 
     document.getElementById("message-container").appendChild(div).scrollIntoView({ behavior: "smooth" });
+
+
+    if (!inPage || isSystem) {
+        var sound = new Audio("/sounds/notification.mp3");
+        sound.volume = 0.1;
+        sound.play();
+    } 
 }
 
 function updateOnline() {
