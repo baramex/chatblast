@@ -15,11 +15,12 @@ class Profile {
      * @param {Object[]} [fingerprint.components]
      * @param {String} ip 
      */
-    constructor(username, fingerprint, ip) {
+    constructor(username, fingerprint, ip, id = undefined) {
         if (Profile.isUsernameExist(username)) throw new Error("Le nom d'utilisateur existe déjà.");
 
         this.ip = ip;
-        this.id = randomWebToken.generate("onlyNumbers", 10);
+        if (!id) this.id = randomWebToken.generate("onlyNumbers", 10);
+        else this.id = id;
         this.hash = fingerprint.hash;
         this.token = randomWebToken.generate("extra", 30);
         this.username = username;
@@ -40,6 +41,7 @@ class Profile {
         if (index == -1) throw new Error("Profil introuvable.");
 
         var profile = Profile.profiles[index];
+        io.to("userid:" + profile.id).socketsLeave("authenticated");
         io.to("authenticated").emit("profile.leave", { id: profile.id, username: profile.username });
 
         return Profile.profiles.splice(index, 1);
@@ -92,10 +94,20 @@ class Profile {
 
     static update() {
         Profile.profiles.forEach(async pro => {
-            if (new Date().getTime() - pro.lastPing.getTime() > 1000 * 60 * 1.2 && (await io.to(pro.id).allSockets()).size == 0) Profile.delete(pro.id);
+            if (new Date().getTime() - pro.lastPing.getTime() > 1000 * 80 && (await io.to(pro.id).allSockets()).size == 0) {
+                Profile.delete(pro.id);
+            }
         });
 
-        setTimeout(Profile.update, 1000 * 60 * 1.5);
+        io.sockets.sockets.forEach(socket => {
+            if (socket.rooms.has("authenticated")) {
+                var id = socket.userID;
+                var profile = Profile.getProfileByID(id);
+                if (!profile) socket.leave("authenticated");
+            }
+        });
+
+        setTimeout(Profile.update, 1000 * 10);
     }
 }
 

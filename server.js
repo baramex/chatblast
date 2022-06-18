@@ -11,7 +11,7 @@ var cors = require('cors');
 app.use(cors({
     origin: (origin, callback) => {
         if (!origin) return callback(null, true);
-        if (!["http://localhost:1500", "http://chatblast.baramex.me", "http://chat-box.baramex.me"].includes(origin)) return callback(new Error("The CORS policy for this site does not allow access from the specified Origin.", false))
+        if (!["http://localhost:1500", "https://www.chatblast.baramex.me"].includes(origin)) return callback(new Error("The CORS policy for this site does not allow access from the specified Origin.", false))
 
         callback(null, true);
     },
@@ -20,7 +20,7 @@ app.use(cors({
 const rateLimit = require('express-rate-limit');
 const baseLimiter = rateLimit({
     windowMs: 1000 * 5,
-    max: 20,
+    max: 25,
     standardHeaders: true,
     legacyHeaders: false
 });
