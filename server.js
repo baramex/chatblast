@@ -11,7 +11,7 @@ var cors = require('cors');
 app.use(cors({
     origin: (origin, callback) => {
         if (!origin) return callback(null, true);
-        if (!["http://localhost:1500", "https://chatblast.baramex.me"].includes(origin)) return callback(new Error("The CORS policy for this site does not allow access from the specified Origin.", false))
+        if (!["http://localhost:1500", "https://www.chatblast.baramex.me"].includes(origin)) return callback(new Error("The CORS policy for this site does not allow access from the specified Origin.", false))
 
         callback(null, true);
     },
