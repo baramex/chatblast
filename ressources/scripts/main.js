@@ -221,8 +221,7 @@ function pushMessage(id, username, message, transfered = null) {
     document.getElementById("message-container").appendChild(div).scrollIntoView({ behavior: "smooth" });
 
     if (!inPage || isSystem) {
-        var sound = new Audio("/sounds/notification.mp3");
-        sound.volume = 0.4;
+        var sound = new Audio("/sounds/notification.wav");
         sound.play();
     }
 }
