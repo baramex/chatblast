@@ -148,8 +148,8 @@ function attemptToRefreshProfile() {
         var id = localStorage.getItem("id");
         if (!username || !id) return rej("Nom d'utilisateur ou identifiant non existant");
         api("/profile/refresh", "post", { username, id }).then(res_ => {
-            localStorage.setItem("username", username);
-            localStorage.setItem("id", id);
+            localStorage.setItem("username", res_.username);
+            localStorage.setItem("id", res_.id);
             if (res_.type == "new") document.location.reload();
             res(res_);
         }).catch(err => {
