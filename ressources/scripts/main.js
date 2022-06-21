@@ -2,6 +2,30 @@
 const socket = io();
 var inPage = true;
 var documentLoaded = false;
+var allMessageFetched = false;
+
+var messageToView = [];
+const messageObserver = new IntersectionObserver((entries) => {
+    var ids = [];
+    var elements = [];
+    entries.forEach(entry => {
+        if (entry.isIntersecting == true) {
+            var id = entry.target.id.replace("m-", "");
+            if (inPage) {
+                ids.push(id);
+                elements.push(entry.target);
+            }
+            else {
+                messageToView.push(id);
+                messageObserver.unobserve(entry.target);
+            }
+        }
+    });
+    // TODO: push to array: reqt: 1 second
+    if (ids.length > 0) api("/messages/view", "put", { ids }).then(() => {
+        elements.forEach(a => messageObserver.unobserve(a));
+    });
+}, { threshold: [0] });
 
 if ((!localStorage.getItem("username") || !localStorage.getItem("id")) && getCookie("token")) {
     api("/profile/@me", "get", undefined, true).then(res => {
@@ -11,31 +35,44 @@ if ((!localStorage.getItem("username") || !localStorage.getItem("id")) && getCoo
 }
 update();
 api("/messages?from=0", "get", undefined, true).then(res => {
-    fetched(res);
+    fetched(res, true);
 });
 
-function fetched(messages) {
-    if (!documentLoaded) return setTimeout(() => fetched(messages), 10);
+function fetched(messages, loaded = false, reverse = false) {
+    if (!documentLoaded) return setTimeout(() => fetched(messages, loaded), 10);
+    if (loaded) {
+        document.body.querySelectorAll("[toshow]").forEach(a => a.hidden = false);
+        document.body.querySelectorAll("[toremove]").forEach(a => a.remove());
+    }
+
+    if (messages.length == 0) allMessageFetched = true;
+    if (reverse) messages = messages.reverse();
     messages.forEach(message => {
-        pushMessage(message.author.id, message.author.username, message.content, message.views, new Date(message.date));
+        pushMessage(message._id, message.author, message.content, message.views, new Date(message.date), false, true);
     });
+
+    messageContainer.childNodes.forEach(a => {
+        if (messages.find(b => "m-" + b._id == a.id)) {
+            messageObserver.observe(a);
+        }
+    });
+
+    if (loaded) messageContainer.parentElement.scrollTo({ top: messageContainer.scrollHeight });
 }
 
 // socket handling
 socket.on("message.send", data => {
-    var id = data.author.id;
-    var username = data.author.username;
     var message = data.content;
 
     var typing = JSON.parse(sessionStorage.getItem("typing") || "[]");
-    var profile = typing.indexOf(username);
+    var profile = typing.indexOf(data.author.username);
     if (profile != -1) {
         typing.splice(profile, 1);
         sessionStorage.setItem("typing", JSON.stringify(typing));
         updateTyping();
     }
 
-    pushMessage(id, username, message, data.views, new Date(data.date));
+    pushMessage(data._id, data.author, message, data.views, new Date(data.date), true);
 });
 
 socket.on("message.typing", (res) => {
@@ -52,19 +89,17 @@ socket.on("message.typing", (res) => {
     updateTyping();
 });
 
-document.body.addEventListener("mouseenter", () => {
-    inPage = true;
-});
-
-document.body.addEventListener("mouseleave", () => {
-    inPage = false;
+socket.on("messages.view", data => {
+    data.forEach(({ _id, views }) => {
+        var el = document.body.querySelector(`div#m-${_id} p.views`);
+        if (el) el.innerText = "Vu par " + views + " utilisateurs";
+    });
 });
 
 socket.on("profile.join", data => {
-    var id = data.id;
     var username = data.username;
 
-    pushMessage(id, "SYSTEM", `<b>${username}</b> a rejoint la session.`);
+    pushMessage(0, { id: null, username: "SYSTEM" }, `<b>${username}</b> a rejoint la session.`, -1, new Date(), true);
 
     var online = JSON.parse(sessionStorage.getItem("online") || "[]");
     online.push(username);
@@ -73,10 +108,9 @@ socket.on("profile.join", data => {
 });
 
 socket.on("profile.leave", data => {
-    var id = data.id;
     var username = data.username;
 
-    pushMessage(id, "SYSTEM", `<b>${username}</b> a quitté la session.`);
+    pushMessage(0, { id: null, username: "SYSTEM" }, `<b>${username}</b> a quitté la session.`, -1, new Date(), true);
 
     var online = JSON.parse(sessionStorage.getItem("online") || "[]");
     var profile = online.indexOf(username);
@@ -94,31 +128,55 @@ socket.on("profile.leave", data => {
 });
 
 // events
+const messageContainer = document.getElementById("message-container");
+const nomoremes = document.getElementById("nomoremes");
+messageContainer.parentElement.addEventListener("scroll", ev => {
+    if (ev.target.scrollTop < 50 && !pending_request && !allMessageFetched) {
+        api("/messages?from=" + messageContainer.childElementCount, "get", undefined, true).then(res => {
+            fetched(res, false, true);
+        });
+    }
+});
+
+document.body.addEventListener("mouseenter", () => {
+    api("/messages/view", "put", { ids: messageToView });
+    messageToView = [];
+
+    inPage = true;
+});
+
+document.body.addEventListener("mouseleave", () => {
+    inPage = false;
+});
+
 window.addEventListener("load", ev => {
     documentLoaded = true;
 });
 
-document.getElementById("show-online").addEventListener("click", ev => {
-    document.getElementById("show-online").parentElement.classList.toggle("active");
+const showOnline = document.getElementById("show-online");
+showOnline.addEventListener("click", () => {
+    showOnline.parentElement.classList.toggle("active");
 });
 
-document.getElementById("send-message").addEventListener("submit", ev => {
+const messageForm = document.getElementById("send-message");
+const messageField = document.getElementById("message");
+const submitButton = messageForm.querySelector("input[type=submit]");
+messageForm.addEventListener("submit", ev => {
     ev.preventDefault();
 
-    var msg = document.getElementById("message").value.trim();
+    var msg = messageField.value.trim();
     if (msg.length == 0) return;
 
-    var btn = document.getElementById("send-message").querySelector("input[type=submit]");
-    btn.disabled = true;
+    submitButton.disabled = true;
 
     api("/message", "put", { content: msg }, true).then(res => {
-        document.getElementById("message").value = "";
+        messageField.value = "";
     }).finally(() => {
-        btn.disabled = false;
+        submitButton.disabled = false;
     });
 });
 
-document.getElementById("message").addEventListener("input", e => {
+messageField.addEventListener("input", e => {
     if ((e.inputType == "insertText" && e.target.value.length == 1) || e.inputType == "insertFromPaste") {
         api("/typing", "put", { isTyping: true });
     } else if (e.target.value.length == 0) {
@@ -152,13 +210,14 @@ async function update() {
     setTimeout(update, 1000 * 60);
 }
 
+const onlineCount = document.getElementById("online-count");
+const onlineTable = document.querySelector("#online-container > table");
 function updateOnline() {
     var online = JSON.parse(sessionStorage.getItem("online"));
 
-    document.getElementById("online-count").innerText = online.length + " en ligne";
+    onlineCount.innerText = online.length + " en ligne";
 
-    var table = document.querySelector("#online-container > table");
-    table.innerHTML = "";
+    onlineTable.innerHTML = "";
 
     online.forEach((user, i) => {
         var tr = document.createElement("tr");
@@ -170,26 +229,35 @@ function updateOnline() {
         img.width = "60";
         var span = document.createElement("span");
         span.classList.add("fs-5");
+        span.innerText = user;
+
         td.append(img, span);
         tr.appendChild(td);
-        table.appendChild(tr);
-        span.innerText = user;
+
+        onlineTable.appendChild(tr);
     });
 }
 
+const typingText = document.getElementById("typing");
 function updateTyping() {
     var typing = JSON.parse(sessionStorage.getItem("typing") || "[]");
     typing = typing.filter(a => a != localStorage.getItem("username"));
-    if (typing == 0) return document.getElementById("typing").innerHTML = ""
-    document.getElementById("typing").innerHTML = `${typing.join(", ")} ${typing.length > 1 ? "sont" : "est"} en train d'écrire...`;
+    if (typing == 0) return typingText.innerHTML = ""
+    typingText.innerHTML = `${typing.join(", ")} ${typing.length > 1 ? "sont" : "est"} en train d'écrire...`;
 }
 
-function pushMessage(id, username, message, views = null, date = new Date()) {
-    if (document.getElementById("nomes")) document.getElementById("nomes").remove();
+var nomes = document.getElementById("nomes");
+const sound = new Audio("/sounds/notification.wav");
+function pushMessage(id, author, message, views = -1, date = new Date(), isNew = false, reverse = false) {
+    if (nomes) {
+        nomes.remove();
+        nomes = undefined;
+    }
 
-    let isSystem = username == "SYSTEM";
+    let isSystem = author.username == "SYSTEM";
 
     let div = document.createElement("div");
+    div.id = "m-" + id;
     div.classList.add("pb-2", "my-4", "rounded-3", "border", "border-secondary", "message");
     if (!isSystem && id == localStorage.getItem("id")) div.classList.add("bg-light");
 
@@ -208,7 +276,7 @@ function pushMessage(id, username, message, views = null, date = new Date()) {
 
     let p = document.createElement("p");
     p.classList.add("pe-3", "ps-1", "py-1", "fs-5", "m-auto");
-    p.innerText = username;
+    p.innerText = author.username;
 
     let p1 = document.createElement("p");
     p1.style.float = "right";
@@ -220,9 +288,9 @@ function pushMessage(id, username, message, views = null, date = new Date()) {
     if (isSystem) p2.innerHTML = message;
     else p2.innerText = message;
 
-    if (views) {
+    if (views != -1) {
         var p3 = document.createElement("p");
-        p3.classList.add("text-end", "mb-2", "me-3");
+        p3.classList.add("text-end", "mb-2", "me-3", "views");
         p3.innerText = "Vu par " + views + " utilisateurs";
     }
 
@@ -233,10 +301,20 @@ function pushMessage(id, username, message, views = null, date = new Date()) {
     div.appendChild(p2);
     if (p3) div.appendChild(p3);
 
-    document.getElementById("message-container").appendChild(div).scrollIntoView({ behavior: "smooth" });
+    if (reverse) nomoremes.after(div);
+    else messageContainer.append(div);
 
-    if (!inPage || isSystem) {
-        var sound = new Audio("/sounds/notification.wav");
-        sound.play();
+    if (isNew) {
+        if (inPage) {
+            api("/messages/view", "put", { ids: [id] });
+        }
+
+        if (!inPage || isSystem) {
+            sound.play();
+        }
+
+        div.scrollIntoView({ behavior: "smooth" });
+
+        messageObserver.observe(div);
     }
 }

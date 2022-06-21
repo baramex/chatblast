@@ -15,6 +15,10 @@ body {
     scroll-behavior: smooth;
 }
 
+.text-theme {
+    color: #44b996;
+}
+
 .title {
     color: #13342b;
     font-size: 3.5rem;

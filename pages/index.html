@@ -8,7 +8,8 @@
     <link rel="icon" href="/images/logo.png" type="image/x-icon">
     <meta name="description"
         content="ChatBlast est une chatbox publique, anonyme et commune à tous les utilisateurs. Vous discutez avec tout le monde en même, cela peut être plutôt amusant !">
-    <meta name="keywords" content="chatbox, public, worldwide, world, chat, online-chat, online, fun, talk, tell, chatblast">
+    <meta name="keywords"
+        content="chatbox, public, worldwide, world, chat, online-chat, online, fun, talk, tell, chatblast">
     <meta name="theme-color" content="#44b996">
     <meta http-equiv="Content-Security-Policy"
         content="default-src 'self'; connect-src 'self'; script-src 'self' 'unsafe-inline' cdnjs.cloudflare.com cdn.socket.io; style-src 'self' 'unsafe-inline' cdn.jsdelivr.net; img-src *">
@@ -52,10 +53,18 @@
     </div>
 
     <div id="chat" class="mx-5 mt-3 mb-4 h-100 d-flex flex-column rounded-3 position-relative">
-        <div id="message-container" class="px-5 py-4 mt-2 overflow-auto h-100 position-relative" style="flex: 1 0px;">
-            <p class="position-absolute top-50 start-50 translate-middle fs-4 text-secondary text-center" id="nomes">
-                L'historique des messages n'est pas accessible
-            </p>
+        <div class="px-5 py-4 mt-2 overflow-auto h-100 position-relative" style="flex: 1 0px;">
+            <div class="position-absolute top-50 start-50 translate-middle text-center">
+                <p id="nomes" class="fs-4 text-secondary" toshow hidden>
+                    Aucun message
+                </p>
+                <div class="spinner-border text-theme" style="width: 3rem;height: 3rem;" role="status" toremove>
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+            <div id="message-container" toshow hidden>
+                <p class="text-center fs-6 text-secondary" id="nomoremes">Il n'y a plus d'autres messages</p>
+            </div>
         </div>
 
         <form id="send-message" class="d-flex p-4 position-relative">

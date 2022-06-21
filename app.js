@@ -145,19 +145,7 @@ app.put("/api/message", rateLimit({
         if (!profile) return res.sendStatus(401);
 
         var content = req.body.content.trim();
-        var message = await Message.create({ id, username } = profile, content);
-
-        var sockets = await io.to("authenticated").fetchSockets();
-        var users = [];
-        sockets = sockets.filter(a => {
-            var id = a.userID;
-            if (users.includes(id)) return false;
-            users.push(id);
-            return true;
-        });
-        message = await Message.addViews(message.id, users);
-
-        io.to("authenticated").emit("message.send", { ...Message.getMessageFields(message) });
+        await Message.create({ id, username } = profile, content);
         profile.isTyping = false;
 
         res.sendStatus(201);
@@ -173,8 +161,7 @@ app.get("/api/messages", async (req, res) => {
         if (!profile) return res.sendStatus(401);
 
         var from = req.query.from;
-        var mes = await Message.getMessages(from, 50);
-        await Message.addViewToMessages(mes.map(a => a._id), profile.id);
+        var mes = await Message.getMessages(from, 20);
         res.status(200).json(mes);
     } catch (error) {
         console.error(error);
@@ -190,7 +177,24 @@ app.put("/api/message/:id", async (req, res) => {
         var id = req.params.id;
         var content = req.body.content.trim();
         var message = await Message.editMessage(new ObjectId(id), content);
-        res.status(200).json({ ...Message.getMessageFields(message), edits: undefined });
+        res.status(200).json(Message.getMessageFields(message));
+    } catch (error) {
+        console.error(error);
+        res.status(400).send(error.message || "Erreur inattendue");
+    }
+});
+
+app.put("/api/messages/view", async (req, res) => {
+    try {
+        var profile = Profile.getProfile(req.cookies.token, req.fingerprint);
+        if (!profile) return res.sendStatus(401);
+
+        var ids = req.body.ids;
+        if (!ids || !Array.isArray(ids)) throw new Error("Requête invalide.");
+
+        var messages = await Message.addViewToMessages(ids.map(id => new ObjectId(id)), profile.id);
+
+        res.status(200).json(messages);
     } catch (error) {
         console.error(error);
         res.status(400).send(error.message || "Erreur inattendue");
