@@ -17,11 +17,14 @@
   },
   "homepage": "https://github.com/baramex/chatbox#readme",
   "dependencies": {
+    "bcrypt": "^5.0.1",
     "body-parser": "^1.20.0",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
+    "dotenv": "^16.0.1",
     "express-fingerprint": "^1.2.2",
     "express-rate-limit": "^6.4.0",
+    "mongoose": "^6.4.0",
     "random-web-token": "^1.6.0",
     "socket.io": "^4.5.1"
   }

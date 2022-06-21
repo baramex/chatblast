@@ -5,8 +5,11 @@ const USERNAMES_NOT_ALLOWED = ["system"];
 /* modules */
 const rateLimit = require("express-rate-limit");
 const path = require("path");
-const { Profile } = require("./profile");
+const { Profile } = require("./models/profile.model");
 const { app, io } = require("./server");
+require("dotenv").config();
+const mongoose = require("mongoose");
+mongoose.connect(process.env.DB, { dbName: process.env.DB_NAME }/*, () => console.log("Mongoose is ready !")*/);
 
 io.on("connection", (socket) => {
     var token = socket.handshake.headers.cookie?.split("; ")?.find(a => a.startsWith("token="))?.replace("token=", "");
@@ -37,12 +40,16 @@ app.get("/", (req, res) => {
 });
 
 app.get("/login", (req, res) => {
-    if (req.cookies?.token && Profile.getProfile(req.cookies?.token, req.fingerprint)) return res.redirect("/");
+    // if (req.cookies?.token && Profile.getProfile(req.cookies?.token, req.fingerprint)) return res.redirect("/");
     res.sendFile(path.join(__dirname, "pages", "login.html"));
 });
 
 app.get("/terms", (req, res) => {
     res.sendFile(path.join(__dirname, "pages", "terms.html"));
+});
+
+app.get("/register", (req, res) => {
+    res.sendFile(path.join(__dirname, "pages", "register.html"));
 });
 
 /* api */
@@ -90,17 +97,16 @@ app.post("/api/profile", rateLimit({
     max: 5,
     standardHeaders: true,
     legacyHeaders: false
-}), (req, res) => {
+}), async (req, res) => {
     try {
+        if (!req.body) throw new Error("Requête invalide.");
         var username = req.body.username?.toLowerCase()?.trim();
-        if (!username || !FIELD_REGEX.test(username)) throw new Error("Nom d'utilisateur invalide.");
-
+        var password = req.body.password?.trim();
         if (USERNAMES_NOT_ALLOWED.includes(username)) throw new Error("Nom d'utilisateur non autorisé.");
-
-        var ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-        var profile = new Profile(username, req.fingerprint, ip);
-
-        res.status(200).cookie("token", profile.token, { expires: new Date(profile.date.getTime() + 1000 * 60 * 60 * 24) }).send({ username, id } = profile);
+        await Profile.create(username, password);
+        res.sendStatus(201);
+        // session (ancien code Rolf):
+        // res.status(200).cookie("token", profile.token, { expires: new Date(profile.date.getTime() + 1000 * 60 * 60 * 24) }).send({ username, id } = profile);
     }
     catch (error) {
         console.error(error);
@@ -113,6 +119,7 @@ app.delete("/api/profile", (req, res) => {
     try {
         var profile = Profile.getProfile(req.cookies?.token, req.fingerprint);
         if (!profile) return res.sendStatus(401);
+        if(!/^(((?=.*[a-z])(?=.*[A-Z]))|((?=.*[a-z])(?=.*[0-9]))|((?=.*[A-Z])(?=.*[0-9])))(?=.{6,32}$)/.test(req.body.password)) throw new Error("Une erreur inexpliquée s'est produite.");
 
         Profile.delete(profile.id);
 

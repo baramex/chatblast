@@ -7,14 +7,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description"
         content="ChatBlast est une chatbox publique, anonyme et commune à tous les utilisateurs. Vous discutez avec tout le monde en même, cela peut être plutôt amusant !">
-    <meta name="theme-color" content="#44b996">
     <meta name="keywords"
         content="chatbox, public, worldwide, world, chat, online-chat, online, fun, talk, tell, chatblast">
     <link rel="stylesheet" href="/styles/main.css">
     <link rel="icon" href="/images/logo.png" type="image/x-icon">
+    <meta name="theme-color" content="#44b996">
     <meta http-equiv="Content-Security-Policy"
         content="default-src 'self'; connect-src 'self'; script-src 'self' 'unsafe-inline' cdnjs.cloudflare.com cdn.socket.io; style-src 'self' 'unsafe-inline' cdn.jsdelivr.net; img-src *">
-    <title>ChatBlast | connexion</title>
+    <title>ChatBlast | Inscription</title>
 </head>
 
 <body>
@@ -26,16 +26,24 @@
     <link rel="stylesheet" href="/styles/main.css">
     <script src="/scripts/util.js"></script>
 
-    <form id="login-form" class="position-absolute top-50 start-50 translate-middle container" style="width: 35%;">
+    <form id="register-form" class="position-absolute top-50 start-50 translate-middle container" style="width: 35%;">
         <div class="fs-1 text-center">
             <label class="mb-4" for="username" class="form-label">Bienvenue sur <strong>ChatBlast</strong></label>
             <input type="text" class="form-control fs-4" id="username" placeholder="Nom d'utilisateur" name="username"
                 autocomplete="off" maxlength="32" required>
-            <input type="text" class="form-control fs-4 mt-3" id="password" placeholder="Mot de passe" name="password"
+            <input type="password" class="form-control fs-4 mt-3" id="password" placeholder="Mot de passe" name="password"
                 autocomplete="off" maxlength="32" required>
+                <input type="password" class="form-control fs-4 mt-3" id="password_" placeholder="Confirmez votre mot de passe" name=""
+                autocomplete="off" maxlength="32" required>
+                <div class="username-circle d-flex align-items-center flex-column-reverse me-4">
+                    <strong>
+                        <p id="username" class="mb-0"></p>
+                    </strong>
+                    <div class="circle" id="pp-div"><!--<img src="/api/user/avatar" width="50%" id="user-pp">--></div>
+                </div>
         </div>
         <div class="text-center mt-4">
-            <input type="submit" class="btn btn-outline-dark btn-lg fs-5 px-5" value="Continuer">
+            <input type="submit" class="btn btn-outline-dark btn-lg fs-5 px-5" value="S'inscrire">
         </div>
     </form>
 
@@ -47,7 +55,7 @@
         <a href="/terms">Conditions d'utilisation</a>
     </footer>
 
-    <script src="/scripts/login.js"></script>
+    <script src="/scripts/register.js"></script>
 </body>
 
 </html>
