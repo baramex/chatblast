@@ -4,9 +4,14 @@ const USERNAMES_NOT_ALLOWED = ["system"];
 
 /* modules */
 const rateLimit = require("express-rate-limit");
+const mongoose = require("mongoose");
+const { ObjectId } = mongoose.Types;
 const path = require("path");
+const { Message } = require("./models/message.model");
 const { Profile } = require("./profile");
 const { app, io } = require("./server");
+require("dotenv").config();
+mongoose.connect(process.env.DB, { dbName: process.env.DB_NAME });
 
 io.on("connection", (socket) => {
     var token = socket.handshake.headers.cookie?.split("; ")?.find(a => a.startsWith("token="))?.replace("token=", "");
@@ -14,7 +19,7 @@ io.on("connection", (socket) => {
         var profile = Profile.getProfileByToken(token);
         if (profile) {
             socket.userID = profile.id;
-            socket.join(["authenticated", "userid:" + profile.id]);
+            socket.join(["authenticated", "userid:" + profile.id.toString()]);
         }
     }
 
@@ -139,8 +144,8 @@ app.put("/api/message", rateLimit({
         var profile = Profile.getProfile(req.cookies.token, req.fingerprint);
         if (!profile) return res.sendStatus(401);
 
-        var message = req.body.message?.trim();
-        if (!message || message.length < 1 || message.length > 256) throw new Error("Message invalide.");
+        var content = req.body.content.trim();
+        var message = await Message.create({ id, username } = profile, content);
 
         var sockets = await io.to("authenticated").fetchSockets();
         var users = [];
@@ -150,11 +155,56 @@ app.put("/api/message", rateLimit({
             users.push(id);
             return true;
         });
+        message = await Message.addViews(message.id, users);
 
-        io.to("authenticated").emit("message.send", { author: { id, username } = profile, message, count: sockets.length });
+        io.to("authenticated").emit("message.send", { ...Message.getMessageFields(message) });
         profile.isTyping = false;
 
         res.sendStatus(201);
+    } catch (error) {
+        console.error(error);
+        res.status(400).send(error.message || "Erreur inattendue");
+    }
+});
+
+app.get("/api/messages", async (req, res) => {
+    try {
+        var profile = Profile.getProfile(req.cookies.token, req.fingerprint);
+        if (!profile) return res.sendStatus(401);
+
+        var from = req.query.from;
+        var mes = await Message.getMessages(from, 50);
+        await Message.addViewToMessages(mes.map(a => a._id), profile.id);
+        res.status(200).json(mes);
+    } catch (error) {
+        console.error(error);
+        res.status(400).send(error.message || "Erreur inattendue");
+    }
+});
+
+app.put("/api/message/:id", async (req, res) => {
+    try {
+        var profile = Profile.getProfile(req.cookies.token, req.fingerprint);
+        if (!profile) return res.sendStatus(401);
+
+        var id = req.params.id;
+        var content = req.body.content.trim();
+        var message = await Message.editMessage(new ObjectId(id), content);
+        res.status(200).json({ ...Message.getMessageFields(message), edits: undefined });
+    } catch (error) {
+        console.error(error);
+        res.status(400).send(error.message || "Erreur inattendue");
+    }
+});
+
+app.delete("/api/message/:id", async (req, res) => {
+    try {
+        var profile = Profile.getProfile(req.cookies.token, req.fingerprint);
+        if (!profile) return res.sendStatus(401);
+
+        var id = req.params.id;
+        var message = await Message.deleteMessage(new ObjectId(id));
+        res.status(200).json({ ...Message.getMessageFields(message), edits: undefined });
     } catch (error) {
         console.error(error);
         res.status(400).send(error.message || "Erreur inattendue");

@@ -1,6 +1,7 @@
 // main script
 const socket = io();
 var inPage = true;
+var documentLoaded = false;
 
 if ((!localStorage.getItem("username") || !localStorage.getItem("id")) && getCookie("token")) {
     api("/profile/@me", "get", undefined, true).then(res => {
@@ -9,12 +10,22 @@ if ((!localStorage.getItem("username") || !localStorage.getItem("id")) && getCoo
     });
 }
 update();
+api("/messages?from=0", "get", undefined, true).then(res => {
+    fetched(res);
+});
+
+function fetched(messages) {
+    if (!documentLoaded) return setTimeout(() => fetched(messages), 10);
+    messages.forEach(message => {
+        pushMessage(message.author.id, message.author.username, message.content, message.views, new Date(message.date));
+    });
+}
 
 // socket handling
 socket.on("message.send", data => {
     var id = data.author.id;
     var username = data.author.username;
-    var message = data.message;
+    var message = data.content;
 
     var typing = JSON.parse(sessionStorage.getItem("typing") || "[]");
     var profile = typing.indexOf(username);
@@ -24,7 +35,7 @@ socket.on("message.send", data => {
         updateTyping();
     }
 
-    pushMessage(id, username, message, data.count);
+    pushMessage(id, username, message, data.views, new Date(data.date));
 });
 
 socket.on("message.typing", (res) => {
@@ -83,6 +94,10 @@ socket.on("profile.leave", data => {
 });
 
 // events
+window.addEventListener("load", ev => {
+    documentLoaded = true;
+});
+
 document.getElementById("show-online").addEventListener("click", ev => {
     document.getElementById("show-online").parentElement.classList.toggle("active");
 });
@@ -96,7 +111,7 @@ document.getElementById("send-message").addEventListener("submit", ev => {
     var btn = document.getElementById("send-message").querySelector("input[type=submit]");
     btn.disabled = true;
 
-    api("/message", "put", { message: msg }, true).then(res => {
+    api("/message", "put", { content: msg }, true).then(res => {
         document.getElementById("message").value = "";
     }).finally(() => {
         btn.disabled = false;
@@ -169,7 +184,7 @@ function updateTyping() {
     document.getElementById("typing").innerHTML = `${typing.join(", ")} ${typing.length > 1 ? "sont" : "est"} en train d'écrire...`;
 }
 
-function pushMessage(id, username, message, transfered = null) {
+function pushMessage(id, username, message, views = null, date = new Date()) {
     if (document.getElementById("nomes")) document.getElementById("nomes").remove();
 
     let isSystem = username == "SYSTEM";
@@ -198,17 +213,17 @@ function pushMessage(id, username, message, transfered = null) {
     let p1 = document.createElement("p");
     p1.style.float = "right";
     p1.classList.add("mt-2", "mx-2", "date");
-    p1.innerText = new Date().toLocaleTimeString("fr");
+    p1.innerText = date.toLocaleTimeString("fr");
 
     let p2 = document.createElement("p");
     p2.classList.add("my-4", "mx-4", "fs-5", "text-break", "text");
     if (isSystem) p2.innerHTML = message;
     else p2.innerText = message;
 
-    if (transfered) {
+    if (views) {
         var p3 = document.createElement("p");
         p3.classList.add("text-end", "mb-2", "me-3");
-        p3.innerText = "Transféré à " + transfered + " utilisateurs";
+        p3.innerText = "Vu par " + views + " utilisateurs";
     }
 
     div.appendChild(div1);

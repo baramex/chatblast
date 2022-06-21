@@ -1,5 +1,7 @@
 const randomWebToken = require("random-web-token");
 const { io } = require("./server");
+const mongoose = require("mongoose");
+const { ObjectId } = mongoose.Types;
 
 class Profile {
     /**
@@ -19,7 +21,7 @@ class Profile {
         if (Profile.isUsernameExist(username)) throw new Error("Le nom d'utilisateur existe déjà.");
 
         this.ip = ip;
-        if (!id) this.id = randomWebToken.generate("onlyNumbers", 10);
+        if (!id) this.id = /*randomWebToken.generate("onlyNumbers", 10)*/ new ObjectId();
         else this.id = id;
         this.hash = fingerprint.hash;
         this.token = randomWebToken.generate("extra", 30);
