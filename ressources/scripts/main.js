@@ -84,6 +84,20 @@ function fetched(messages, loaded = false, reverse = false) {
 }
 
 // socket handling
+socket.on("message.delete", id => {
+    var mes = document.getElementById("m-" + id);
+    if (mes) {
+        if (mes.classList.contains("unread")) {
+            if (viewMessagesToSend.findIndex(a => a.id == id)) viewMessagesToSend.splice(viewMessagesToSend.findIndex(a => a.id == id), 1);
+            if (messageToView.includes(id)) messageToView.splice(messageToView.indexOf(id), 1);
+
+            sessionStorage.setItem("unread", sessionStorage.getItem("unread") - 1);
+            updateUnread();
+        }
+        mes.remove();
+    }
+});
+
 socket.on("message.send", data => {
     var message = data.content;
 
@@ -114,15 +128,13 @@ socket.on("message.typing", (res) => {
 
 socket.on("messages.view", data => {
     data.forEach(({ _id, views }) => {
-        var el = document.body.querySelector(`div#m-${_id} p.views`);
-        if (el) el.innerText = "Vu par " + views + " utilisateurs";
+        var el = document.body.querySelector(`div#m-${_id} span.views`);
+        if (el) el.innerText = views;
     });
 });
 
 socket.on("profile.join", data => {
     var username = data.username;
-
-    pushMessage(0, { id: null, username: "SYSTEM" }, `<b>${username}</b> a rejoint la session.`, -1, true, new Date(), true);
 
     var online = JSON.parse(sessionStorage.getItem("online") || "[]");
     online.push(username);
@@ -132,8 +144,6 @@ socket.on("profile.join", data => {
 
 socket.on("profile.leave", data => {
     var username = data.username;
-
-    pushMessage(0, { id: null, username: "SYSTEM" }, `<b>${username}</b> a quitté la session.`, -1, true, new Date(), true);
 
     var online = JSON.parse(sessionStorage.getItem("online") || "[]");
     var profile = online.indexOf(username);
@@ -173,7 +183,7 @@ document.body.addEventListener("mouseenter", () => {
         api("/messages/view", "put", { ids: messageToView });
         messageToView.forEach(id => {
             var doc = document.getElementById("m-" + id);
-            if (doc.classList.contains("unread")) {
+            if (doc && doc.classList.contains("unread")) {
                 sessionStorage.setItem("unread", sessionStorage.getItem("unread") - 1);
                 doc.classList.remove("unread");
                 updateUnread();
@@ -311,11 +321,12 @@ function pushMessage(id, author, message, views = -1, isViewed, date = new Date(
     }
 
     let isSystem = author.username == "SYSTEM";
+    var isMy = author.id == localStorage.getItem("id");
 
     let div = document.createElement("div");
     div.id = "m-" + id;
     div.classList.add("pb-2", "my-4", "rounded-3", "border", "border-secondary", "message");
-    if (!isSystem && id == localStorage.getItem("id")) div.classList.add("bg-light");
+    if (isMy) div.classList.add("bg-light");
     if (!isViewed) div.classList.add("unread");
 
     let div1 = document.createElement("div");
@@ -331,32 +342,54 @@ function pushMessage(id, author, message, views = -1, isViewed, date = new Date(
     img.src = isSystem ? "/images/system.png" : "/images/user.png";
     img.alt = "avatar";
 
+    // author
     let p = document.createElement("p");
     p.classList.add("pe-3", "ps-1", "py-1", "fs-5", "m-auto");
     p.innerText = author.username;
 
-    let p1 = document.createElement("p");
-    p1.style.float = "right";
-    p1.classList.add("mt-2", "mx-2", "date");
-    p1.innerText = date.toLocaleTimeString("fr");
+    // icons & date
+    var divIcons = document.createElement("div");
+    divIcons.classList.add("d-flex", "align-items-center", "me-2", "icons");
+    divIcons.style.gap = "10px";
+
+    let spanDate = document.createElement("span");
+    spanDate.classList.add("date");
+    spanDate.innerText = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")} ${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}`;
+
+    var viewsDiv = document.createElement("div");
+    viewsDiv.innerHTML = `<span class="views">${views}</span><img class="ms-1" style="vertical-align: sub;" width=20 src="/images/eye.png">`;
+    divIcons.append(viewsDiv, spanDate);
+
+    // message
+    let divMessage = document.createElement("div");
+    divMessage.classList.add("d-flex");
 
     let p2 = document.createElement("p");
     p2.classList.add("my-4", "mx-4", "fs-5", "text-break", "text");
+    p2.style.flexGrow = 1;
     if (isSystem) p2.innerHTML = message;
     else p2.innerText = message;
+    divMessage.append(p2);
 
-    if (views != -1) {
-        var p3 = document.createElement("p");
-        p3.classList.add("text-end", "mb-2", "me-3", "views");
-        p3.innerText = "Vu par " + views + " utilisateurs";
+    if (isMy) {
+        // options
+        let divOptions = document.createElement("div");
+        divOptions.classList.add("d-flex", "flex-column");
+        divOptions.style.gap = "5px";
+
+        let buttonDel = document.createElement("button");
+        buttonDel.classList.add("border-0", "bg-transparent");
+        buttonDel.innerHTML = `<img width=20 src="/images/bin.png">`;
+        buttonDel.onclick = () => deleteMessage(id);
+        divOptions.append(buttonDel);
+        divMessage.append(divOptions);
     }
 
     div.appendChild(div1);
     div1.appendChild(div2);
     div2.append(img, p);
-    div1.appendChild(p1);
-    div.appendChild(p2);
-    if (p3) div.appendChild(p3);
+    div1.append(divIcons);
+    div.appendChild(divMessage);
 
     var scroll = messageContainer.parentElement.scrollTop;
     var height = messageContainer.parentElement.scrollHeight;
@@ -384,4 +417,10 @@ function pushMessage(id, author, message, views = -1, isViewed, date = new Date(
 
         messageObserver.observe(div);
     }
+}
+
+function deleteMessage(id) {
+    showConfirm("Êtes-vous sûr de vouloir supprimer le message ?", () => {
+        api("/message/" + id, "delete", undefined, true, undefined, "Message supprimé !");
+    });
 }

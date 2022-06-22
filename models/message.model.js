@@ -18,13 +18,15 @@ messageSchema.post("updateMany", async function (doc, next) {
     }
     next();
 });
+messageSchema.pre("save", function (next) {
+    if (!this.isNew && this.isModified("deleted") && this.deleted == true) {
+        io.to("authenticated").emit("message.delete", this._id);
+    }
+    next();
+});
 messageSchema.post("validate", (doc, next) => {
     if (doc.isNew) {
-        io.to("authenticated").fetchSockets().then(sockets => {
-            sockets.forEach(socket => {
-                socket.emit("message.send", Message.getMessageFields(socket.profileId, doc));
-            });
-        });
+        io.to("authenticated").emit("message.send", { _id: doc._id, author: doc.author, content: doc.content, date: doc.date, views: 0, isViewed: false });
     }
     next();
 });
@@ -89,19 +91,22 @@ class Message {
     }
 
     static getMessageFields(profile, doc) {
-        return { _id: doc._id, author: doc.author, content: doc.content, deleted: doc.deleted, date: doc.date, views: doc.views.length, isViewed: doc.views.includes(profile) };
+        return { _id: doc._id, author: doc.author, content: doc.content, date: doc.date, views: doc.views.length, isViewed: (doc.views.includes(profile.id) || doc.date.getTime() < profile.date.getTime()) };
     }
 
     static getUnreadCount(profile) {
-        return messageModel.find({ views: { $not: { $all: [profile] } }, deleted: false }).count();
+        return messageModel.find({ views: { $not: { $all: [profile.id] } }, date: { $gt: profile.date }, deleted: false }).count();
     }
 
     /**
      * 
+     * @param {ObjectId} author 
      * @param {ObjectId} id 
      */
-    static async deleteMessage(id) {
+    static async deleteMessage(author, id) {
         var doc = await Message.getById(id);
+        if (!doc) throw new Error("Message invalide.");
+        if (doc.author.id.toString() != author.toString()) throw new Error("Vous ne pouvez pas supprimer un message ne vous appartenant pas.");
         doc.deleted = true;
         return doc.save();
     }

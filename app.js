@@ -64,7 +64,7 @@ app.get("/api/profile/@me", async (req, res) => {
     var profile = Profile.getProfile(req.cookies?.token, req.fingerprint);
     if (!profile) return res.sendStatus(401);
 
-    res.status(200).send({ username: profile.username, id: profile.id, unread: await Message.getUnreadCount(profile.id) });
+    res.status(200).send({ username: profile.username, id: profile.id, unread: await Message.getUnreadCount(profile) });
 });
 
 // actualiser profil
@@ -78,11 +78,11 @@ app.post("/api/profile/refresh", async (req, res) => {
         if (!socket) type = "new";
 
         var ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-        var profile = new Profile(username, req.fingerprint, ip, type == "refresh" ? id : undefined);
+        var profile = await Profile.create(username, req.fingerprint, ip, type == "refresh" ? id : undefined);
 
         if (socket) socket.join("authenticated");
 
-        res.status(200).cookie("token", profile.token, { expires: new Date(profile.date.getTime() + 1000 * 60 * 60 * 24) }).send({ username: profile.username, id: profile.id, unread: await Message.getUnreadCount(profile.id), type });
+        res.status(200).cookie("token", profile.token, { expires: new Date(profile.date.getTime() + 1000 * 60 * 60 * 24) }).send({ username: profile.username, id: profile.id, unread: await Message.getUnreadCount(profile), type });
     } catch (error) {
         console.error(error);
         res.status(400).send(error.message || "Erreur inattendue");
@@ -103,9 +103,9 @@ app.post("/api/profile", rateLimit({
         if (USERNAMES_NOT_ALLOWED.includes(username)) throw new Error("Nom d'utilisateur non autorisé.");
 
         var ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-        var profile = new Profile(username, req.fingerprint, ip);
+        var profile = await Profile.create(username, req.fingerprint, ip);
 
-        res.status(200).cookie("token", profile.token, { expires: new Date(profile.date.getTime() + 1000 * 60 * 60 * 24) }).send({ username: profile.username, id: profile.id, unread: await Message.getUnreadCount(profile.id) });
+        res.status(200).cookie("token", profile.token, { expires: new Date(profile.date.getTime() + 1000 * 60 * 60 * 24) }).send({ username: profile.username, id: profile.id, unread: await Message.getUnreadCount(profile) });
     }
     catch (error) {
         console.error(error);
@@ -162,7 +162,7 @@ app.get("/api/messages", async (req, res) => {
         if (!profile) return res.sendStatus(401);
 
         var from = req.query.from;
-        var mes = await Message.getMessages(profile.id, from, 20);
+        var mes = await Message.getMessages(profile, from, 20);
         res.status(200).json(mes);
     } catch (error) {
         console.error(error);
@@ -173,13 +173,15 @@ app.get("/api/messages", async (req, res) => {
 // mettre à jour un message
 app.put("/api/message/:id", async (req, res) => {
     try {
+        return res.status(400).send("Cette méthode n'est pas encore implémentée.");
+
         var profile = Profile.getProfile(req.cookies.token, req.fingerprint);
         if (!profile) return res.sendStatus(401);
 
         var id = req.params.id;
         var content = req.body.content.trim();
         var message = await Message.editMessage(profile.id, new ObjectId(id), content);
-        res.status(200).json(Message.getMessageFields(profile.id, message));
+        res.status(200).json(Message.getMessageFields(profile, message));
     } catch (error) {
         console.error(error);
         res.status(400).send(error.message || "Erreur inattendue");
@@ -213,8 +215,8 @@ app.delete("/api/message/:id", async (req, res) => {
         if (!profile) return res.sendStatus(401);
 
         var id = req.params.id;
-        var message = await Message.deleteMessage(new ObjectId(id));
-        res.status(200).json(Message.getMessageFields(profile.id, message));
+        var message = await Message.deleteMessage(profile.id, new ObjectId(id));
+        res.status(200).json(Message.getMessageFields(profile, message));
     } catch (error) {
         console.error(error);
         res.status(400).send(error.message || "Erreur inattendue");
