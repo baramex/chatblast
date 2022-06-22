@@ -58,6 +58,15 @@ body {
     border-bottom-right-radius: var(--bs-border-radius-lg);
 }
 
+#avatar-container {
+    background-color: #1d765d;
+    border: 2px dashed #114738;
+}
+
+#avatar-container #avatar-input {
+    display: none;
+}
+
 .pointer {
     cursor: pointer;
 }

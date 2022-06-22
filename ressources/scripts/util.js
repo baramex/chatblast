@@ -181,21 +181,3 @@ function api(endpoint, method, data = undefined, isShowError = false, errorActio
         });
     });
 }
-
-function attemptToRefreshProfile() {
-    return new Promise((res, rej) => {
-        var username = localStorage.getItem("username");
-        var id = localStorage.getItem("id");
-        if (!username || !id) return rej("Nom d'utilisateur ou identifiant non existant");
-        api("/profile/refresh", "post", { username, id }).then(res_ => {
-            localStorage.setItem("username", res_.username);
-            localStorage.setItem("id", res_.id);
-            sessionStorage.setItem("unread", res_.unread);
-            if (res_.type == "new") document.location.reload();
-            res(res_);
-        }).catch(err => {
-            resetProfile();
-            rej(err);
-        });
-    });
-}
