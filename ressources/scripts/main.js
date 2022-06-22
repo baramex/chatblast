@@ -1,19 +1,18 @@
 // main script
 const socket = io();
+const unread = document.getElementById("unread");
 var inPage = true;
 var documentLoaded = false;
 var allMessageFetched = false;
 
 var messageToView = [];
+var viewMessagesToSend = [];
 const messageObserver = new IntersectionObserver((entries) => {
-    var ids = [];
-    var elements = [];
     entries.forEach(entry => {
         if (entry.isIntersecting == true) {
             var id = entry.target.id.replace("m-", "");
             if (inPage) {
-                ids.push(id);
-                elements.push(entry.target);
+                viewMessagesToSend.push({ id, element: entry.target });
             }
             else {
                 messageToView.push(id);
@@ -21,19 +20,41 @@ const messageObserver = new IntersectionObserver((entries) => {
             }
         }
     });
-    // TODO: push to array: reqt: 1 second
-    if (ids.length > 0) api("/messages/view", "put", { ids }).then(() => {
-        elements.forEach(a => messageObserver.unobserve(a));
-    });
+    updateViewMessages();
 }, { threshold: [0] });
 
-if ((!localStorage.getItem("username") || !localStorage.getItem("id")) && getCookie("token")) {
+var lastUpdateViewMessage = 0;
+function updateViewMessages() {
+    if (new Date().getTime() - lastUpdateViewMessage < 1000) return setTimeout(updateViewMessages, new Date().getTime() - lastUpdateViewMessage);
+
+    var curr = [...viewMessagesToSend];
+    if (!curr || curr.length == 0) return;
+    api("/messages/view", "put", { ids: curr.map(a => a.id) });
+
+    curr.forEach(a => {
+        messageObserver.unobserve(a.element);
+
+        if (a.element.classList.contains("unread")) {
+            sessionStorage.setItem("unread", Number(sessionStorage.getItem("unread")) - 1);
+            a.element.classList.remove("unread");
+            updateUnread();
+        }
+    });
+    viewMessagesToSend = viewMessagesToSend.filter(a => !curr.find(b => b.id != a.id));
+
+    lastUpdateViewMessage = new Date().getTime();
+}
+
+if ((!localStorage.getItem("username") || !localStorage.getItem("id") || !sessionStorage.getItem("unread")) && getCookie("token")) {
     api("/profile/@me", "get", undefined, true).then(res => {
         localStorage.setItem("username", res.username);
         localStorage.setItem("id", res.id);
+        sessionStorage.setItem("unread", res.unread);
+        updateUnread();
     });
 }
 update();
+updateUnread();
 api("/messages?from=0", "get", undefined, true).then(res => {
     fetched(res, true);
 });
@@ -47,9 +68,11 @@ function fetched(messages, loaded = false, reverse = false) {
 
     if (messages.length == 0) allMessageFetched = true;
     if (reverse) messages = messages.reverse();
+    var s = messageContainer.scrollHeight;
     messages.forEach(message => {
-        pushMessage(message._id, message.author, message.content, message.views, new Date(message.date), false, true);
+        pushMessage(message._id, message.author, message.content, message.views, message.isViewed, new Date(message.date), false, true);
     });
+    var news = messageContainer.scrollHeight;
 
     messageContainer.childNodes.forEach(a => {
         if (messages.find(b => "m-" + b._id == a.id)) {
@@ -57,7 +80,7 @@ function fetched(messages, loaded = false, reverse = false) {
         }
     });
 
-    if (loaded) messageContainer.parentElement.scrollTo({ top: messageContainer.scrollHeight });
+    messageContainer.parentElement.scrollTo({ top: news - s });
 }
 
 // socket handling
@@ -72,7 +95,7 @@ socket.on("message.send", data => {
         updateTyping();
     }
 
-    pushMessage(data._id, data.author, message, data.views, new Date(data.date), true);
+    pushMessage(data._id, data.author, message, data.views, false, new Date(data.date), true);
 });
 
 socket.on("message.typing", (res) => {
@@ -99,7 +122,7 @@ socket.on("messages.view", data => {
 socket.on("profile.join", data => {
     var username = data.username;
 
-    pushMessage(0, { id: null, username: "SYSTEM" }, `<b>${username}</b> a rejoint la session.`, -1, new Date(), true);
+    pushMessage(0, { id: null, username: "SYSTEM" }, `<b>${username}</b> a rejoint la session.`, -1, true, new Date(), true);
 
     var online = JSON.parse(sessionStorage.getItem("online") || "[]");
     online.push(username);
@@ -110,7 +133,7 @@ socket.on("profile.join", data => {
 socket.on("profile.leave", data => {
     var username = data.username;
 
-    pushMessage(0, { id: null, username: "SYSTEM" }, `<b>${username}</b> a quitté la session.`, -1, new Date(), true);
+    pushMessage(0, { id: null, username: "SYSTEM" }, `<b>${username}</b> a quitté la session.`, -1, true, new Date(), true);
 
     var online = JSON.parse(sessionStorage.getItem("online") || "[]");
     var profile = online.indexOf(username);
@@ -129,18 +152,35 @@ socket.on("profile.leave", data => {
 
 // events
 const messageContainer = document.getElementById("message-container");
-const nomoremes = document.getElementById("nomoremes");
 messageContainer.parentElement.addEventListener("scroll", ev => {
     if (ev.target.scrollTop < 50 && !pending_request && !allMessageFetched) {
         api("/messages?from=" + messageContainer.childElementCount, "get", undefined, true).then(res => {
+            if (res.length == 0 && !document.getElementById("nomoremes")) {
+                var p = document.createElement("p");
+                p.classList.add("text-center", "fs-6", "text-secondary");
+                p.id = "nomoremes";
+                p.innerText = "Il n'y a pas d'autres messages";
+                messageContainer.prepend(p);
+            }
+
             fetched(res, false, true);
         });
     }
 });
 
 document.body.addEventListener("mouseenter", () => {
-    api("/messages/view", "put", { ids: messageToView });
-    messageToView = [];
+    if (messageToView.length > 0) {
+        api("/messages/view", "put", { ids: messageToView });
+        messageToView.forEach(id => {
+            var doc = document.getElementById("m-" + id);
+            if (doc.classList.contains("unread")) {
+                sessionStorage.setItem("unread", sessionStorage.getItem("unread") - 1);
+                doc.classList.remove("unread");
+                updateUnread();
+            }
+        });
+        messageToView = [];
+    }
 
     inPage = true;
 });
@@ -149,7 +189,7 @@ document.body.addEventListener("mouseleave", () => {
     inPage = false;
 });
 
-window.addEventListener("load", ev => {
+window.addEventListener("load", () => {
     documentLoaded = true;
 });
 
@@ -167,12 +207,13 @@ messageForm.addEventListener("submit", ev => {
     var msg = messageField.value.trim();
     if (msg.length == 0) return;
 
-    submitButton.disabled = true;
+    messageForm.querySelectorAll("input").forEach(a => a.disabled = true);
 
     api("/message", "put", { content: msg }, true).then(res => {
         messageField.value = "";
     }).finally(() => {
-        submitButton.disabled = false;
+        messageForm.querySelectorAll("input").forEach(a => a.disabled = false);
+        messageField.focus();
     });
 });
 
@@ -246,9 +287,24 @@ function updateTyping() {
     typingText.innerHTML = `${typing.join(", ")} ${typing.length > 1 ? "sont" : "est"} en train d'écrire...`;
 }
 
+function updateUnread() {
+    var n = sessionStorage.getItem("unread") || 0;
+    unread.innerText = n;
+    if (n > 0) {
+        unread.classList.add("warning");
+        unread.classList.remove("bg-primary");
+        unread.classList.add("bg-danger");
+    }
+    else {
+        unread.classList.remove("warning");
+        unread.classList.add("bg-primary");
+        unread.classList.remove("bg-danger");
+    }
+}
+
 var nomes = document.getElementById("nomes");
 const sound = new Audio("/sounds/notification.wav");
-function pushMessage(id, author, message, views = -1, date = new Date(), isNew = false, reverse = false) {
+function pushMessage(id, author, message, views = -1, isViewed, date = new Date(), isNew = false, reverse = false) {
     if (nomes) {
         nomes.remove();
         nomes = undefined;
@@ -260,6 +316,7 @@ function pushMessage(id, author, message, views = -1, date = new Date(), isNew =
     div.id = "m-" + id;
     div.classList.add("pb-2", "my-4", "rounded-3", "border", "border-secondary", "message");
     if (!isSystem && id == localStorage.getItem("id")) div.classList.add("bg-light");
+    if (!isViewed) div.classList.add("unread");
 
     let div1 = document.createElement("div");
     div1.classList.add("d-flex", "justify-content-between", "username-container");
@@ -301,19 +358,29 @@ function pushMessage(id, author, message, views = -1, date = new Date(), isNew =
     div.appendChild(p2);
     if (p3) div.appendChild(p3);
 
-    if (reverse) nomoremes.after(div);
+    var scroll = messageContainer.parentElement.scrollTop;
+    var height = messageContainer.parentElement.scrollHeight;
+    if (reverse) messageContainer.prepend(div);
     else messageContainer.append(div);
 
     if (isNew) {
         if (inPage) {
             api("/messages/view", "put", { ids: [id] });
+            div.classList.remove("unread");
+        }
+        else {
+            sessionStorage.setItem("unread", Number(sessionStorage.getItem("unread")) + 1);
+            updateUnread();
         }
 
         if (!inPage || isSystem) {
             sound.play();
         }
 
-        div.scrollIntoView({ behavior: "smooth" });
+        // 666: height - scroll = 666...
+        if (scroll > height - 666 - 50) {
+            messageContainer.parentElement.scrollTo({ top: height, behavior: "smooth" });
+        }
 
         messageObserver.observe(div);
     }

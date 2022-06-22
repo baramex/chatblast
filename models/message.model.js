@@ -20,7 +20,11 @@ messageSchema.post("updateMany", async function (doc, next) {
 });
 messageSchema.post("validate", (doc, next) => {
     if (doc.isNew) {
-        io.to("authenticated").emit("message.send", Message.getMessageFields(doc));
+        io.to("authenticated").fetchSockets().then(sockets => {
+            sockets.forEach(socket => {
+                socket.emit("message.send", Message.getMessageFields(socket.profileId, doc));
+            });
+        });
     }
     next();
 });
@@ -47,12 +51,14 @@ class Message {
 
     /**
      * 
+     * @param {ObjectId} author 
      * @param {ObjectId} id 
      * @param {String} content 
      * @returns 
      */
-    static async editMessage(id, content) {
+    static async editMessage(author, id, content) {
         var doc = await Message.getById(id);
+        if (doc.author.id != author) throw new Error("Vous ne pouvez pas modifier un message ne vous appartenant pas.");
         doc.edits.push({ content: doc.message });
         doc.message = content;
         return doc.save({ validateBeforeSave: true });
@@ -60,13 +66,14 @@ class Message {
 
     /**
      * 
+     * @param {ObjectId} profile 
      * @param {Number} from 
      * @param {Number} number 
      */
-    static async getMessages(from, number) {
+    static async getMessages(profile, from, number) {
         if (!from || isNaN(from) || from < 0) throw new Error("La valeur de départ doit être supérieure à 0.");
         if (number > 50) throw new Error("Le nombre de message ne peut pas excéder 50.");
-        return Message.getMessagesFields(await messageModel.find({}).where("deleted", false).skip(from).limit(number));
+        return Message.getMessagesFields(profile, await messageModel.find({}).sort({ date: -1 }).where("deleted", false).skip(from).limit(number));
     }
 
     /**
@@ -77,12 +84,16 @@ class Message {
         return messageModel.find({ _id: { $in: ids } });
     }
 
-    static getMessagesFields(docs) {
-        return docs.map(a => Message.getMessageFields(a));
+    static getMessagesFields(profile, docs) {
+        return docs.map(a => Message.getMessageFields(profile, a));
     }
 
-    static getMessageFields(doc) {
-        return { _id: doc._id, author: doc.author, content: doc.content, deleted: doc.deleted, date: doc.date, views: doc.views.length };
+    static getMessageFields(profile, doc) {
+        return { _id: doc._id, author: doc.author, content: doc.content, deleted: doc.deleted, date: doc.date, views: doc.views.length, isViewed: doc.views.includes(profile) };
+    }
+
+    static getUnreadCount(profile) {
+        return messageModel.find({ views: { $not: { $all: [profile] } }, deleted: false }).count();
     }
 
     /**

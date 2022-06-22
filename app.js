@@ -18,15 +18,15 @@ io.on("connection", (socket) => {
     if (token) {
         var profile = Profile.getProfileByToken(token);
         if (profile) {
-            socket.userID = profile.id;
-            socket.join(["authenticated", "userid:" + profile.id.toString()]);
+            socket.profileId = profile.id;
+            socket.join(["authenticated", "profileid:" + profile.id.toString()]);
         }
     }
 
     socket.on("disconnect", () => {
-        var userID = socket.userID;
-        if (!userID) return;
-        var profile = Profile.getProfileByID(userID);
+        var profileId = socket.profileId;
+        if (!profileId) return;
+        var profile = Profile.getProfileByID(profileId);
         if (!profile) return;
         if (profile.isTyping) {
             profile.isTyping = false;
@@ -60,20 +60,20 @@ app.get("/api/profiles/online", (req, res) => {
 });
 
 // récupérer profil
-app.get("/api/profile/@me", (req, res) => {
+app.get("/api/profile/@me", async (req, res) => {
     var profile = Profile.getProfile(req.cookies?.token, req.fingerprint);
     if (!profile) return res.sendStatus(401);
 
-    res.status(200).send({ username, id } = profile);
+    res.status(200).send({ username: profile.username, id: profile.id, unread: await Message.getUnreadCount(profile.id) });
 });
 
 // actualiser profil
-app.post("/api/profile/refresh", (req, res) => {
+app.post("/api/profile/refresh", async (req, res) => {
     try {
         var username = req.body.username;
         var id = req.body.id;
         if (!username || !FIELD_REGEX.test(username) || !id) throw new Error("Requête invalide.");
-        var socket = Array.from(io.sockets.sockets.values()).find(a => a.userID == id && !a.rooms.has("authenticated"));
+        var socket = Array.from(io.sockets.sockets.values()).find(a => a.profileId == id && !a.rooms.has("authenticated"));
         var type = "refresh";
         if (!socket) type = "new";
 
@@ -82,7 +82,7 @@ app.post("/api/profile/refresh", (req, res) => {
 
         if (socket) socket.join("authenticated");
 
-        res.status(200).cookie("token", profile.token, { expires: new Date(profile.date.getTime() + 1000 * 60 * 60 * 24) }).send({ username: profile.username, id: profile.id, type });
+        res.status(200).cookie("token", profile.token, { expires: new Date(profile.date.getTime() + 1000 * 60 * 60 * 24) }).send({ username: profile.username, id: profile.id, unread: await Message.getUnreadCount(profile.id), type });
     } catch (error) {
         console.error(error);
         res.status(400).send(error.message || "Erreur inattendue");
@@ -95,7 +95,7 @@ app.post("/api/profile", rateLimit({
     max: 5,
     standardHeaders: true,
     legacyHeaders: false
-}), (req, res) => {
+}), async (req, res) => {
     try {
         var username = req.body.username?.toLowerCase()?.trim();
         if (!username || !FIELD_REGEX.test(username)) throw new Error("Nom d'utilisateur invalide.");
@@ -105,7 +105,7 @@ app.post("/api/profile", rateLimit({
         var ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
         var profile = new Profile(username, req.fingerprint, ip);
 
-        res.status(200).cookie("token", profile.token, { expires: new Date(profile.date.getTime() + 1000 * 60 * 60 * 24) }).send({ username, id } = profile);
+        res.status(200).cookie("token", profile.token, { expires: new Date(profile.date.getTime() + 1000 * 60 * 60 * 24) }).send({ username: profile.username, id: profile.id, unread: await Message.getUnreadCount(profile.id) });
     }
     catch (error) {
         console.error(error);
@@ -155,13 +155,14 @@ app.put("/api/message", rateLimit({
     }
 });
 
+// récupérer des messages
 app.get("/api/messages", async (req, res) => {
     try {
         var profile = Profile.getProfile(req.cookies.token, req.fingerprint);
         if (!profile) return res.sendStatus(401);
 
         var from = req.query.from;
-        var mes = await Message.getMessages(from, 20);
+        var mes = await Message.getMessages(profile.id, from, 20);
         res.status(200).json(mes);
     } catch (error) {
         console.error(error);
@@ -169,6 +170,7 @@ app.get("/api/messages", async (req, res) => {
     }
 });
 
+// mettre à jour un message
 app.put("/api/message/:id", async (req, res) => {
     try {
         var profile = Profile.getProfile(req.cookies.token, req.fingerprint);
@@ -176,8 +178,8 @@ app.put("/api/message/:id", async (req, res) => {
 
         var id = req.params.id;
         var content = req.body.content.trim();
-        var message = await Message.editMessage(new ObjectId(id), content);
-        res.status(200).json(Message.getMessageFields(message));
+        var message = await Message.editMessage(profile.id, new ObjectId(id), content);
+        res.status(200).json(Message.getMessageFields(profile.id, message));
     } catch (error) {
         console.error(error);
         res.status(400).send(error.message || "Erreur inattendue");
@@ -191,8 +193,11 @@ app.put("/api/messages/view", async (req, res) => {
 
         var ids = req.body.ids;
         if (!ids || !Array.isArray(ids)) throw new Error("Requête invalide.");
+        ids = ids.map(a => ObjectId.isValid(a) ? new ObjectId(a) : null);
+        ids = ids.filter(a => a != null);
+        if (ids.length == 0) throw new Error("Requête invalide.");
 
-        var messages = await Message.addViewToMessages(ids.map(id => new ObjectId(id)), profile.id);
+        var messages = await Message.addViewToMessages(ids, profile.id);
 
         res.status(200).json(messages);
     } catch (error) {
@@ -201,6 +206,7 @@ app.put("/api/messages/view", async (req, res) => {
     }
 });
 
+// supprimer un message
 app.delete("/api/message/:id", async (req, res) => {
     try {
         var profile = Profile.getProfile(req.cookies.token, req.fingerprint);
@@ -208,7 +214,7 @@ app.delete("/api/message/:id", async (req, res) => {
 
         var id = req.params.id;
         var message = await Message.deleteMessage(new ObjectId(id));
-        res.status(200).json({ ...Message.getMessageFields(message), edits: undefined });
+        res.status(200).json(Message.getMessageFields(profile.id, message));
     } catch (error) {
         console.error(error);
         res.status(400).send(error.message || "Erreur inattendue");

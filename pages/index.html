@@ -53,6 +53,12 @@
     </div>
 
     <div id="chat" class="mx-5 mt-3 mb-4 h-100 d-flex flex-column rounded-3 position-relative">
+        <span id="unread"
+            class="position-absolute badge rounded-pill bg-danger fs-6" style="margin-top: -.25rem;margin-left: -.5rem;">
+            0
+            <span class="visually-hidden">messages non lues</span>
+        </span>
+
         <div class="px-5 py-4 mt-2 overflow-auto h-100 position-relative" style="flex: 1 0px;">
             <div class="position-absolute top-50 start-50 translate-middle text-center">
                 <p id="nomes" class="fs-4 text-secondary" toshow hidden>
@@ -63,7 +69,6 @@
                 </div>
             </div>
             <div id="message-container" toshow hidden>
-                <p class="text-center fs-6 text-secondary" id="nomoremes">Il n'y a plus d'autres messages</p>
             </div>
         </div>
 

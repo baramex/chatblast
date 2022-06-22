@@ -2,6 +2,7 @@ function resetProfile() {
     var terms = localStorage.getItem("terms");
     localStorage.clear();
     localStorage.setItem("terms", terms ? true : false);
+    sessionStorage.removeItem("unread");
     deleteCookie("token");
 }
 
@@ -104,9 +105,11 @@ function openPopup(type, text, action = null) {
 var pending_request = false;
 function api(endpoint, method, data = undefined, isShowError = false, errorAction = undefined, successMessage = undefined, successAction = undefined) {
     return new Promise((res, rej) => {
-        if (pending_request) return setTimeout(() => api(endpoint, method, data, isShowError, errorAction, successAction, successAction).then(res).catch(rej), 10);
+        if (pending_request) return setTimeout(() => api(endpoint, method, data, isShowError, errorAction, successMessage, successAction).then(res).catch(rej), 10);
 
+        // -> axios clear data
         var copyData = data ? { ...data } : undefined;
+
         pending_request = true;
         axios({
             method,
@@ -121,9 +124,15 @@ function api(endpoint, method, data = undefined, isShowError = false, errorActio
             var response = err.response;
             if (!response) return rej();
             var status = response.status;
-            if (status == 401) {
-                attemptToRefreshProfile().then(res_ => {
-                    api(endpoint, method, copyData, isShowError, errorAction, successAction, successAction).then(res).catch(rej);
+            var time = err.response.headers["retry-after"];
+            if (status == 429 && time && time * 1000 < 10000) {
+                setTimeout(() => {
+                    api(endpoint, method, copyData, isShowError, errorAction, successMessage, successAction).then(res).catch(rej);
+                }, time * 1000);
+            }
+            else if (status == 401) {
+                attemptToRefreshProfile().then(() => {
+                    api(endpoint, method, copyData, isShowError, errorAction, successMessage, successAction).then(res).catch(rej);
                 }).catch(err_ => {
                     document.location.href = "/login";
                     rej(err_);
@@ -150,6 +159,7 @@ function attemptToRefreshProfile() {
         api("/profile/refresh", "post", { username, id }).then(res_ => {
             localStorage.setItem("username", res_.username);
             localStorage.setItem("id", res_.id);
+            sessionStorage.setItem("unread", res_.unread);
             if (res_.type == "new") document.location.reload();
             res(res_);
         }).catch(err => {

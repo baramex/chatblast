@@ -21,7 +21,7 @@ class Profile {
         if (Profile.isUsernameExist(username)) throw new Error("Le nom d'utilisateur existe déjà.");
 
         this.ip = ip;
-        if (!id) this.id = /*randomWebToken.generate("onlyNumbers", 10)*/ new ObjectId();
+        if (!id) this.id = new ObjectId();
         else this.id = id;
         this.hash = fingerprint.hash;
         this.token = randomWebToken.generate("extra", 30);
@@ -43,7 +43,7 @@ class Profile {
         if (index == -1) throw new Error("Profil introuvable.");
 
         var profile = Profile.profiles[index];
-        io.to("userid:" + profile.id).socketsLeave("authenticated");
+        io.to("profileid:" + profile.id).socketsLeave("authenticated");
         io.to("authenticated").emit("profile.leave", { id: profile.id, username: profile.username });
 
         return Profile.profiles.splice(index, 1);
@@ -103,7 +103,7 @@ class Profile {
 
         io.sockets.sockets.forEach(socket => {
             if (socket.rooms.has("authenticated")) {
-                var id = socket.userID;
+                var id = socket.profileId;
                 var profile = Profile.getProfileByID(id);
                 if (!profile) socket.leave("authenticated");
             }
