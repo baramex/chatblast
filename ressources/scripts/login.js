@@ -1,18 +1,23 @@
-document.getElementById("login-form").addEventListener("submit", ev => {
+const form = document.getElementById("login-form");
+form.addEventListener("submit", ev => {
     ev.preventDefault();
     const username = document.getElementById("username").value.trim().toLowerCase();
     const password = document.getElementById("password").value;
-    axios.post("/api/login", { username, password }).then(res => {
-        console.log(res.data);
-        sessionStorage.setItem("username", res.data.username.trim());
-        document.location.href = "/";
-    }).catch(err => console.log(err, err.response.data));
-    
 
     if (!localStorage.getItem("terms")) {
         return showInfo("Vous devez accepter les <a href='/terms' target='_blank'>conditions d'utilisations</a> pour continuer.", () => {
             localStorage.setItem("terms", true);
-            document.getElementById("login-form").dispatchEvent(ev);
+            form.dispatchEvent(ev);
         });
     }
+
+
+    form.querySelectorAll("input").forEach(a => a.disabled = true);
+
+    api("/login", "post", { username, password }, true).then(res => {
+        sessionStorage.setItem("username", res.username.trim());
+        document.location.href = "/";
+    }).catch(() => {
+        form.querySelectorAll("input").forEach(a => a.disabled = false);
+    });
 });

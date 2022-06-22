@@ -4,33 +4,34 @@ const USERNAMES_NOT_ALLOWED = ["system"];
 
 /* modules */
 const rateLimit = require("express-rate-limit");
+const mongoose = require("mongoose");
+const { ObjectId } = mongoose.Types;
 const path = require("path");
 const { Profile } = require("./models/profile.model");
 const { Session } = require("./models/session.model");
-const { app, io } = require("./server");
 const fs = require("fs");
-require("dotenv").config();
-const mongoose = require("mongoose");
-const ObjectId = mongoose.Types.ObjectId;
 const multer = require("multer");
 const upload = multer({ dest: "/avatars", limits: "0.5mb" });
-mongoose.connect(process.env.DB, { dbName: process.env.DB_NAME }, () => console.log("Mongoose is ready !"));
+const { Message } = require("./models/message.model");
+const { app, io } = require("./server");
+require("dotenv").config();
+mongoose.connect(process.env.DB, { dbName: process.env.DB_NAME });
 
 io.on("connection", (socket) => {
     var token = socket.handshake.headers.cookie?.split("; ")?.find(a => a.startsWith("token="))?.replace("token=", "");
     if (token) {
         var profile = Profile.getProfileByToken(token);
         if (profile) {
-            socket.userID = profile.id;
-            socket.join(["authenticated", "userid:" + profile.id]);
+            socket.profileId = profile.id;
+            socket.join(["authenticated", "profileid:" + profile.id.toString()]);
         }
     }
 
     socket.on("disconnect", () => {
+        var profileId = socket.profileId;
+        if (!profileId) return;
+        var profile = Profile.getProfileByID(profileId);
 
-        var userID = socket.userID;
-        if (!userID) return;
-        var profile = Profile.getProfileByID(userID);
         if (!profile) return;
         if (profile.isTyping) {
             profile.isTyping = false;
@@ -63,7 +64,6 @@ app.get("/register", async (req, res) => {
 });
 
 // fonctionne
-
 app.get("/profile/:id/avatar", async (req, res) => {
     try {
         var session = await Session.getSession(req.cookies?.id, req.cookies?.token, req.fingerprint.hash);
@@ -89,10 +89,16 @@ app.get("/api/profiles/online", async (req, res) => {
     // res.status(200).send(Profile.profiles.map(a => a.username, a.id));
 });
 
+// récupérer profil
+app.get("/api/profile/@me", async (req, res) => {
+    var profile = Profile.getProfile(req.cookies?.token, req.fingerprint);
+    if (!profile) return res.sendStatus(401);
+
+    res.status(200).send({ username: profile.username, id: profile.id, unread: await Message.getUnreadCount(profile) });
+});
+
 // upload avatar fonctionne
-
 app.put("/api/profile/@me/avatar", upload.single("avatar"), async (req, res) => {
-
     try {
         const flag = generateID(15)
         const tempPath = req.file.path;
@@ -203,19 +209,8 @@ app.put("/api/message", rateLimit({
         var session = await Session.getSession(req.cookies?.id, req.cookies?.token, req.fingerprint.hash);
         if (!session) return res.sendStatus(401);
 
-        var message = req.body.message?.trim();
-        if (!message || message.length < 1 || message.length > 256) throw new Error("Message invalide.");
-
-        var sockets = await io.to("authenticated").fetchSockets();
-        var users = [];
-        sockets = sockets.filter(a => {
-            var id = a.userID;
-            if (users.includes(id)) return false;
-            users.push(id);
-            return true;
-        });
-
-        io.to("authenticated").emit("message.send", { author: { id, username } = profile, message, count: sockets.length });
+        var content = req.body.content.trim();
+        await Message.create({ id, username } = profile, content);
         profile.isTyping = false;
 
         res.sendStatus(201);
@@ -225,9 +220,76 @@ app.put("/api/message", rateLimit({
     }
 });
 
-// fonctionne pas
+// récupérer des messages
+app.get("/api/messages", async (req, res) => {
+    try {
+        var profile = Profile.getProfile(req.cookies.token, req.fingerprint);
+        if (!profile) return res.sendStatus(401);
 
-app.get("/api/profiles/typing", async (req, res) => {
+        var from = req.query.from;
+        var mes = await Message.getMessages(profile, from, 20);
+        res.status(200).json(mes);
+    } catch (error) {
+        console.error(error);
+        res.status(400).send(error.message || "Erreur inattendue");
+    }
+});
+
+// mettre à jour un message
+app.put("/api/message/:id", async (req, res) => {
+    try {
+        return res.status(400).send("Cette méthode n'est pas encore implémentée.");
+
+        var profile = Profile.getProfile(req.cookies.token, req.fingerprint);
+        if (!profile) return res.sendStatus(401);
+
+        var id = req.params.id;
+        var content = req.body.content.trim();
+        var message = await Message.editMessage(profile.id, new ObjectId(id), content);
+        res.status(200).json(Message.getMessageFields(profile, message));
+    } catch (error) {
+        console.error(error);
+        res.status(400).send(error.message || "Erreur inattendue");
+    }
+});
+
+app.put("/api/messages/view", async (req, res) => {
+    try {
+        var profile = Profile.getProfile(req.cookies.token, req.fingerprint);
+        if (!profile) return res.sendStatus(401);
+
+        var ids = req.body.ids;
+        if (!ids || !Array.isArray(ids)) throw new Error("Requête invalide.");
+        ids = ids.map(a => ObjectId.isValid(a) ? new ObjectId(a) : null);
+        ids = ids.filter(a => a != null);
+        if (ids.length == 0) throw new Error("Requête invalide.");
+
+        var messages = await Message.addViewToMessages(ids, profile.id);
+
+        res.status(200).json(messages);
+    } catch (error) {
+        console.error(error);
+        res.status(400).send(error.message || "Erreur inattendue");
+    }
+});
+
+// supprimer un message
+app.delete("/api/message/:id", async (req, res) => {
+    try {
+        var profile = Profile.getProfile(req.cookies.token, req.fingerprint);
+        if (!profile) return res.sendStatus(401);
+
+        var id = req.params.id;
+        var message = await Message.deleteMessage(profile.id, new ObjectId(id));
+        res.status(200).json(Message.getMessageFields(profile, message));
+    } catch (error) {
+        console.error(error);
+        res.status(400).send(error.message || "Erreur inattendue");
+    }
+});
+
+// fonctionne pas
+app.get("/api/profiles/typing", (req, res) => {
     try {
         var session = await Session.getSession(req.cookies?.id, req.cookies?.token, req.fingerprint.hash);
         if (!session) return res.sendStatus(401);
@@ -239,7 +301,6 @@ app.get("/api/profiles/typing", async (req, res) => {
 });
 
 // fonctionne pas 
-
 app.put("/api/typing", (req, res) => {
     try {
         var profile = Profile.getProfile(req.cookies.token, req.fingerprint);

@@ -15,6 +15,10 @@ body {
     scroll-behavior: smooth;
 }
 
+.text-theme {
+    color: #44b996;
+}
+
 .title {
     color: #13342b;
     font-size: 3.5rem;
@@ -130,6 +134,24 @@ footer a:hover {
     opacity: 0;
 }
 
+.unread {
+    background-color: rgba(255, 0, 0, .1);
+}
+
+.warning {
+    animation: warning .4s linear infinite alternate both;
+}
+
+@keyframes warning {
+    30% {
+        transform: scale(1);
+    }
+
+    to {
+        transform: scale(1.1);
+    }
+}
+
 @keyframes online-circle {
     0% {
         transform: scale(0.95);
@@ -166,6 +188,7 @@ footer a:hover {
 
     body footer {
         justify-content: center;
+        font-size: .8rem !important;
     }
 
     form>div.fs-1 {
@@ -196,10 +219,33 @@ footer a:hover {
 
     #send-message {
         flex-direction: column;
+        background-color: transparent;
     }
 
     #send-message input[type="text"] {
         margin-bottom: 10px;
+    }
+
+    #chat {
+        background-color: transparent;
+        margin-bottom: 0 !important;
+        box-shadow: inset 0 0 10px 1px rgb(0 0 0 / 20%);
+        width: 100%;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+
+    #chat>div {
+        padding-bottom: 0 !important;
+    }
+
+    .message {
+        background-color: white;
+    }
+
+    #unread {
+        margin-left: .25rem !important;
+        margin-top: -0.5rem !important;
     }
 }
 
@@ -209,7 +255,23 @@ footer a:hover {
     }
 }
 
-@media screen and (max-width: 460px) {
+@media screen and (max-width: 475px) {
+     h1.title {
+        font-size: 2.5rem;
+     }
+
+    .message span {
+        font-size: .75rem !important;
+    }
+
+    .message .text {
+        font-size: 1rem !important;
+    }
+
+    .message .username p {
+        font-size: 1.1rem !important;
+    }
+    
     .message .username {
         border-bottom-right-radius: 0 !important;
         border-right: none;
@@ -227,11 +289,20 @@ footer a:hover {
     .message .username-container {
         flex-direction: column;
     }
+
+    .message .icons {
+        justify-content: center;
+        margin: .25rem 0;
+    }
 }
 
 @media screen and (max-width: 390px) {
     header.position-relative {
         position: static !important;
+    }
+
+    header.text-center {
+        text-align: center !important;
     }
 
     #disconnect-img {
