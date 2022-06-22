@@ -37,11 +37,6 @@ body {
     border-bottom-right-radius: var(--bs-border-radius-lg) !important;
 }
 
-#register-form {
-    display: grid;
-    grid-template-columns: auto;
-}
-
 .border-dashed {
     border-right: 2px dashed #aab4bd;
     border-bottom: 2px dashed #aab4bd;
@@ -57,6 +52,15 @@ body {
 
 .rounded-br-3 {
     border-bottom-right-radius: var(--bs-border-radius-lg);
+}
+
+#avatar-container {
+    background-color: #1d765d;
+    border: 2px dashed #114738;
+}
+
+#avatar-container #avatar-input {
+    display: none;
 }
 
 .pointer {

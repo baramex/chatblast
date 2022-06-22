@@ -150,7 +150,7 @@ function updateOnline() {
         var td = document.createElement("td");
         td.classList.add("py-3", "px-4");
         var img = document.createElement("img");
-        img.src = "/images/user.png";
+        img.src = "/avatars/";
         img.classList.add("me-2", "contrast");
         img.width = "60";
         var span = document.createElement("span");
