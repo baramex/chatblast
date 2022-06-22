@@ -2,6 +2,7 @@ function resetProfile() {
     var terms = localStorage.getItem("terms");
     localStorage.clear();
     localStorage.setItem("terms", terms ? true : false);
+    sessionStorage.removeItem("unread");
     deleteCookie("token");
 }
 
@@ -38,6 +39,10 @@ function showInfo(message, action = null) {
     openPopup("info", message, action);
 }
 
+function showConfirm(message, onconfirm) {
+    openPopup("confirm", message, onconfirm);
+}
+
 function closePopup(hidden = true) {
     var popup = document.getElementById("popup");
     if (!popup) return;
@@ -64,23 +69,14 @@ function openPopup(type, text, action = null) {
     popup.classList.add("popup", "popup-status", "text-center", "px-5", "py-4", "bg-light", "top-50", "start-50", "position-absolute", "translate-middle", "rounded-3");
 
     var img = document.createElement("img");
-    img.src = "/images/" + type + ".png";
+    img.src = "/images/" + (type == "confirm" ? "warning" : type) + ".png";
     img.width = 150;
 
     var p = document.createElement("p");
     p.innerHTML = text;
     p.classList.add("text-dark", "fs-4");
     p.style.fontFamily = "sans-serif";
-
-    var button = document.createElement("button");
-    button.classList.add("btn", type == "valid" ? "btn-success" : type == "error" ? "btn-danger" : "btn-info", "px-3", "py-2");
-    button.innerText = "Ok";
-    if (type == "info") button.style.color = "white";
-
-    popup.append(img, p, button);
-    popup.animate([{ transform: "translate(-50%, -50%) scale(0)" }, { transform: "translate(-50%, -50%) scale(1)" }], { duration: 300, easing: "cubic-bezier(0.6, 0.2, 0.2, 1.2)" });
-    document.body.appendChild(popup);
-    button.focus();
+    popup.append(img, p);
 
     var hiddentab = document.createElement("div");
     hiddentab.id = "hidden-tab";
@@ -90,23 +86,61 @@ function openPopup(type, text, action = null) {
     hiddentab.style.zIndex = "50";
     hiddentab.classList.add("position-fixed", "t-0", "s-0", "bg-dark", "bg-opacity-50");
 
+    var tofoc = null;
+    if (type != "confirm") {
+        var button = document.createElement("button");
+        button.classList.add("btn", type == "valid" ? "btn-success" : type == "error" ? "btn-danger" : "btn-info", "px-3", "py-2");
+        button.innerText = "Ok";
+        if (type == "info") button.style.color = "white";
+
+        popup.append(button);
+        tofoc = button;
+
+        button.onclick = () => {
+            if (action) action();
+            closePopup();
+        };
+        hiddentab.onclick = button.onclick;
+    }
+    else {
+        var buttonCancel = document.createElement("button");
+        buttonCancel.classList.add("btn", "btn-danger", "px-3", "py-2", "mx-3");
+        buttonCancel.innerText = "Annuler";
+
+        var buttonOk = document.createElement("button");
+        buttonOk.classList.add("btn", "btn-success", "px-3", "py-2", "mx-3");
+        buttonOk.innerText = "Oui";
+
+        popup.append(buttonCancel, buttonOk);
+        tofoc = buttonCancel;
+
+        buttonCancel.onclick = () => {
+            closePopup();
+        };
+        hiddentab.onclick = buttonCancel.onclick;
+
+        buttonOk.onclick = () => {
+            action();
+            closePopup();
+        };
+    }
+
+    popup.animate([{ transform: "translate(-50%, -50%) scale(0)" }, { transform: "translate(-50%, -50%) scale(1)" }], { duration: 300, easing: "cubic-bezier(0.6, 0.2, 0.2, 1.2)" });
+    document.body.appendChild(popup);
+    tofoc.focus();
+
     hiddentab.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300 });
     document.body.appendChild(hiddentab);
-
-    button.onclick = () => {
-        if (action) action();
-        closePopup();
-    };
-
-    hiddentab.onclick = button.onclick;
 }
 
 var pending_request = false;
 function api(endpoint, method, data = undefined, isShowError = false, errorAction = undefined, successMessage = undefined, successAction = undefined) {
     return new Promise((res, rej) => {
-        if (pending_request) return setTimeout(() => api(endpoint, method, data, isShowError, errorAction, successAction, successAction).then(res).catch(rej), 10);
+        if (pending_request) return setTimeout(() => api(endpoint, method, data, isShowError, errorAction, successMessage, successAction).then(res).catch(rej), 10);
 
+        // -> axios clear data
         var copyData = data ? { ...data } : undefined;
+
         pending_request = true;
         axios({
             method,
@@ -121,9 +155,15 @@ function api(endpoint, method, data = undefined, isShowError = false, errorActio
             var response = err.response;
             if (!response) return rej();
             var status = response.status;
-            if (status == 401) {
-                attemptToRefreshProfile().then(res_ => {
-                    api(endpoint, method, copyData, isShowError, errorAction, successAction, successAction).then(res).catch(rej);
+            var time = err.response.headers["retry-after"];
+            if (status == 429 && time && time * 1000 < 10000) {
+                setTimeout(() => {
+                    api(endpoint, method, copyData, isShowError, errorAction, successMessage, successAction).then(res).catch(rej);
+                }, time * 1000);
+            }
+            else if (status == 401) {
+                attemptToRefreshProfile().then(() => {
+                    api(endpoint, method, copyData, isShowError, errorAction, successMessage, successAction).then(res).catch(rej);
                 }).catch(err_ => {
                     document.location.href = "/login";
                     rej(err_);
@@ -150,6 +190,7 @@ function attemptToRefreshProfile() {
         api("/profile/refresh", "post", { username, id }).then(res_ => {
             localStorage.setItem("username", res_.username);
             localStorage.setItem("id", res_.id);
+            sessionStorage.setItem("unread", res_.unread);
             if (res_.type == "new") document.location.reload();
             res(res_);
         }).catch(err => {

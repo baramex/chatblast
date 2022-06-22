@@ -1,5 +1,10 @@
 const randomWebToken = require("random-web-token");
 const { io } = require("./server");
+const mongoose = require("mongoose");
+const { Message } = require("./models/message.model");
+const { ObjectId } = mongoose.Types;
+
+const systemId = new ObjectId(0);
 
 class Profile {
     /**
@@ -15,33 +20,23 @@ class Profile {
      * @param {Object[]} [fingerprint.components]
      * @param {String} ip 
      */
-    constructor(username, fingerprint, ip, id = undefined) {
+    static async create(username, fingerprint, ip, id = undefined) {
         if (Profile.isUsernameExist(username)) throw new Error("Le nom d'utilisateur existe déjà.");
 
-        this.ip = ip;
-        if (!id) this.id = randomWebToken.generate("onlyNumbers", 10);
-        else this.id = id;
-        this.hash = fingerprint.hash;
-        this.token = randomWebToken.generate("extra", 30);
-        this.username = username;
-        this.isTyping = false;
-
-        var p = Profile.pushProfile(this.id, this.hash, this.token, this.ip, this.username);
-        this.date = p.date;
-        this.expireIn = p.expireIn;
-        this.lastPing = p.lastPing;
+        return Profile.pushProfile(id || new ObjectId(), fingerprint.hash, randomWebToken.generate("extra", 30), ip, username);
     }
 
     /**
      * 
      * @param {String} id 
      */
-    static delete(id) {
+    static async delete(id) {
         var index = Profile.profiles.findIndex(a => a.id == id);
         if (index == -1) throw new Error("Profil introuvable.");
 
         var profile = Profile.profiles[index];
-        io.to("userid:" + profile.id).socketsLeave("authenticated");
+        io.to("profileid:" + profile.id).socketsLeave("authenticated");
+        await Message.create({ username: "SYSTEM", id: systemId }, "<strong>" + profile.username + "</strong> a quitté la session.");
         io.to("authenticated").emit("profile.leave", { id: profile.id, username: profile.username });
 
         return Profile.profiles.splice(index, 1);
@@ -72,8 +67,9 @@ class Profile {
      * @param {String} ip 
      * @param {String} username 
      */
-    static pushProfile(id, hash, token, ip, username) {
+    static async pushProfile(id, hash, token, ip, username) {
         if (Profile.profiles.find(a => a.id == id) || Profile.profiles.find(a => a.token == token)) throw new Error("Impossible de créer le profil.");
+        await Message.create({ username: "SYSTEM", id: systemId }, "<strong>" + username + "</strong> a rejoint la session.");
         io.to("authenticated").emit("profile.join", { id, username });
         return Profile.profiles[Profile.profiles.push({ id, hash, token, ip, username, lastPing: new Date(), date: new Date(), isTyping: false }) - 1];
     }
@@ -101,7 +97,7 @@ class Profile {
 
         io.sockets.sockets.forEach(socket => {
             if (socket.rooms.has("authenticated")) {
-                var id = socket.userID;
+                var id = socket.profileId;
                 var profile = Profile.getProfileByID(id);
                 if (!profile) socket.leave("authenticated");
             }
