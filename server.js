@@ -30,7 +30,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 const multer = require("multer");
 const upload = multer({
-    dest: "/avatars", limits: "0.5mb", fileFilter: (req, file, callback) => {
+    dest: "./avatars", limits: "0.5mb", fileFilter: (req, file, callback) => {
         if (!file.mimetype.startsWith("image/")) {
             callback(new Error("Type de fichier invalide."), false);
         }
