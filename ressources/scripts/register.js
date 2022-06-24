@@ -43,9 +43,10 @@ document.getElementById("register-form").addEventListener("submit", async (e) =>
             sessionStorage.setItem("id", res.id);
         });
 
-        if (avatarInput.files[0]) await new UploadImage(avatarInput.files[0]).upload();
-
-        showSuccess("Compte créé ! Vous allez être redirigé", () => document.location.href = "/");
+        if (avatarInput.files[0]) new UploadImage(avatarInput.files[0]).upload().catch(() => { }).then(() => {
+            showSuccess("Compte créé ! Vous allez être redirigé", () => document.location.href = "/");
+        });
+        else showSuccess("Compte créé ! Vous allez être redirigé", () => document.location.href = "/");
     } catch (err) {
         showError(err.message || err);
         button.removeAttribute("disabled");

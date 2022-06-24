@@ -10,10 +10,8 @@ const path = require("path");
 const { Profile } = require("./models/profile.model");
 const { Session, SessionMiddleware } = require("./models/session.model");
 const fs = require("fs");
-const multer = require("multer");
-const upload = multer({ dest: "/avatars", limits: "0.5mb" });
 const { Message } = require("./models/message.model");
-const { app, io } = require("./server");
+const { app, io, upload } = require("./server");
 require("dotenv").config();
 mongoose.connect(process.env.DB, { dbName: process.env.DB_NAME });
 
@@ -86,14 +84,15 @@ app.get("/register", SessionMiddleware.isAuthed, async (req, res) => {
     res.sendFile(path.join(__dirname, "pages", "register.html"));
 });
 
+// récupérer avatar
 app.get("/profile/:id/avatar", SessionMiddleware.auth, async (req, res) => {
     try {
         var id = req.params.id;
         if (!id || (!ObjectId.isValid(id) && id != "@me")) throw new Error("Requête invalide.");
-        var profile = (req.params.id == "@me" || req.params.id == req.profile._id.toString()) ? req.profile : await Profile.getProfileById(new ObjectId(id));
+        var profile = (id == "@me" || id == req.profile._id.toString()) ? req.profile : await Profile.getProfileById(new ObjectId(id));
 
         var name = profile.avatar.flag + profile.avatar.extention;
-        if (fs.existsSync(path.join(__dirname, "avatars", name))) return res.sendFile(path.join(__dirname, "ressources", "images", "user.png"));
+        if (!name || !fs.existsSync(path.join(__dirname, "avatars", name))) return res.sendFile(path.join(__dirname, "ressources", "images", "user.png"));
         res.sendFile(path.join(__dirname, "avatars", name));
     } catch (err) {
         console.error(err);
@@ -125,10 +124,7 @@ app.put("/api/profile/@me/avatar", rateLimit({
     max: 5,
     standardHeaders: true,
     legacyHeaders: false
-}), SessionMiddleware.auth, (req, res, next) => {
-    if (req.file.mimetype.startsWith("image/")) return next();
-    res.sendStatus(400);
-}, upload.single("avatar"), async (req, res) => {
+}), SessionMiddleware.auth, upload.single("avatar"), async (req, res) => {
     try {
         if (!req.file) throw new Error("Requête invalide.");
 

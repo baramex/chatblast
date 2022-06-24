@@ -27,6 +27,16 @@ const baseLimiter = rateLimit({
 app.use(baseLimiter);
 const bodyParser = require('body-parser');
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+const multer = require("multer");
+const upload = multer({
+    dest: "/avatars", limits: "0.5mb", fileFilter: (req, file, callback) => {
+        if (!file.mimetype.startsWith("image/")) {
+            callback(new Error("Type de fichier invalide."), false);
+        }
+        else callback(false, true);
+    }
+});
 const cookieParser = require('cookie-parser');
 app.use(cookieParser());
 const Fingerprint = require('express-fingerprint');
@@ -46,4 +56,4 @@ server.listen(PORT, () => {
     console.log("Serveur lancé sur le port: " + PORT);
 });
 
-module.exports = { io, app };
+module.exports = { io, app, upload };

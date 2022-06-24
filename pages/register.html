@@ -26,7 +26,8 @@
     <link rel="stylesheet" href="/styles/main.css">
     <script src="/scripts/util.js"></script>
 
-    <form id="register-form" class="position-absolute top-50 start-50 translate-middle container" style="width: 40%;max-width: 800px;">
+    <form id="register-form" class="position-absolute top-50 start-50 translate-middle container"
+        style="width: 40%;max-width: 800px;">
         <div class="fs-1 text-center">
             <label class="mb-4" for="username" class="form-label">Bienvenue sur <strong>ChatBlast</strong></label>
             <div class="d-flex direction-column mt-4 justify-content-evenly w-100">
@@ -39,19 +40,19 @@
                     <img class="position-absolute top-0 end-0 me-3 mt-2" width="25%" id="add-picture"
                         src="/images/add-picture.png">
                 </label>
-                <div class="flex-grow-1">
+                <div class="flex-grow-1 text-start">
                     <input type="text" class="form-control fs-4" id="username" placeholder="Nom d'utilisateur"
                         name="username" autocomplete="off" maxlength="32" required>
                     <input type="password" class="form-control fs-4 mt-4" id="password" placeholder="Mot de passe"
                         name="password" autocomplete="off" maxlength="32" required>
-                    <input type="password" class="form-control fs-4 mt-4" id="password_"
+                    <input type="password" class="form-control fs-4 mt-4 mb-2" id="password_"
                         placeholder="Confirmez votre mot de passe" autocomplete="off" maxlength="32" required>
+                    <a class="fs-6 align-top" href="/login">Vous avez déjà un compte ?</a>
                 </div>
             </div>
-
-            <div class="text-center mt-4">
-                <input type="submit" class="btn btn-outline-dark btn-lg fs-5 px-5" value="S'inscrire">
-            </div>
+        </div>
+        <div class="text-center mt-4">
+            <input type="submit" class="btn btn-outline-dark btn-lg fs-5 px-5" value="S'inscrire">
         </div>
     </form>
 

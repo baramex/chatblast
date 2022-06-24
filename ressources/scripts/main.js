@@ -277,7 +277,7 @@ function updateOnline() {
         var td = document.createElement("td");
         td.classList.add("py-3", "px-4");
         var img = document.createElement("img");
-        img.src = "/profile/" + (user.id == sessionStorage.getItem("id") ? "@me" : user.id) + "/avatar";
+        img.src = "/profile/" +  (user.id == sessionStorage.getItem("id") ? "@me" : user.id) + "/avatar";
         img.classList.add("me-2", "contrast");
         img.width = "60";
         var span = document.createElement("span");
@@ -431,6 +431,6 @@ function pushMessage(id, author, message, views = -1, isViewed, date = new Date(
 
 function deleteMessage(id) {
     showConfirm("Êtes-vous sûr de vouloir supprimer le message ?", () => {
-        api("/message/" + id, "delete", undefined, true, undefined, "Message supprimé !");
+        api("/message/id" + id, "delete", undefined, true, undefined, "Message supprimé !");
     });
 }
