@@ -45,10 +45,10 @@ function updateViewMessages() {
     lastUpdateViewMessage = new Date().getTime();
 }
 
-if ((!localStorage.getItem("username") || !localStorage.getItem("id") || !sessionStorage.getItem("unread")) && getCookie("token")) {
+if ((!sessionStorage.getItem("username") || !sessionStorage.getItem("id") || !sessionStorage.getItem("unread")) && getCookie("token")) {
     api("/profile/@me", "get", undefined, true).then(res => {
-        localStorage.setItem("username", res.username);
-        localStorage.setItem("id", res.id);
+        sessionStorage.setItem("username", res.username);
+        sessionStorage.setItem("id", res.id);
         sessionStorage.setItem("unread", res.unread);
         updateUnread();
     });
@@ -102,7 +102,7 @@ socket.on("message.send", data => {
     var message = data.content;
 
     var typing = JSON.parse(sessionStorage.getItem("typing") || "[]");
-    var profile = typing.indexOf(data.author.username);
+    var profile = typing.findIndex(a => a.id == data.author.id);
     if (profile != -1) {
         typing.splice(profile, 1);
         sessionStorage.setItem("typing", JSON.stringify(typing));
@@ -115,9 +115,9 @@ socket.on("message.send", data => {
 socket.on("message.typing", (res) => {
     var typing = JSON.parse(sessionStorage.getItem("typing") || "[]");
     if (res.isTyping) {
-        typing.push(res.username)
+        typing.push({ id: res.id, username: res.username })
     } else {
-        var profile = typing.indexOf(res.username);
+        var profile = typing.findIndex(a => a.id == res.id);
         if (profile == -1) return;
         typing.splice(profile, 1);
     }
@@ -127,33 +127,35 @@ socket.on("message.typing", (res) => {
 });
 
 socket.on("messages.view", data => {
-    data.forEach(({ _id, views }) => {
-        var el = document.body.querySelector(`div#m-${_id} span.views`);
+    data.forEach(({ id, views }) => {
+        var el = document.body.querySelector(`div#m-${id} span.views`);
         if (el) el.innerText = views;
     });
 });
 
 socket.on("profile.join", data => {
+    var id = data.id;
     var username = data.username;
 
     var online = JSON.parse(sessionStorage.getItem("online") || "[]");
-    online.push(username);
+    online.push({ id, username });
     sessionStorage.setItem("online", JSON.stringify(online));
     updateOnline();
 });
 
 socket.on("profile.leave", data => {
+    var id = data.id;
     var username = data.username;
 
     var online = JSON.parse(sessionStorage.getItem("online") || "[]");
-    var profile = online.indexOf(username);
+    var profile = online.findIndex(a => a.id == id);
     if (profile == -1) return;
     online.splice(profile, 1);
     sessionStorage.setItem("online", JSON.stringify(online));
     updateOnline();
 
     var typing = JSON.parse(sessionStorage.getItem("typing") || "[]");
-    var profile = typing.indexOf(username);
+    var profile = typing.findIndex(a => a.id == id);
     if (profile == -1) return;
     typing.splice(profile, 1);
     sessionStorage.setItem("typing", JSON.stringify(typing));
@@ -275,12 +277,12 @@ function updateOnline() {
         var td = document.createElement("td");
         td.classList.add("py-3", "px-4");
         var img = document.createElement("img");
-        img.src = "/avatars/";
+        img.src = "/profile/" + (user.id == sessionStorage.getItem("id") ? "@me" : user.id) + "/avatar";
         img.classList.add("me-2", "contrast");
         img.width = "60";
         var span = document.createElement("span");
         span.classList.add("fs-5");
-        span.innerText = user;
+        span.innerText = user.username;
 
         td.append(img, span);
         tr.appendChild(td);
@@ -292,13 +294,19 @@ function updateOnline() {
 const typingText = document.getElementById("typing");
 function updateTyping() {
     var typing = JSON.parse(sessionStorage.getItem("typing") || "[]");
-    typing = typing.filter(a => a != localStorage.getItem("username"));
+    typing = typing.filter(a => a.id != sessionStorage.getItem("id"));
     if (typing == 0) return typingText.innerHTML = ""
-    typingText.innerHTML = `${typing.join(", ")} ${typing.length > 1 ? "sont" : "est"} en train d'écrire...`;
+    typingText.innerHTML = `${typing.map(a => a.username).join(", ")} ${typing.length > 1 ? "sont" : "est"} en train d'écrire...`;
 }
 
 function updateUnread() {
     var n = sessionStorage.getItem("unread") || 0;
+
+    if (n < 0) {
+        sessionStorage.setItem("unread", 0);
+        n = 0;
+    }
+
     unread.innerText = n;
     if (n > 0) {
         unread.classList.add("warning");
@@ -315,13 +323,15 @@ function updateUnread() {
 var nomes = document.getElementById("nomes");
 const sound = new Audio("/sounds/notification.wav");
 function pushMessage(id, author, message, views = -1, isViewed, date = new Date(), isNew = false, reverse = false) {
+    if (document.getElementById("m-" + id)) return;
+
     if (nomes) {
         nomes.remove();
         nomes = undefined;
     }
 
     let isSystem = author.username == "SYSTEM";
-    var isMy = author.id == localStorage.getItem("id");
+    var isMy = author.id == sessionStorage.getItem("id");
 
     let div = document.createElement("div");
     div.id = "m-" + id;
@@ -339,7 +349,7 @@ function pushMessage(id, author, message, views = -1, isViewed, date = new Date(
     let img = document.createElement("img");
     img.classList.add("mx-2", "contrast");
     img.width = 30;
-    img.src = isSystem ? "/images/system.png" : "/images/user.png";
+    img.src = isSystem ? "/images/system.png" : "/profile/" + (isMy ? "@me" : author.id) + "/avatar";
     img.alt = "avatar";
 
     // author
@@ -411,7 +421,7 @@ function pushMessage(id, author, message, views = -1, isViewed, date = new Date(
         }
 
         // 666: height - scroll = 666...
-        if (scroll > height - 666 - 50) {
+        if (scroll > height - 666 - 100) {
             messageContainer.parentElement.scrollTo({ top: height, behavior: "smooth" });
         }
 

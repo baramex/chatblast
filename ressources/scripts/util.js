@@ -2,8 +2,9 @@ function resetProfile() {
     var terms = localStorage.getItem("terms");
     localStorage.clear();
     localStorage.setItem("terms", terms ? true : false);
-    sessionStorage.removeItem("unread");
+    sessionStorage.clear();
     deleteCookie("token");
+    deleteCookie("id");
 }
 
 function deleteCookie(name) {
@@ -170,11 +171,11 @@ function api(endpoint, method, data = undefined, isShowError = false, errorActio
                 });
             }
             else {
-                var data = response.data;
+                var message = response.data;
                 if (isShowError) {
-                    showError(data, errorAction);
+                    showError(message, errorAction);
                 }
-                rej(data);
+                rej(message);
             }
         }).finally(() => {
             pending_request = false;

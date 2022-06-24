@@ -14,7 +14,7 @@ const messageSchema = new Schema({
 messageSchema.post("updateMany", async function (doc, next) {
     if (doc.modifiedCount >= 1) {
         var messages = await Message.getMessagesByIds(this.getQuery()._id.$in);
-        io.to("authenticated").emit("messages.view", messages.map(a => ({ _id: a._id, views: a.views.length })));
+        io.to("authenticated").emit("messages.view", messages.map(a => ({ id: a._id, views: a.views.length })));
     }
     next();
 });
@@ -36,11 +36,11 @@ const messageModel = model("Message", messageSchema, "messages");
 class Message {
     /**
      * 
-     * @param {{ username: String, id: ObjectId }} author 
+     * @param {*} profile 
      * @param {String} content 
      */
-    static create(author, content) {
-        return new messageModel({ author, content }).save();
+    static create(profile, content) {
+        return new messageModel({ author: { id: profile._id, username: profile.username }, content }).save();
     }
 
     /**
@@ -68,7 +68,7 @@ class Message {
 
     /**
      * 
-     * @param {ObjectId} profile 
+     * @param {*} profile 
      * @param {Number} from 
      * @param {Number} number 
      */
@@ -91,24 +91,11 @@ class Message {
     }
 
     static getMessageFields(profile, doc) {
-        return { _id: doc._id, author: doc.author, content: doc.content, date: doc.date, views: doc.views.length, isViewed: (doc.views.includes(profile.id) || doc.date.getTime() < profile.date.getTime()) };
+        return { _id: doc._id, author: doc.author, content: doc.content, date: doc.date, views: doc.views.length, isViewed: (doc.views.includes(profile._id) || doc.date.getTime() < profile.date.getTime()) };
     }
 
     static getUnreadCount(profile) {
-        return messageModel.find({ views: { $not: { $all: [profile.id] } }, date: { $gt: profile.date }, deleted: false }).count();
-    }
-
-    /**
-     * 
-     * @param {ObjectId} author 
-     * @param {ObjectId} id 
-     */
-    static async deleteMessage(author, id) {
-        var doc = await Message.getById(id);
-        if (!doc) throw new Error("Message invalide.");
-        if (doc.author.id.toString() != author.toString()) throw new Error("Vous ne pouvez pas supprimer un message ne vous appartenant pas.");
-        doc.deleted = true;
-        return doc.save();
+        return messageModel.find({ views: { $not: { $all: [profile._id] } }, date: { $gt: profile.date }, deleted: false }).count();
     }
 
     /**

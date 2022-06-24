@@ -1,21 +1,38 @@
-const { Schema, model, ObjectId } = require("mongoose");
+const { Schema, model, default: mongoose } = require("mongoose");
 const token = require("random-web-token");
+const { io } = require("../server");
+const { Message } = require("./message.model");
+const { Profile } = require("./profile.model");
+const { ObjectId } = mongoose.Types;
+
+const systemId = new ObjectId(0);
 
 const session = new Schema({
-    token: { type: String, required: true },
+    token: { type: String },
     profileId: { type: ObjectId, required: true, unique: true },
-    expiresIn: { type: Number, required: true },
     ips: { type: [String], required: true },
     fingerprints: { type: [String], required: true },
     active: { type: Boolean, default: true },
-    date: { type: Date, default: new Date() },
+    date: { type: Date, default: Date.now },
 });
 
-session.pre("validate", function (next) {
-    if (!this.token) {
-        this.token = token.generate("extra", 30);
-        this.date = new Date();
+session.post("validate", async function (doc, next) {
+    if (doc.isModified("active") || doc.isNew) {
+        if (doc.active) {
+            doc.token = token.generate("extra", 30);
+            doc.date = new Date();
+            doc.markModified("token");
+            doc.markModified("date");
+        }
+        else {
+            doc.token = undefined;
+            doc.markModified("token");
+
+            var profile = await Profile.getProfileById(doc.profileId).catch(console.error);
+            await Session.disconnectMessage(profile).catch(console.error);
+        }
     }
+
     next();
 });
 
@@ -31,12 +48,22 @@ class Session {
      */
     static create(profileId, fingerprint, ip) {
         return new Promise((res, rej) => {
-            var doc = new SessionModel({ profileId, fingerprints: [fingerprint], expiresIn: 60 * 60 * 24, ips: [ip] });
+            var doc = new SessionModel({ profileId, fingerprints: [fingerprint], ips: [ip] });
             doc.save(err => {
                 if (err) rej(err);
                 else res(doc);
             });
         });
+    }
+
+    static async disconnectMessage(profile) {
+        await Message.create({ username: "SYSTEM", id: systemId }, "<strong>" + profile.username + "</strong> a quitté la session.");
+        io.to("authenticated").emit("profile.leave", { id: profile.id, username: profile.username });
+    }
+
+    static async connectMessage(profile) {
+        await Message.create({ username: "SYSTEM", id: systemId }, "<strong>" + profile.username + "</strong> a rejoint la session.");
+        io.to("authenticated").emit("profile.join", { id: profile.id, username: profile.username });
     }
 
     /**
@@ -57,13 +84,12 @@ class Session {
         return SessionModel.updateOne({ _id: id }, { $addToSet: { ips: ip } });
     }
 
-        /**
+    /**
      * 
      * @param {ObjectId} id 
      * @param {String} fingerprint
      * @returns 
      */
-
     static addFingerprint(id, fingerprint) {
         return SessionModel.updateOne({ _id: id }, { $addToSet: { fingerprints: fingerprint } });
     }
@@ -78,22 +104,8 @@ class Session {
         return SessionModel.findOne({ _id: id, token, fingerprints: { $all: [fingerprint] }, active: true });
     }
 
-    /**
-     * 
-     * @param {ObjectId} id 
-     * @returns 
-     */
-
-    static getSessionById(id) {
-        return SessionModel.findOne({ _id: id })._id;
-    }
-
-    /**
-     * 
-     * @param {ObjectId} id
-     */
-    static getByProfileId(id) {
-        return SessionModel.findOne({ profileId: id });
+    static getSessionByToken(token) {
+        return SessionModel.findOne({ token, active: true });
     }
 
     /**
@@ -102,19 +114,62 @@ class Session {
      * @param {Number} expireIn 
      */
     static checkExpired(date, expireIn) {
-        return (new Date().getTime() - date.getTime()) > expireIn * 1000;
+        return new Date().getTime() - date.getTime() > expireIn * 1000;
     }
 
     static getSessionByProfileId(profileId) {
-
+        return SessionModel.findOne({ profileId });
     }
 
     static update() {
-        
-        SessionModel.updateMany({ date }, { $set: { date: new Date() } });
+        SessionModel.updateMany({ active: true, date: { $gt: new Date().getTime() - 1000 * 60 * 60 * 24 } }, { $unset: { token: "" }, $set: { active: false } });
+
+        io.sockets.sockets.forEach(async socket => {
+            if (socket.rooms.has("authenticated")) {
+                var id = socket.profileId;
+                var profile = await Profile.getProfileById(id);
+                if (!profile) return socket.leave("authenticated");
+
+                var session = await Session.getSessionByProfileId(id);
+                if (!session || !session.active) socket.leave("authenticated");
+            }
+        });
     }
-    
 }
 
-// setInterval(Session.update, 1000 * 60 * 30 );
-module.exports = { Session };
+class SessionMiddleware {
+    static async auth(req, res, next) {
+        try {
+            var session = await Session.getSession(req.cookies?.id, req.cookies?.token, req.fingerprint.hash);
+            if (!session) return res.sendStatus(401);
+
+            var profile = await Profile.getProfileById(session.profileId);
+            if (!profile) return res.sendStatus(401);
+
+            req.session = session;
+            req.profile = profile;
+            next();
+        } catch (error) {
+            return res.status(400).send(error.message);
+        }
+    }
+
+    static async isAuthed(req, res, next) {
+        try {
+            var session = await Session.getSession(req.cookies?.id, req.cookies?.token, req.fingerprint.hash);
+            if (!session) throw new Error();
+
+            var profile = await Profile.getProfileById(session.profileId);
+            if (!profile) throw new Error();
+
+            req.isAuthed = true;
+            next();
+        } catch (error) {
+            req.isAuthed = false;
+            next();
+        }
+    }
+}
+
+setInterval(Session.update, 1000 * 60 * 30);
+module.exports = { Session, SessionMiddleware };

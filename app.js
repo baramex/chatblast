@@ -8,7 +8,7 @@ const mongoose = require("mongoose");
 const { ObjectId } = mongoose.Types;
 const path = require("path");
 const { Profile } = require("./models/profile.model");
-const { Session } = require("./models/session.model");
+const { Session, SessionMiddleware } = require("./models/session.model");
 const fs = require("fs");
 const multer = require("multer");
 const upload = multer({ dest: "/avatars", limits: "0.5mb" });
@@ -17,39 +17,62 @@ const { app, io } = require("./server");
 require("dotenv").config();
 mongoose.connect(process.env.DB, { dbName: process.env.DB_NAME });
 
-io.on("connection", (socket) => {
+var typing = [];
+var disconnected = [];
+
+io.on("connection", async (socket) => {
     var token = socket.handshake.headers.cookie?.split("; ")?.find(a => a.startsWith("token="))?.replace("token=", "");
     if (token) {
-        var profile = Profile.getProfileByToken(token);
-        if (profile) {
-            socket.profileId = profile.id;
-            socket.join(["authenticated", "profileid:" + profile.id.toString()]);
+        var session = await Session.getSessionByToken(token).catch(console.error);
+        if (session) {
+            var profile = await Profile.getProfileById(session.profileId).catch(console.error);
+            if (profile) {
+                socket.profileId = session.profileId;
+                socket.join(["authenticated", "profileid:" + session.profileId.toString()]);
+
+                var d = disconnected.findIndex(a => a.id.equals(profile._id));
+                if (d != -1) disconnected.splice(d, 1);
+                else {
+                    await Session.connectMessage(profile).catch(console.error);
+                }
+            }
         }
     }
 
-    socket.on("disconnect", () => {
+    socket.on("disconnecting", async () => {
         var profileId = socket.profileId;
         if (!profileId) return;
-        var profile = Profile.getProfileByID(profileId);
 
+        var rooms = socket.rooms;
+
+        var profile = await Profile.getProfileById(profileId);
         if (!profile) return;
-        if (profile.isTyping) {
-            profile.isTyping = false;
-            io.to("authenticated").emit("message.typing", { isTyping: false, username: profile.username });
+
+        if (rooms.has("authenticated")) {
+            disconnected.push({ id: profileId, date: new Date().getTime() });
         }
     });
 });
 
+// disconnect
+setInterval(() => {
+    disconnected.filter(a => a.date <= new Date().getTime() - 1000 * 10).forEach(async ({ id }) => {
+        if (Array.from(io.sockets.sockets.values).find(a => a.profileId.equals(id))) return;
+        await Session.disconnectMessage(await Profile.getProfileById(id).catch(console.error)).catch(console.error);
+    });
+    disconnected = disconnected.filter(a => a.date > new Date().getTime() - 1000 * 10);
+}, 1000 * 10);
+
 /* routes */
-app.get("/", async (req, res) => {
-    var session = await Session.getSession(req.cookies?.id, req.cookies?.token, req.fingerprint.hash);
-    if (!session) return res.redirect("/login");
+app.get("/", SessionMiddleware.isAuthed, async (req, res) => {
+    if (!req.isAuthed) return res.redirect("/login");
+
     res.sendFile(path.join(__dirname, "pages", "index.html"));
 });
 
-app.get("/login", async (req, res) => {
-    var session_ = await Session.getSession(req.cookies?.id, req.cookies?.token, req.fingerprint.hash);
-    if (session_) return res.redirect("/");
+app.get("/login", SessionMiddleware.isAuthed, async (req, res) => {
+    if (req.isAuthed) return res.redirect("/");
+
     res.sendFile(path.join(__dirname, "pages", "login.html"));
 });
 
@@ -57,22 +80,21 @@ app.get("/terms", (req, res) => {
     res.sendFile(path.join(__dirname, "pages", "terms.html"));
 });
 
-app.get("/register", async (req, res) => {
-    var session_ = await Session.getSession(req.cookies?.id, req.cookies?.token, req.fingerprint.hash);
-    if (session_) return res.redirect("/");
+app.get("/register", SessionMiddleware.isAuthed, async (req, res) => {
+    if (req.isAuthed) return res.redirect("/");
+
     res.sendFile(path.join(__dirname, "pages", "register.html"));
 });
 
-// fonctionne
-app.get("/profile/:id/avatar", async (req, res) => {
+app.get("/profile/:id/avatar", SessionMiddleware.auth, async (req, res) => {
     try {
-        var session = await Session.getSession(req.cookies?.id, req.cookies?.token, req.fingerprint.hash);
-        if (!session) return res.sendStatus(401);
-        var profileId = req.params.id == "@me" ? session.profileId : new ObjectId(req.params.id);
-        var profile = await Profile.getProfileById(profileId);
-        console.log(profile)
-        if (!profile.avatar.flag || !profile.avatar.extention) return res.sendFile(__dirname + "/ressources/images/user.png");
-        res.sendFile(path.join(__dirname, "avatars", profile.avatar.flag + profile.avatar.extention));
+        var id = req.params.id;
+        if (!id || (!ObjectId.isValid(id) && id != "@me")) throw new Error("Requête invalide.");
+        var profile = (req.params.id == "@me" || req.params.id == req.profile._id.toString()) ? req.profile : await Profile.getProfileById(new ObjectId(id));
+
+        var name = profile.avatar.flag + profile.avatar.extention;
+        if (fs.existsSync(path.join(__dirname, "avatars", name))) return res.sendFile(path.join(__dirname, "ressources", "images", "user.png"));
+        res.sendFile(path.join(__dirname, "avatars", name));
     } catch (err) {
         console.error(err);
         res.status(400).send(err.message || "Erreur inattendue");
@@ -81,71 +103,75 @@ app.get("/profile/:id/avatar", async (req, res) => {
 
 /* api */
 
-// utilisateurs en ligne fonctionne pas => revoir car rien touché
-app.get("/api/profiles/online", async (req, res) => {
-    var session = await Session.getSession(req.cookies?.id, req.cookies?.token, req.fingerprint.hash);
-    if (!session) return res.sendStatus(401);
-    res.sendStatus(200);
-    // res.status(200).send(Profile.profiles.map(a => a.username, a.id));
+// utilisateurs en ligne
+app.get("/api/profiles/online", SessionMiddleware.auth, async (req, res) => {
+    try {
+        var online = (await io.to("authenticated").fetchSockets()).map(a => a.profileId).concat(disconnected.map(a => a.id));
+        res.status(200).send((await Profile.getUsernamesByIds(online)).map(a => ({ id: a._id, username: a.username })));
+    } catch (error) {
+        console.error(error);
+        res.status(400).send(error.message || "Erreur inattendue");
+    }
 });
 
 // récupérer profil
-app.get("/api/profile/@me", async (req, res) => {
-    var profile = Profile.getProfile(req.cookies?.token, req.fingerprint);
-    if (!profile) return res.sendStatus(401);
-
-    res.status(200).send({ username: profile.username, id: profile.id, unread: await Message.getUnreadCount(profile) });
+app.get("/api/profile/@me", SessionMiddleware.auth, async (req, res) => {
+    res.status(200).send({ username: req.profile.username, id: req.profile._id, unread: await Message.getUnreadCount(req.profile) });
 });
 
 // upload avatar fonctionne
-app.put("/api/profile/@me/avatar", upload.single("avatar"), async (req, res) => {
+app.put("/api/profile/@me/avatar", rateLimit({
+    windowMs: 1000 * 60 * 10,
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false
+}), SessionMiddleware.auth, (req, res, next) => {
+    if (req.file.mimetype.startsWith("image/")) return next();
+    res.sendStatus(400);
+}, upload.single("avatar"), async (req, res) => {
     try {
-        const flag = generateID(15)
+        if (!req.file) throw new Error("Requête invalide.");
+
+        const flag = generateID(15);
         const tempPath = req.file.path;
         const extention = path.extname(req.file.originalname).toLowerCase()
         const targetPath = path.join(__dirname, "avatars", flag + extention);
-        var session = await Session.getSession(req.cookies?.id, req.cookies?.token, req.fingerprint.hash);
-        if (req.file.mimetype.startsWith("image/") && session) {
-            fs.renameSync(tempPath, targetPath);
-            var profile = await Profile.getProfileById(session.profileId);
-            profile.avatar.flag = flag;
-            profile.avatar.extention = extention;
-            await profile.save();
-            res.sendStatus(200);
-        } else fs.unlinkSync(tempPath);
+
+        fs.renameSync(tempPath, targetPath);
+
+        req.profile.avatar = { flag, extention };
+        await req.profile.save();
+
+        res.sendStatus(200);
     } catch (err) {
         console.error(err);
         res.status(400).send(err.message || "Erreur inattendue");
     }
 });
 
-// récupérer profil fonctionne
-app.get("/api/profile/@me", async (req, res) => {
-    var session = await Session.getSession(req.cookies?.id, req.cookies?.token, req.fingerprint.hash);
-    if (!session) return res.sendStatus(401);
-    res.status(200).send({ username, id } = session);
-});
-
-// créer profil fonctionne
+// créer profil
 app.post("/api/profile", rateLimit({
     windowMs: 1000 * 60 * 5,
     max: 5,
     standardHeaders: true,
     legacyHeaders: false
-}), async (req, res) => {
+}), SessionMiddleware.isAuthed, async (req, res) => {
     try {
-        if (!req.body.username || !req.body.password) throw new Error("Requête invalide.");
-        var session_ = await Session.getSession(req.cookies?.id, req.cookies?.token, req.fingerprint.hash);
-        if (session_) throw new Error("Vous êtes déjà authentifié(e)");
+        if (req.isAuthed) throw new Error("Vous êtes déjà authentifié.");
+        if (!req.body || !req.body.username || !req.body.password) throw new Error("Requête invalide.");
+
         var { username, password } = req.body;
         username = username.toLowerCase().trim();
         password = password.trim();
+
         if (USERNAMES_NOT_ALLOWED.includes(username)) throw new Error("Nom d'utilisateur non autorisé.");
-        if (!/^(((?=.*[a-z])(?=.*[A-Z]))|((?=.*[a-z])(?=.*[0-9]))|((?=.*[A-Z])(?=.*[0-9])))(?=.{6,32}$)/.test(password)) throw new Error("Une erreur inexpliquée s'est produite.");
+        if (!/^(((?=.*[a-z])(?=.*[A-Z]))|((?=.*[a-z])(?=.*[0-9]))|((?=.*[A-Z])(?=.*[0-9])))(?=.{6,32}$)/.test(password) || !FIELD_REGEX.test(username)) throw new Error("Requête invalide.");
+
         var profile = await Profile.create(username, password);
         var ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
         var session = await Session.create(profile._id, req.fingerprint.hash, ip);
-        res.cookie("token", session.token, { expires: new Date(session.expiresIn * 1000 + new Date().getTime()) }).cookie("id", session._id.toString(), { expires: new Date(session.expiresIn * 1000 + new Date().getTime()) }).json(profile);
+        var expires = new Date(24 * 60 * 60 * 1000 + new Date().getTime());
+        res.cookie("token", session.token, { expires }).cookie("id", session._id.toString(), { expires }).json({ username: profile.username, id: profile._id, unread: await Message.getUnreadCount(profile) });
     }
     catch (error) {
         console.error(error);
@@ -153,47 +179,48 @@ app.post("/api/profile", rateLimit({
     }
 });
 
-// supprimer la session fonctionne
-app.delete("/api/profile", async (req, res) => {
+// supprimer la session
+app.delete("/api/profile", SessionMiddleware.auth, async (req, res) => {
     try {
-        var session = await Session.getSession(req.cookies?.id, req.cookies?.token, req.fingerprint.hash);
-        if (!session) return res.sendStatus(401);
-
-        await Session.disable(session.id);
+        await Session.disable(req.session.id);
         res.sendStatus(200);
-
     } catch (error) {
         console.error(error);
         res.status(400).send(error.message || "Erreur inattendue");
     }
 });
 
-// connexion fonctionne pas (duplicate)
-
-app.post("/api/login", async (req, res) => {
+// connexion
+app.post("/api/login", SessionMiddleware.isAuthed, async (req, res) => {
     try {
-        console.log(req.body)
-        if (!req.body) throw new Error("Mauvaise requête.");
+        if (req.isAuthed) throw new Error("Vous êtes déjà authentifié.");
+        if (!req.body || !req.body.username || !req.body.password) throw new Error("Requête invalide.");
+
         const { username, password } = req.body;
-        var profileId = await Profile.check(username, password)
-        if (!profileId) throw new Error("Identifants incorrects.");
-        var session = await Session.getSessionByProfileId(profileId)
+
+        var profile = await Profile.check(username, password);
+        if (!profile) throw new Error("Identifants incorrects.");
+
+        var session = await Session.getSessionByProfileId(profile._id);
+        var ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
         if (session) {
             session.active = true;
-            await session.save();
+            if (!session.fingerprints.includes(req.fingerprint.hash)) session.fingerprints.push(req.fingerprint.hash);
+            if (!session.ips.includes(ip)) session.ips.push(ip);
+            await session.save({ validateBeforeSave: true });
         } else {
-            var ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-            await Session.create(profileId, req.fingerprint.hash, ip);
-            res.status(201).json({ username: Profile.getProfileById(session.profileId).username });
+            session = await Session.create(profile._id, req.fingerprint.hash, ip);
         }
 
+        var expires = new Date(24 * 60 * 60 * 1000 + new Date().getTime());
+        res.cookie("token", session.token, { expires }).cookie("id", session._id.toString(), { expires }).json({ username: profile.username, id: profile._id, unread: await Message.getUnreadCount(profile) });
     } catch (error) {
         console.error(error);
         res.status(400).send(error.message || "Erreur inattendue");
     }
 });
 
-// post message fonctionne pas
+// message
 app.put("/api/message", rateLimit({
     windowMs: 1000 * 5,
     max: 3,
@@ -204,14 +231,15 @@ app.put("/api/message", rateLimit({
     max: 20,
     standardHeaders: true,
     legacyHeaders: false
-}), async (req, res) => {
+}), SessionMiddleware.auth, async (req, res) => {
     try {
-        var session = await Session.getSession(req.cookies?.id, req.cookies?.token, req.fingerprint.hash);
-        if (!session) return res.sendStatus(401);
+        if (!req.body || !req.body.content) throw new Error("Requête invalide.");
 
         var content = req.body.content.trim();
-        await Message.create({ id, username } = profile, content);
-        profile.isTyping = false;
+        await Message.create(req.profile, content);
+
+        var i = typing.findIndex(a => a.id.equals(req.profile._id));
+        if (i != -1) typing.splice(i, 1);
 
         res.sendStatus(201);
     } catch (error) {
@@ -221,13 +249,12 @@ app.put("/api/message", rateLimit({
 });
 
 // récupérer des messages
-app.get("/api/messages", async (req, res) => {
+app.get("/api/messages", SessionMiddleware.auth, async (req, res) => {
     try {
-        var profile = Profile.getProfile(req.cookies.token, req.fingerprint);
-        if (!profile) return res.sendStatus(401);
+        if (!req.query || !req.query.from) throw new Error("Requête invalide.");
 
         var from = req.query.from;
-        var mes = await Message.getMessages(profile, from, 20);
+        var mes = await Message.getMessages(req.profile, from, 20);
         res.status(200).json(mes);
     } catch (error) {
         console.error(error);
@@ -236,10 +263,9 @@ app.get("/api/messages", async (req, res) => {
 });
 
 // mettre à jour un message
-app.put("/api/message/:id", async (req, res) => {
-    try {
-        return res.status(400).send("Cette méthode n'est pas encore implémentée.");
-
+app.put("/api/message/:id", (req, res) => {
+    return res.status(400).send("Cette méthode n'est pas encore implémentée.");
+    /*try {
         var profile = Profile.getProfile(req.cookies.token, req.fingerprint);
         if (!profile) return res.sendStatus(401);
 
@@ -250,21 +276,22 @@ app.put("/api/message/:id", async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(400).send(error.message || "Erreur inattendue");
-    }
+    }*/
 });
 
-app.put("/api/messages/view", async (req, res) => {
+// voir des messages
+app.put("/api/messages/view", SessionMiddleware.auth, async (req, res) => {
     try {
-        var profile = Profile.getProfile(req.cookies.token, req.fingerprint);
-        if (!profile) return res.sendStatus(401);
+        if (!req.body || !req.body.ids) throw new Error("Requête invalide.");
 
         var ids = req.body.ids;
-        if (!ids || !Array.isArray(ids)) throw new Error("Requête invalide.");
+        if (!Array.isArray(ids)) throw new Error("Requête invalide.");
+
         ids = ids.map(a => ObjectId.isValid(a) ? new ObjectId(a) : null);
         ids = ids.filter(a => a != null);
         if (ids.length == 0) throw new Error("Requête invalide.");
 
-        var messages = await Message.addViewToMessages(ids, profile.id);
+        var messages = await Message.addViewToMessages(ids, req.profile._id);
 
         res.status(200).json(messages);
     } catch (error) {
@@ -274,41 +301,43 @@ app.put("/api/messages/view", async (req, res) => {
 });
 
 // supprimer un message
-app.delete("/api/message/:id", async (req, res) => {
+app.delete("/api/message/:id", SessionMiddleware.auth, async (req, res) => {
     try {
-        var profile = Profile.getProfile(req.cookies.token, req.fingerprint);
-        if (!profile) return res.sendStatus(401);
-
         var id = req.params.id;
-        var message = await Message.deleteMessage(profile.id, new ObjectId(id));
-        res.status(200).json(Message.getMessageFields(profile, message));
+        var message = await Message.getById(new ObjectId(id));
+        if (!message.author.id.equals(req.profile._id)) return res.sendStatus(403);
+
+        message.deleted = true;
+        await message.save();
+
+        res.sendStatus(200);
     } catch (error) {
         console.error(error);
         res.status(400).send(error.message || "Erreur inattendue");
     }
 });
 
-// fonctionne pas
-app.get("/api/profiles/typing", (req, res) => {
+// récupérer ceux qui évrivent
+app.get("/api/profiles/typing", SessionMiddleware.auth, async (req, res) => {
     try {
-        var session = await Session.getSession(req.cookies?.id, req.cookies?.token, req.fingerprint.hash);
-        if (!session) return res.sendStatus(401);
-        res.status(200).json(Profile.profiles.filter(a => a.isTyping).map(b => b.username));
+        res.status(200).json(typing);
     } catch (error) {
         console.error(error);
         res.status(400).send(error.message || "Erreur inattendue");
     }
 });
 
-// fonctionne pas 
-app.put("/api/typing", (req, res) => {
+// écrire
+app.put("/api/typing", SessionMiddleware.auth, (req, res) => {
     try {
-        var profile = Profile.getProfile(req.cookies.token, req.fingerprint);
-        if (!profile) return res.sendStatus(401);
         var isTyping = req.body.isTyping ? true : false;
-        if (profile.isTyping == isTyping) return res.sendStatus(200);
-        profile.isTyping = isTyping;
-        io.to("authenticated").emit("message.typing", { isTyping, username: profile.username });
+
+        var i = typing.findIndex(a => a.id.equals(req.profile._id));
+        if ((i == -1 && !isTyping) || (i != -1 && isTyping)) return res.sendStatus(200);
+
+        if (isTyping) addTyping(req.profile);
+        else removeTyping(req.profile);
+
         res.sendStatus(201);
     } catch (error) {
         console.error(error);
@@ -324,4 +353,19 @@ function generateID(length) {
         b[i] = a[j];
     }
     return b.join("");
+}
+
+function addTyping(profile) {
+    if (!typing.some(a => a.id.equals(profile._id))) {
+        typing.push({ id: profile._id, username: profile.username });
+        io.to("authenticated").emit("message.typing", { isTyping: true, id: profile._id, username: profile.username });
+    }
+}
+
+function removeTyping(profile) {
+    var i = typing.findIndex(a => a.id.equals(profile._id));
+    if (i != -1) {
+        typing.splice(i, 1);
+        io.to("authenticated").emit("message.typing", { isTyping: false, id: profile._id, username: profile.username });
+    }
 }
