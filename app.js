@@ -178,7 +178,7 @@ app.post("/api/profile", rateLimit({
 // supprimer la session
 app.delete("/api/profile", SessionMiddleware.auth, async (req, res) => {
     try {
-        await Session.disable(req.session.id);
+        await Session.disable(req.session);
         res.sendStatus(200);
     } catch (error) {
         console.error(error);

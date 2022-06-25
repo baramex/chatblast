@@ -16,7 +16,7 @@
     <title>ChatBlast</title>
 </head>
 
-<body class="d-flex flex-column">
+<body class="d-flex flex-column" style="height: 100vh;">
     <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"
         integrity="sha384-fKnu0iswBIqkjxrhQCTZ7qlLHOFEgNkRmK2vaO/LbTZSXdJfAu6ewRBdwHPhBo/H"
         crossorigin="anonymous"></script>
@@ -63,7 +63,7 @@
                 <p id="nomes" class="fs-4 text-secondary" toshow hidden>
                     Aucun message
                 </p>
-                <div class="spinner-border text-theme" style="width: 3rem;height: 3rem;" role="status" toremove>
+                <div class="spinner-border text-theme" id="message-spinner" style="width: 3rem;height: 3rem;" role="status" toremove>
                     <span class="visually-hidden">Loading...</span>
                 </div>
             </div>
