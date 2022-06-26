@@ -67,10 +67,10 @@ function fetched(messages, loaded = false, reverse = false) {
     }
 
     if (messages.length == 0) allMessageFetched = true;
-    if (reverse) messages = messages.reverse();
+    if (!reverse) messages.reverse();
     var s = messageContainer.scrollHeight;
     messages.forEach(message => {
-        pushMessage(message._id, message.author, message.content, message.views, message.isViewed, new Date(message.date), false, true);
+        pushMessage(message._id, message.author, message.content, message.views, message.isViewed, new Date(message.date), false, reverse);
     });
     var news = messageContainer.scrollHeight;
 
@@ -148,7 +148,6 @@ socket.on("profile.join", data => {
 
 socket.on("profile.leave", data => {
     var id = data.id;
-    var username = data.username;
 
     var online = JSON.parse(sessionStorage.getItem("online") || "[]");
     var profile = online.findIndex(a => a.id == id);
