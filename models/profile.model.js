@@ -31,7 +31,7 @@ class Profile {
     static async check(username, password) {
         var profile = await profileModel.findOne({ username });
         if (!profile) return false;
-        if (bcrypt.compare(password, profile.password)) return profile;
+        if (await bcrypt.compare(password, profile.password)) return profile;
         return false;
     }
 
