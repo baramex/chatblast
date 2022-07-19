@@ -51,7 +51,11 @@ app.use(Fingerprint({
 const http = require('http');
 const server = http.createServer(app);
 const { Server } = require("socket.io");
-const io = new Server(server);
+const io = new Server(server, {
+    cors: {
+        origin: "https://www.chatblast.baramex.me"
+    }
+});
 server.listen(PORT, () => {
     console.log("Serveur lancé sur le port: " + PORT);
 });
