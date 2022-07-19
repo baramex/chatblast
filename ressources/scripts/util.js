@@ -163,12 +163,8 @@ function api(endpoint, method, data = undefined, isShowError = false, errorActio
                 }, time * 1000);
             }
             else if (status == 401) {
-                attemptToRefreshProfile().then(() => {
-                    api(endpoint, method, copyData, isShowError, errorAction, successMessage, successAction).then(res).catch(rej);
-                }).catch(err_ => {
-                    document.location.href = "/login";
-                    rej(err_);
-                });
+                document.location.href = "/login";
+                rej(response.data);
             }
             else {
                 var message = response.data;

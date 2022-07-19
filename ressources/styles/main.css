@@ -10,7 +10,7 @@ img.contrast {
 body {
     background-color: #44b996;
     width: 100vw;
-    height: 100vh;
+    min-height: 100vh;
     overflow-x: hidden;
     scroll-behavior: smooth;
 }
@@ -221,6 +221,10 @@ footer a:hover {
         margin-top: 60px;
     }
 
+    #message-spinner {
+        color: white !important;
+    }
+
     #send-message {
         flex-direction: column;
         background-color: transparent;
@@ -250,6 +254,21 @@ footer a:hover {
     #unread {
         margin-left: .25rem !important;
         margin-top: -0.5rem !important;
+    }
+
+    #register-form div.inputs-container {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    #register-form div.inputs-container > div {
+        width: 100%;
+    }
+
+    #avatar-container {
+        margin-right: 0 !important;
+        margin-bottom: 2rem;
+        margin-top: 0 !important;
     }
 }
 

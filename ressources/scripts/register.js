@@ -23,6 +23,7 @@ avatarInput.addEventListener('input', () => {
     document.getElementById("add-picture").hidden = true;
     document.getElementById("avatar-img").style.width = "100%";
     document.getElementById("avatar-img").style.height = "100%";
+    document.getElementById("avatar-img").hidden = false;
     readURL(avatarInput);
 });
 

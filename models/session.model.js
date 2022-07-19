@@ -28,8 +28,7 @@ session.post("validate", async function (doc, next) {
             doc.token = undefined;
             doc.markModified("token");
 
-            var profile = await Profile.getProfileById(doc.profileId).catch(console.error);
-            await Session.disconnectMessage(profile).catch(console.error);
+            io.to("profileid:" + doc.profileId.toString()).disconnectSockets(true);
         }
     }
 
@@ -66,13 +65,9 @@ class Session {
         io.to("authenticated").emit("profile.join", { id: profile.id, username: profile.username });
     }
 
-    /**
-     * 
-     * @param {ObjectId} id 
-     */
-
-    static disable(id) {
-        return SessionModel.updateOne({ _id: id }, { $unset: { token: "" }, $set: { active: false } });
+    static disable(session) {
+        session.active = false;
+        return session.save({ runValidators: true });
     }
 
     /**
@@ -122,7 +117,7 @@ class Session {
     }
 
     static update() {
-        SessionModel.updateMany({ active: true, date: { $gt: new Date().getTime() - 1000 * 60 * 60 * 24 } }, { $unset: { token: "" }, $set: { active: false } });
+        SessionModel.updateMany({ active: true, date: { $gt: new Date().getTime() - 1000 * 60 * 60 * 24 } }, { $set: { active: false }, $unset: { token: true } }, { runValidators: true });
 
         io.sockets.sockets.forEach(async socket => {
             if (socket.rooms.has("authenticated")) {

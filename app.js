@@ -12,6 +12,7 @@ const { Session, SessionMiddleware } = require("./models/session.model");
 const fs = require("fs");
 const { Message } = require("./models/message.model");
 const { app, io, upload } = require("./server");
+const { getClientIp } = require("request-ip");
 require("dotenv").config();
 mongoose.connect(process.env.DB, { dbName: process.env.DB_NAME });
 
@@ -164,7 +165,7 @@ app.post("/api/profile", rateLimit({
         if (!/^(((?=.*[a-z])(?=.*[A-Z]))|((?=.*[a-z])(?=.*[0-9]))|((?=.*[A-Z])(?=.*[0-9])))(?=.{6,32}$)/.test(password) || !FIELD_REGEX.test(username)) throw new Error("Requête invalide.");
 
         var profile = await Profile.create(username, password);
-        var ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+        var ip = getClientIp(req);
         var session = await Session.create(profile._id, req.fingerprint.hash, ip);
         var expires = new Date(24 * 60 * 60 * 1000 + new Date().getTime());
         res.cookie("token", session.token, { expires }).cookie("id", session._id.toString(), { expires }).json({ username: profile.username, id: profile._id, unread: await Message.getUnreadCount(profile) });
@@ -178,7 +179,7 @@ app.post("/api/profile", rateLimit({
 // supprimer la session
 app.delete("/api/profile", SessionMiddleware.auth, async (req, res) => {
     try {
-        await Session.disable(req.session.id);
+        await Session.disable(req.session);
         res.sendStatus(200);
     } catch (error) {
         console.error(error);
@@ -198,7 +199,7 @@ app.post("/api/login", SessionMiddleware.isAuthed, async (req, res) => {
         if (!profile) throw new Error("Identifants incorrects.");
 
         var session = await Session.getSessionByProfileId(profile._id);
-        var ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+        var ip = getClientIp(req);
         if (session) {
             session.active = true;
             if (!session.fingerprints.includes(req.fingerprint.hash)) session.fingerprints.push(req.fingerprint.hash);

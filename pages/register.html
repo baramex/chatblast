@@ -17,7 +17,7 @@
     <title>ChatBlast | inscription</title>
 </head>
 
-<body>
+<body style="margin-bottom: 4rem;">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.0.0-alpha.1/axios.min.js"
         integrity="sha512-xIPqqrfvUAc/Cspuj7Bq0UtHNo/5qkdyngx6Vwt+tmbvTLDszzXM0G6c91LXmGrRx8KEPulT+AfOOez+TeVylg=="
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -28,17 +28,17 @@
 
     <form id="register-form" class="position-absolute top-50 start-50 translate-middle container"
         style="width: 40%;max-width: 800px;">
-        <div class="fs-1 text-center">
-            <label class="mb-4" for="username" class="form-label">Bienvenue sur <strong>ChatBlast</strong></label>
-            <div class="d-flex direction-column mt-4 justify-content-evenly w-100">
+        <div class="text-center">
+            <h1 class="mb-4 fw-normal" class="form-label">Bienvenue sur <strong>ChatBlast</strong></h1>
+            <div class="d-flex direction-column mt-4 justify-content-evenly w-100 inputs-container">
                 <label for="avatar-input"
                     class="rounded-circle me-5 mt-4 pointer position-relative d-flex justify-content-center align-items-center p-1"
                     style="width: 150px; height: 150px;" id="avatar-container">
                     <p class="fs-5 m-0" style="color: #ececec;">Photo de <br>profil</p>
                     <input type="file" accept="image/*" name="avatar" id="avatar-input">
-                    <img class="rounded-circle" id="avatar-img">
-                    <img class="position-absolute top-0 end-0 me-3 mt-2" width="25%" id="add-picture"
-                        src="/images/add-picture.png">
+                    <img class="rounded-circle" id="avatar-img" alt="avatar" hidden>
+                    <img class="position-absolute top-0 end-0 me-2 mt-1" width="25%" id="add-picture"
+                        src="/images/add-picture.png" alt="add-avatar">
                 </label>
                 <div class="flex-grow-1 text-start">
                     <input type="text" class="form-control fs-4" id="username" placeholder="Nom d'utilisateur"

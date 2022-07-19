@@ -67,10 +67,10 @@ function fetched(messages, loaded = false, reverse = false) {
     }
 
     if (messages.length == 0) allMessageFetched = true;
-    if (reverse) messages = messages.reverse();
+    if (!reverse) messages.reverse();
     var s = messageContainer.scrollHeight;
     messages.forEach(message => {
-        pushMessage(message._id, message.author, message.content, message.views, message.isViewed, new Date(message.date), false, true);
+        pushMessage(message._id, message.author, message.content, message.views, message.isViewed, new Date(message.date), false, reverse);
     });
     var news = messageContainer.scrollHeight;
 
@@ -115,6 +115,7 @@ socket.on("message.send", data => {
 socket.on("message.typing", (res) => {
     var typing = JSON.parse(sessionStorage.getItem("typing") || "[]");
     if (res.isTyping) {
+        if (typing.some(a => a.id == res.id)) return;
         typing.push({ id: res.id, username: res.username })
     } else {
         var profile = typing.findIndex(a => a.id == res.id);
@@ -138,14 +139,15 @@ socket.on("profile.join", data => {
     var username = data.username;
 
     var online = JSON.parse(sessionStorage.getItem("online") || "[]");
-    online.push({ id, username });
-    sessionStorage.setItem("online", JSON.stringify(online));
-    updateOnline();
+    if (online.some(a => a.id == id)) {
+        online.push({ id, username });
+        sessionStorage.setItem("online", JSON.stringify(online));
+        updateOnline();
+    }
 });
 
 socket.on("profile.leave", data => {
     var id = data.id;
-    var username = data.username;
 
     var online = JSON.parse(sessionStorage.getItem("online") || "[]");
     var profile = online.findIndex(a => a.id == id);
@@ -277,7 +279,7 @@ function updateOnline() {
         var td = document.createElement("td");
         td.classList.add("py-3", "px-4");
         var img = document.createElement("img");
-        img.src = "/profile/" +  (user.id == sessionStorage.getItem("id") ? "@me" : user.id) + "/avatar";
+        img.src = "/profile/" + (user.id == sessionStorage.getItem("id") ? "@me" : user.id) + "/avatar";
         img.classList.add("me-2", "contrast");
         img.width = "60";
         var span = document.createElement("span");
@@ -431,6 +433,6 @@ function pushMessage(id, author, message, views = -1, isViewed, date = new Date(
 
 function deleteMessage(id) {
     showConfirm("Êtes-vous sûr de vouloir supprimer le message ?", () => {
-        api("/message/id" + id, "delete", undefined, true, undefined, "Message supprimé !");
+        api("/message/" + id, "delete", undefined, true, undefined, "Message supprimé !");
     });
 }
