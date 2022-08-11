@@ -85,9 +85,9 @@ io.on("connection", async (socket) => {
             return socket.emit("call.error", "Appel déconnecté");
         }
 
-        call.candidates.push({ label: data.label, candidate: data.candidate });
+        call.candidates.push({ label: data.label, candidate: data.candidate, id: data.id });
 
-        io.to(socket.profileId == data.caller ? data.callee : data.caller).emit("call.candidate", { label: data.label, candidate: data.candidate });
+        io.to(socket.profileId == data.caller ? data.callee : data.caller).emit("call.candidate", { label: data.label, candidate: data.candidate, id: data.id });
     });
 
     socket.on("disconnecting", async () => {

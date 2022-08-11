@@ -561,7 +561,11 @@ socket.on("call.answered", async data => {
         else {
             console.log("add candidates: " + data.candidates.length);
             for (const candidate of data.candidates) {
-                await call.peerConnection.addIceCandidate(candidate);
+                await call.peerConnection.addIceCandidate(new RTCIceCandidate({
+                    sdpMLineIndex: candidate.label,
+                    sdpMid: candidate.id,
+                    candidate: candidate.candidate
+                }));
             }
             console.log("ended candidates");
         }
@@ -572,6 +576,7 @@ socket.on("call.candidate", candidate => {
     if (call) {
         call.peerConnection.addIceCandidate(new RTCIceCandidate({
             sdpMLineIndex: candidate.label,
+            sdpMid: candidate.id,
             candidate: candidate.candidate
         }));
     }
