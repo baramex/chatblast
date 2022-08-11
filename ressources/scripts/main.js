@@ -561,13 +561,19 @@ socket.on("call.answered", async data => {
         else {
             console.log("add candidates: " + data.candidates.length);
             for (const candidate of data.candidates) {
-                await call.peerConnection.addIceCandidate(new RTCIceCandidate({
-                    sdpMLineIndex: candidate.label,
-                    candidate: candidate.candidate
-                }));
+                await call.peerConnection.addIceCandidate(candidate);
             }
             console.log("ended candidates");
         }
+    }
+});
+
+socket.on("call.candidate", candidate => {
+    if (call) {
+        call.peerConnection.addIceCandidate(new RTCIceCandidate({
+            sdpMLineIndex: candidate.label,
+            candidate: candidate.candidate
+        }));
     }
 });
 
