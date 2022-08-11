@@ -574,6 +574,7 @@ socket.on("call.answered", async data => {
 
 socket.on("call.candidate", candidate => {
     if (call) {
+        console.log("received candidate packet");
         call.peerConnection.addIceCandidate(new RTCIceCandidate({
             sdpMLineIndex: candidate.label,
             sdpMid: candidate.id,
