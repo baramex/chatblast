@@ -4,7 +4,7 @@ const PORT = 1500;
 /* express */
 const express = require("express");
 const app = express();
-app.use(express.static("./ressources"))
+app.use(express.static("./ressources"));
 
 /* middleware */
 var cors = require('cors');

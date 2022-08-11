@@ -12,7 +12,7 @@
         content="chatbox, public, worldwide, world, chat, online-chat, online, fun, talk, tell, chatblast">
     <meta name="theme-color" content="#44b996">
     <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self'; connect-src 'self'; script-src 'self' 'unsafe-inline' cdnjs.cloudflare.com cdn.socket.io; style-src 'self' 'unsafe-inline' cdn.jsdelivr.net; img-src *">
+        content="default-src 'self'; media-src * blob:; connect-src 'self' blob:; script-src 'self' 'unsafe-inline' unpkg.com cdnjs.cloudflare.com cdn.socket.io; style-src 'self' 'unsafe-inline' cdn.jsdelivr.net; img-src *">
     <title>ChatBlast</title>
 </head>
 
@@ -27,6 +27,9 @@
         integrity="sha384-0evHe/X+R7YkIZDRvuzKMRqM+OrBnVFBL6DOitfPri4tjfHxaWutUpFmBp4vmVor" crossorigin="anonymous">
     <link rel="stylesheet" href="/styles/main.css">
     <script src="/scripts/util.js"></script>
+
+
+    <script src="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
 
     <header class="text-center position-relative">
         <h1 class="title d-inline-block ms-5">ChatBlast</h1>
@@ -53,8 +56,8 @@
     </div>
 
     <div id="chat" class="mx-5 mt-3 mb-4 h-100 d-flex flex-column rounded-3 position-relative">
-        <span id="unread"
-            class="position-absolute badge rounded-pill bg-danger fs-6" style="margin-top: -.25rem;margin-left: -.5rem;">
+        <span id="unread" class="position-absolute badge rounded-pill bg-danger fs-6"
+            style="margin-top: -.25rem;margin-left: -.5rem;">
             0
         </span>
 
@@ -63,7 +66,8 @@
                 <p id="nomes" class="fs-4 text-secondary" toshow hidden>
                     Aucun message
                 </p>
-                <div class="spinner-border text-theme" id="message-spinner" style="width: 3rem;height: 3rem;" role="status" toremove>
+                <div class="spinner-border text-theme" id="message-spinner" style="width: 3rem;height: 3rem;"
+                    role="status" toremove>
                     <span class="visually-hidden">Loading...</span>
                 </div>
             </div>
@@ -89,6 +93,16 @@
         </p>
         <a href="/terms">Conditions d'utilisation</a>
     </footer>
+
+    <div class="call">
+        <form id="call-form">
+            <input type="text" name="id" id="id" placeholder="callee">
+            <input type="submit" value="call">
+        </form>
+        <button id="answer">answer</button>
+    </div>
+
+    <audio id="call" controls autoplay></audio>
 
     <script src="/scripts/main.js"></script>
 </body>

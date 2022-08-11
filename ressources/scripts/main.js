@@ -1,16 +1,16 @@
 // main script
 const socket = io();
 const unread = document.getElementById("unread");
-var inPage = true;
-var documentLoaded = false;
-var allMessageFetched = false;
+let inPage = true;
+let documentLoaded = false;
+let allMessageFetched = false;
 
-var messageToView = [];
-var viewMessagesToSend = [];
+let messageToView = [];
+let viewMessagesToSend = [];
 const messageObserver = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
         if (entry.isIntersecting == true) {
-            var id = entry.target.id.replace("m-", "");
+            let id = entry.target.id.replace("m-", "");
             if (inPage) {
                 viewMessagesToSend.push({ id, element: entry.target });
             }
@@ -23,11 +23,11 @@ const messageObserver = new IntersectionObserver((entries) => {
     updateViewMessages();
 }, { threshold: [0] });
 
-var lastUpdateViewMessage = 0;
+let lastUpdateViewMessage = 0;
 function updateViewMessages() {
     if (new Date().getTime() - lastUpdateViewMessage < 1000) return setTimeout(updateViewMessages, new Date().getTime() - lastUpdateViewMessage);
 
-    var curr = [...viewMessagesToSend];
+    let curr = [...viewMessagesToSend];
     if (!curr || curr.length == 0) return;
     api("/messages/view", "put", { ids: curr.map(a => a.id) });
 
@@ -436,3 +436,180 @@ function deleteMessage(id) {
         api("/message/" + id, "delete", undefined, true, undefined, "Message supprimé !");
     });
 }
+
+const CALL_STATES = {
+    "INIT": 0,
+    "RINGING": 1,
+    "ANSWERED": 2,
+    "ENDED": 3,
+    "ERROR": 4,
+    "BUSY": 6
+};
+
+const audio = document.getElementById("call");
+
+class Call {
+    constructor(state, caller = undefined, remoteRTCMessage = undefined) {
+        this.state = state;
+        if (caller) this.caller = caller;
+        if (remoteRTCMessage) this.remoteRTCMessage = remoteRTCMessage;
+    }
+
+    async start(callee) {
+        if (this.state != CALL_STATES.INIT) throw new Error("Call already started");
+
+        await this.createPeerConnection();
+        const sessionDescription = await this.peerConnection.createOffer();
+        await this.peerConnection.setLocalDescription(sessionDescription);
+
+        socket.emit("call", { callee, RTCMessage: sessionDescription });
+        this.caller = sessionStorage.getItem("id");
+        this.callee = callee;
+        this.state = CALL_STATES.RINGING;
+
+        console.log("start call");
+    }
+
+    async createPeerConnection() {
+        this.mediaStream = await this.getMediaStream();
+        if (!this.mediaStream) throw new Error("No media stream");
+
+        const config = {
+            iceServers: [
+                {
+                    "urls": ["stun:stun.l.google.com:19302",
+                        "stun:stun1.l.google.com:19302",
+                        "stun:stun2.l.google.com:19302"]
+                }
+            ]
+        }
+
+        this.peerConnection = new RTCPeerConnection(config);
+        this.peerConnection.onaddstream = e => {
+            audio.srcObject = e.stream;
+        };
+        this.peerConnection.onicecandidate = e => {
+            if (e.candidate) {
+                socket.emit("call.candidate", {
+                    label: e.candidate.sdpMLineIndex,
+                    id: e.candidate.sdpMid,
+                    candidate: e.candidate.candidate,
+                    caller: this.caller,
+                    callee: this.callee
+                });
+            }
+        };
+
+        this.peerConnection.addStream(this.mediaStream);
+    }
+
+    getMediaStream() {
+        return navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+    }
+
+    async answer() {
+        if (this.state != CALL_STATES.RINGING) throw new Error("Call not ringing");
+
+        await this.createPeerConnection();
+        this.peerConnection.setRemoteDescription(new RTCSessionDescription(this.remoteRTCMessage));
+        const sessionDescription = await this.peerConnection.createAnswer();
+        this.peerConnection.setLocalDescription(sessionDescription);
+
+        socket.emit("call.answer", { caller: this.caller, RTCMessage: sessionDescription });
+        this.state = CALL_STATES.ANSWERED;
+
+        console.log("answer call");
+    }
+
+    answered() {
+        if (this.state != CALL_STATES.RINGING && this.state != CALL_STATES.ANSWERED) throw new Error("Call not ringing or answered");
+        this.state = CALL_STATES.ANSWERED;
+
+        console.log("answered call");
+    }
+
+    busy() {
+        if (this.state != CALL_STATES.RINGING) throw new Error("Call not ringing");
+        this.state = CALL_STATES.BUSY;
+
+        console.log("busy call");
+    }
+}
+
+let call;
+socket.on("call.income", data => {
+    console.log("ringing");
+    if (call) return;
+    call = new Call(CALL_STATES.RINGING, data.caller, data.RTCMessage);
+    call.callee = sessionStorage.getItem("id");
+});
+
+socket.on("call.answered", async data => {
+    if (call) {
+        call.answered();
+
+        if (call.caller == sessionStorage.getItem("id")) {
+            call.peerConnection.setRemoteDescription(new RTCSessionDescription(data.RTCMessage));
+        }
+        else {
+            for (const candidate of data.candidates) {
+                await call.peerConnection.addIceCandidate(new RTCIceCandidate({
+                    sdpMLineIndex: candidate.label,
+                    candidate: candidate.candidate
+                }));
+            }
+        }
+    }
+});
+
+socket.on("call.busy", () => {
+    if (call) call.busy();
+    call = undefined;
+});
+
+document.getElementById("call-form").addEventListener("submit", e => {
+    e.preventDefault();
+    if (!call) {
+        call = new Call(CALL_STATES.INIT);
+        call.start(e.target.id.value);
+    }
+});
+
+document.getElementById("answer").addEventListener("click", e => {
+    if (call) call.answer();
+});
+
+/*const audio = new Audio();
+audio.autoplay = true;
+let burl = "";
+let firstBuffer = 0;
+socket.on("voice", async buffer => {
+    if (!firstBuffer) firstBuffer = buffer;
+    const blob = new Blob([firstBuffer, buffer], { type: "audio/webm" });
+
+    if (burl) URL.revokeObjectURL(burl);
+    const url = URL.createObjectURL(blob);
+
+    audio.src = url;
+    audio.volume = 1;
+    audio.currentTime = burl ? 0.5 : 0;
+
+    burl = url;
+});
+
+async function getLocalStream() {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+
+    const recorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+    recorder.start();
+
+    setInterval(() => {
+        recorder.requestData();
+    }, 500);
+
+    recorder.ondataavailable = async e => {
+        socket.emit("voice", { buffer: e.data, receiver: sessionStorage.getItem("id") });
+    };
+}
+
+getLocalStream().catch(console.error);*/

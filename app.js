@@ -16,8 +16,10 @@ const { getClientIp } = require("request-ip");
 require("dotenv").config();
 mongoose.connect(process.env.DB, { dbName: process.env.DB_NAME });
 
-var typing = [];
-var disconnected = [];
+let typing = [];
+let disconnected = [];
+
+const calls = [];
 
 io.on("connection", async (socket) => {
     var token = socket.handshake.headers.cookie?.split("; ")?.find(a => a.startsWith("token="))?.replace("token=", "");
@@ -37,6 +39,54 @@ io.on("connection", async (socket) => {
             }
         }
     }
+
+    socket.on("call", async data => {
+        if (!socket.profileId || !socket.rooms.has("authenticated")) return socket.emit("call.error", "Non autorisé");
+
+        if (!data.callee || !data.RTCMessage) return socket.emit("call.error");
+
+        if (calls.find(a => a.id == data.callee || a.id == socket.profileId)) return socket.emit("call.busy");
+        var sockets = io.to("profileid:" + data.callee).to("autenticated");
+        if ((await sockets.allSockets()).size == 0) return socket.emit("call.error", "Destinataire non trouvé");
+
+        calls.push({ caller: socket.profileId, callee: data.callee, answered: false, candidates: [], date: new Date() });
+
+        socket.join("call:" + data.callee + socket.profileId);
+        sockets.socketsJoin("call:" + data.callee + socket.profileId);
+
+        sockets.emit("call.income", { caller: socket.profileId, RTCMessage: data.RTCMessage });
+    });
+
+    socket.on("call.answer", async data => {
+        if (!data.caller || !data.RTCMessage) return socket.emit("call.error");
+
+        var call = calls.find(a => a.caller == data.caller && a.callee == socket.profileId);
+        if (!call) return socket.emit("call.error", "Appel non trouvé");
+
+        var sockets = io.to("call:" + socket.profileId + data.caller).to("autenticated");
+        if ((await sockets.allSockets()).size != 2) {
+            calls.splice(calls.indexOf(call), 1);
+            return socket.emit("call.error", "Appel déconnecté");
+        }
+
+        call.answered = true;
+        sockets.emit("call.answered", { RTCMessage: data.RTCMessage, candidates: call.candidates });
+    });
+
+    socket.on("call.candidate", async data => {
+        if (data.caller != socket.profileId && data.callee != socket.profileId) return socket.emit("call.error", "Non aurorisé");
+
+        var call = calls.find(a => a.caller == data.caller && a.callee == data.callee);
+        if (!call) return socket.emit("call.error", "Appel non trouvé");
+
+        var sockets = io.to("call:" + data.callee + data.caller).to("autenticated");
+        if ((await sockets.allSockets()).size != 2) {
+            calls.splice(calls.findIndex(a => a.caller == data.caller && a.callee == data.callee), 1);
+            return socket.emit("call.error", "Appel déconnecté");
+        }
+
+        call.candidates.push({ label: data.label, candidate: data.candidate });
+    });
 
     socket.on("disconnecting", async () => {
         var profileId = socket.profileId;
