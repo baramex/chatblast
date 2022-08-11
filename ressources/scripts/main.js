@@ -541,6 +541,12 @@ class Call {
 
         console.log("busy call");
     }
+
+    error(error) {
+        this.state = CALL_STATES.ERROR;
+
+        console.log("call error: " + error);
+    }
 }
 
 let call;
@@ -586,6 +592,12 @@ socket.on("call.candidate", candidate => {
 socket.on("call.busy", () => {
     if (call) call.busy();
     call = undefined;
+});
+
+socket.on("call.error", error => {
+    error = error || "Erreur inconnue";
+
+    if (call) call.error(error);
 });
 
 document.getElementById("call-form").addEventListener("submit", e => {
