@@ -492,6 +492,7 @@ class Call {
         this.peerConnection = new RTCPeerConnection(config);
         this.peerConnection.onaddstream = e => {
             audio.srcObject = e.stream;
+            console.log("stream added");
         };
         this.peerConnection.onicecandidate = e => {
             if (e.candidate) {
@@ -502,6 +503,7 @@ class Call {
                     caller: this.caller,
                     callee: this.callee
                 });
+                console.log("new candidate");
             }
         };
 
@@ -557,12 +559,14 @@ socket.on("call.answered", async data => {
             call.peerConnection.setRemoteDescription(new RTCSessionDescription(data.RTCMessage));
         }
         else {
+            console.log("add candidates: " + data.candidates.length);
             for (const candidate of data.candidates) {
                 await call.peerConnection.addIceCandidate(new RTCIceCandidate({
                     sdpMLineIndex: candidate.label,
                     candidate: candidate.candidate
                 }));
             }
+            console.log("ended candidates");
         }
     }
 });
