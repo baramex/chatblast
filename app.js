@@ -87,7 +87,7 @@ io.on("connection", async (socket) => {
 
         call.candidates.push({ label: data.label, candidate: data.candidate, id: data.id });
 
-        io.to(socket.profileId == data.caller ? data.callee : data.caller).emit("call.candidate", { label: data.label, candidate: data.candidate, id: data.id });
+        io.to("profileid:" + (socket.profileId == data.caller ? data.callee : data.caller)).emit("call.candidate", { label: data.label, candidate: data.candidate, id: data.id });
     });
 
     socket.on("disconnecting", async () => {
