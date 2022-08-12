@@ -1,18 +1,27 @@
-import { Route, BrowserRouter as Router } from "react-router-dom";
+import React from "react";
+import { Route, BrowserRouter as Router, Routes, useNavigate } from "react-router-dom";
 import Home from "./Home";
 import Login from "./Login";
-import Register from "./Register/register";
-import Terms from "./Terms/terms";
+import Register from "./Register";
+import Terms from "./Terms";
 
 export default function App() {
     return (
         <Router>
-            <Route path="/" exact component={Home} />
+            <Routes>
+                <Route path="/login" element={<NavigationElement element={<Login />} />} />
+                <Route path="/register" element={<Register />} />
 
-            <Route path="/login" exact component={Login} />
-            <Route path="/register" exact component={Register} />
+                <Route path="/terms" element={<Terms />} />
 
-            <Route path="/terms" exact component={Terms} />
+                <Route path="/" element={<Home />} />
+            </Routes>
         </Router>
     );
+}
+
+function NavigationElement({ element }) {
+    const navigation = useNavigate();
+
+    return React.cloneElement(element, { navigation });
 }

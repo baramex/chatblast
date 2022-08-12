@@ -7,10 +7,10 @@ const rateLimit = require("express-rate-limit");
 const mongoose = require("mongoose");
 const { ObjectId } = mongoose.Types;
 const path = require("path");
-const { Profile } = require("../models/profile.model");
-const { Session, SessionMiddleware } = require("../models/session.model");
+const { Profile } = require("./models/profile.model");
+const { Session, SessionMiddleware } = require("./models/session.model");
 const fs = require("fs");
-const { Message } = require("../models/message.model");
+const { Message } = require("./models/message.model");
 const { app, io, upload } = require("./server");
 const { getClientIp } = require("request-ip");
 require("dotenv").config();
@@ -65,24 +65,14 @@ setInterval(() => {
 /* routes */
 app.get("/", SessionMiddleware.isAuthed, async (req, res) => {
     if (!req.isAuthed) return res.redirect("/login");
-
-    res.sendFile(path.join(__dirname, "pages", "index.html"));
 });
 
 app.get("/login", SessionMiddleware.isAuthed, async (req, res) => {
     if (req.isAuthed) return res.redirect("/");
-
-    res.sendFile(path.join(__dirname, "pages", "login.html"));
-});
-
-app.get("/terms", (req, res) => {
-    res.sendFile(path.join(__dirname, "pages", "terms.html"));
 });
 
 app.get("/register", SessionMiddleware.isAuthed, async (req, res) => {
     if (req.isAuthed) return res.redirect("/");
-
-    res.sendFile(path.join(__dirname, "pages", "register.html"));
 });
 
 // récupérer avatar

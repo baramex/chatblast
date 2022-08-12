@@ -58,6 +58,28 @@ body {
     border-bottom-right-radius: var(--bs-border-radius-lg);
 }
 
+.popup {
+    z-index: 70;
+    min-width: 400px;
+    max-width: 700px;
+    transform: translate(-50%, -50%);
+}
+
+.popup-coming {
+    animation: scaleIn cubic-bezier(0.6, 0.2, 0.2, 1.2) .3s;
+}
+
+.popup-closing {
+    animation: scaleIn reverse cubic-bezier(0.6, 0.2, 0.2, 1.2) .3s;
+}
+
+.hidden-tab {
+    width: 100vw;
+    height: 100vh;
+    backdrop-filter: blur(5px);
+    z-index: 50;
+}
+
 #avatar-container {
     background-color: #1d765d;
     border: 2px dashed #114738;
@@ -144,6 +166,20 @@ footer a:hover {
 
 .warning {
     animation: warning .4s linear infinite alternate both;
+}
+
+.fm-sans-serif {
+    font-family: sans-serif;
+}
+
+@keyframes scaleIn {
+    from {
+        transform: translate(-50%, -50%) scale(0);
+    }
+
+    to {
+        transform: translate(-50%, -50%) scale(1);
+    }
 }
 
 @keyframes warning {
@@ -261,7 +297,7 @@ footer a:hover {
         align-items: center;
     }
 
-    #register-form div.inputs-container > div {
+    #register-form div.inputs-container>div {
         width: 100%;
     }
 

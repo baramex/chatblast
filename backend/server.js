@@ -4,17 +4,11 @@ const PORT = 1500;
 /* express */
 const express = require("express");
 const app = express();
-app.use(express.static("./ressources"))
 
 /* middleware */
 var cors = require('cors');
 app.use(cors({
-    origin: (origin, callback) => {
-        if (!origin) return callback(null, true);
-        if (!["http://localhost:1500", "https://www.chatblast.baramex.me"].includes(origin)) return callback(new Error("The CORS policy for this site does not allow access from the specified Origin.", false))
-
-        callback(null, true);
-    },
+    origin: "http://localhost:3000",
     credentials: true
 }));
 const rateLimit = require('express-rate-limit');
