@@ -1,22 +1,20 @@
 import axios from 'axios';
 
-export function loginUser(username, password) {
-    return api("/login", "post", { username, password });
-}
-
 let pending_request = false;
-function api(endpoint, method, data = undefined) {
+export function api(endpoint, method, data = undefined, customHeader = undefined) {
     return new Promise((res, rej) => {
-        if (pending_request) return setTimeout(() => api(endpoint, method, data).then(res).catch(rej), 10);
+        if (pending_request) return setTimeout(() => api(endpoint, method, data, customHeader).then(res).catch(rej), 10);
 
         // -> axios clear data
-        var copyData = data ? { ...data } : undefined;
+        const copyData = data ? { ...data } : undefined;
+        const copyHeader = customHeader ? { ...customHeader } : undefined;
 
         pending_request = true;
         axios({
             method,
             url: "/api" + endpoint,
-            data
+            data,
+            headers: customHeader
         }).then(response => {
             res(response.data);
         }).catch(err => {
@@ -26,7 +24,7 @@ function api(endpoint, method, data = undefined) {
             var time = err.response.headers["retry-after"];
             if (status === 429 && time && time * 1000 < 10000) {
                 setTimeout(() => {
-                    api(endpoint, method, copyData).then(res).catch(rej);
+                    api(endpoint, method, copyData, copyHeader).then(res).catch(rej);
                 }, time * 1000);
             }
             else if (status === 401) {

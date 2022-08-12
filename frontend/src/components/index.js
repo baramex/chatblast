@@ -10,7 +10,7 @@ export default function App() {
         <Router>
             <Routes>
                 <Route path="/login" element={<NavigationElement element={<Login />} />} />
-                <Route path="/register" element={<Register />} />
+                <Route path="/register" element={<NavigationElement element={<Register />} />} />
 
                 <Route path="/terms" element={<Terms />} />
 

@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { loginUser } from "../../lib/service";
+import { loginUser } from "../../lib/hooks/authentification";
 import { Footer } from "../Layout/Footer";
 import ErrorPopup from "../Misc/ErrorPopup";
 
