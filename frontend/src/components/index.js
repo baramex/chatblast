@@ -14,7 +14,7 @@ export default function App() {
 
                 <Route path="/terms" element={<Terms />} />
 
-                <Route path="/" element={<Home />} />
+                <Route path="/" element={<NavigationElement element={<Home />} />} />
             </Routes>
         </Router>
     );

@@ -28,7 +28,6 @@ export function api(endpoint, method, data = undefined, customHeader = undefined
                 }, time * 1000);
             }
             else if (status === 401) {
-                document.location.href = "/login";
                 rej(response.data);
             }
             else {

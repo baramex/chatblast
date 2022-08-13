@@ -18,6 +18,10 @@ export async function registerUser(username, password, avatar) {
     return res;
 }
 
+export function logoutUser() {
+   return api("/profile", "delete");
+}
+
 export function isLogged() {
     return sessionStorage.getItem("id") && getCookie("token");
 }
