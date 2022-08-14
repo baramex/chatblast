@@ -2,6 +2,7 @@
 Une chatbox universelle, commune à tous !
 ChatBlast est une chatbox publique, anonyme et commune à tous les utilisateurs. Vous discutez avec tout le monde en même, cela peut être plutôt amusant !<br/><br/>
 [![](https://tokei.rs/b1/github/baramex/chatblast)]()
+
 [![](https://img.shields.io/github/languages/top/baramex/chatblast?style=for-the-badge)]()
 
 [![](https://img.shields.io/github/downloads/baramex/chatblast/total?style=for-the-badge)](https://github.com/baramex/chatblast/releases/)
