@@ -4,7 +4,7 @@ const { ObjectId } = mongoose.Types;
 
 const messageSchema = new Schema({
     author: { type: { username: String, id: ObjectId, _id: false }, required: true },
-    content: { type: String, required: true, validate: /^.{1,256}$/ },
+    content: { type: String, required: true, validate: /^.{1,512}$/ },
     deleted: { type: Boolean, default: false },
     edits: { type: [{ content: { type: String, required: true }, date: { type: Date, default: new Date() } }], default: [] },
     views: { type: [ObjectId], default: [] },

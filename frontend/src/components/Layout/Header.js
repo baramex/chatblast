@@ -1,5 +1,5 @@
 import { Component } from "react";
-import { logoutUser, resetSession } from "../../lib/hooks/authentification";
+import { logoutUser, resetSession } from "../../lib/service/authentification";
 
 export default class Header extends Component {
     constructor(props) {

@@ -62,19 +62,6 @@ setInterval(() => {
     disconnected = disconnected.filter(a => a.date > new Date().getTime() - 1000 * 10);
 }, 1000 * 10);
 
-/* routes */
-app.get("/", SessionMiddleware.isAuthed, async (req, res) => {
-    if (!req.isAuthed) return res.redirect("/login");
-});
-
-app.get("/login", SessionMiddleware.isAuthed, async (req, res) => {
-    if (req.isAuthed) return res.redirect("/");
-});
-
-app.get("/register", SessionMiddleware.isAuthed, async (req, res) => {
-    if (req.isAuthed) return res.redirect("/");
-});
-
 // récupérer avatar
 app.get("/profile/:id/avatar", SessionMiddleware.auth, async (req, res) => {
     try {

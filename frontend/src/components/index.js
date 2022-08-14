@@ -1,5 +1,5 @@
 import React from "react";
-import { Route, BrowserRouter as Router, Routes, useNavigate } from "react-router-dom";
+import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import Home from "./Home";
 import Login from "./Login";
 import Register from "./Register";
@@ -9,19 +9,19 @@ export default function App() {
     return (
         <Router>
             <Routes>
-                <Route path="/login" element={<NavigationElement element={<Login />} />} />
-                <Route path="/register" element={<NavigationElement element={<Register />} />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
 
                 <Route path="/terms" element={<Terms />} />
 
-                <Route path="/" element={<NavigationElement element={<Home />} />} />
+                <Route path="/" element={<Home />} />
             </Routes>
         </Router>
     );
 }
 
-function NavigationElement({ element }) {
+/*function NavigationElement({ element }) {
     const navigation = useNavigate();
 
     return React.cloneElement(element, { navigation });
-}
+}*/

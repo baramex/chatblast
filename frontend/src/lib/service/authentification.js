@@ -1,4 +1,4 @@
-import { api } from "../service";
+import { api } from ".";
 import { deleteCookie, getCookie } from "../utils/cookie";
 
 export function loginUser(username, password) {
@@ -19,11 +19,15 @@ export async function registerUser(username, password, avatar) {
 }
 
 export function logoutUser() {
-   return api("/profile", "delete");
+    return api("/profile", "delete");
+}
+
+export function getUser() {
+    return api("/profile/@me", "get")
 }
 
 export function isLogged() {
-    return sessionStorage.getItem("id") && getCookie("token");
+    return (sessionStorage.getItem("id") && getCookie("token")) ? true : false;
 }
 
 export function resetSession() {

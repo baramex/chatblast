@@ -15,6 +15,10 @@ body {
     scroll-behavior: smooth;
 }
 
+#root {
+    height: 100vh;
+}
+
 .text-theme {
     color: #44b996;
 }

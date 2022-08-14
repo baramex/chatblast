@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Footer } from "../Layout/Footer";
+import Footer from "../Layout/Footer";
 import Article from "./Article";
 
 export default function Terms() {
