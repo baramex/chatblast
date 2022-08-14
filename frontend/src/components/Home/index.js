@@ -1,79 +1,100 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getUser, isLogged } from "../../lib/service/authentification";
-import { fetchMessages, fetchTyping, sendMessage, setTyping, setViewed } from "../../lib/service/message";
+import { deleteMessageById, fetchMessages, fetchTyping, sendMessage, setTyping, setViewed } from "../../lib/service/message";
 import { socket } from "../../lib/service/webSocket";
 import Footer from "../Layout/Footer";
 import Header from "../Layout/Header";
+import ConfirmPopup from "../Misc/ConfirmPopup";
 import ErrorPopup from "../Misc/ErrorPopup";
 import Loading from "../Misc/Loading";
+import SuccessPopup from "../Misc/SuccessPopup";
 import MessageContainer from "./MessageContainer";
 
 export default function Home() {
     const [error, setError] = useState(undefined);
+    const [success, setSuccess] = useState(undefined);
+    const [wantToDelete, setWantToDelete] = useState(undefined);
     const [messages, setMessages] = useState(undefined);
+    const [newMessage, setNewMessage] = useState(false);
     const [fetchedAll, setFetchedAll] = useState(false);
     const [from, setFrom] = useState(0);
     const [unread, setUnread] = useState(undefined);
     const [typing, setTyping] = useState(undefined);
     const navigate = useNavigate();
 
-    function getMessagesState() {
-        return messages;
-    }
-    function getTypingState() {
-        return typing;
-    }
-
     useEffect(() => {
-        console.log("useEffect");
         if (!isLogged()) return navigate("/login");
 
         getMessages(fetchedAll, from, setFrom, setMessages, setFetchedAll, setError);
         getUnread(setUnread, setError);
         getTyping(setTyping, setError);
 
-        socket.on("message.delete", id => {
-            const messages = getMessagesState();
-            if (!messages) return;
-            if (messages.some(a => a._id === id)) setMessages(prev => prev.filter(message => message._id !== id));
-        });
-
-        socket.on("message.send", message => {
-            const messages = getMessagesState();
-            if (!messages) return;
-            setMessages(prev => [...prev, message]);
-        });
-
-        socket.on("message.typing", _typing => {
-            const typing = getTypingState();
-            if (!typing) return;
-            if (typing.some(a => a.id === typing.id)) setTyping([...typing, _typing]);
-        });
-
-        socket.on("message.view", viewed => {
-            const messages = getMessagesState();
-            if (!messages) return;
-            if (messages.some(a => a._id === viewed && !a.isViewed)) setMessages(prev => prev.map(message => message._id === viewed ? { ...message, isViewed: true } : message));
-        });
 
         socket.on("profile.join", profile => {
 
         });
-
         socket.on("profile.leave", profile => {
 
         });
+
+        return () => {
+            socket.off('profile.join');
+            socket.off('profile.leave');
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    useEffect(() => {
+        socket.on("message.delete", id => {
+            if (!messages) return;
+            if (messages.some(a => a._id === id)) setMessages(prev => prev.filter(message => message._id !== id));
+        });
+        socket.on("message.send", message => {
+            if (!messages) return;
+            setMessages(prev => [...prev, message]);
+            setUnread(prev => prev + 1);
+            setNewMessage(true);
+        });
+        socket.on("messages.view", views => {
+            if (!messages) return;
+            setMessages(curr => {
+                views.forEach(view => {
+                    const index = curr.findIndex(a => a._id === view.id);
+                    if (index !== -1) curr[index].views = view.views;
+                });
+                return [...curr];
+            });
+        });
+
+        return () => {
+            socket.off('message.delete');
+            socket.off('message.send');
+            socket.off('messages.view');
+        };
+    }, [messages]);
+
+    useEffect(() => {
+        socket.on("message.typing", _typing => {
+            if (!typing) return;
+            if (typing.some(a => a.id === typing.id)) setTyping([...typing, _typing]);
+        });
+
+        return () => {
+            socket.off('message.typing');
+        };
+    }, [typing]);
+
+    if (!isLogged()) return null;
     return (<div className="d-flex flex-column h-100">
-        {error && <ErrorPopup message={error} onClose={() => setError("")}></ErrorPopup>}
+        {error && <ErrorPopup message={error} onClose={() => setError("")} />}
+        {success && <SuccessPopup message={success} onClose={() => setSuccess("")} />}
+        {wantToDelete && <ConfirmPopup message="Êtes-vous sûr de vouloir supprimer ce message ?" onConfirm={() => { confirmDeleteMessage(wantToDelete, setError, setMessages, setSuccess); setWantToDelete(undefined); }} onClose={() => setWantToDelete(undefined)} />}
 
         <Header navigation={navigate} />
         <div id="chat" className="mx-5 mt-3 mb-4 h-100 d-flex flex-column rounded-3 position-relative">
-            <span id="unread" className={"position-absolute badge rounded-pill bg-danger fs-6"} style={{ marginTop: "-.25rem", marginLeft: "-.5rem" }}>
-                {unread === undefined ? <Loading color="text-light" type="grow" size="sm" /> : unread}
+            <span id="unread" className={"position-absolute badge rounded-pill fs-6 " + (unread > 0 ? "warning bg-danger" : "bg-primary")} style={{ marginTop: "-.25rem", marginLeft: "-.5rem" }}>
+                {(!unread && unread !== 0) ? <Loading color="text-light" type="grow" size="sm" /> : unread}
             </span>
 
             <div className="px-5 py-4 mt-2 overflow-auto h-100 position-relative" style={{ flex: "1 0px" }}>
@@ -82,7 +103,7 @@ export default function Home() {
                         !messages ? <Loading size="lg" /> : messages.length === 0 ? <p id="nomes" className="fs-4 text-secondary">Aucun message</p> : null
                     }
                 </div>
-                <MessageContainer viewed={viewed(setUnread, setMessages)} messages={messages} />
+                <MessageContainer scroll={newMessage} viewed={viewed(setUnread, setMessages)} deleteMessage={deleteMessage(setWantToDelete)} messages={messages} />
             </div>
 
             <form id="send-message" onSubmit={e => handleSendMessage(e, setError)} className="d-flex p-4 position-relative">
@@ -121,6 +142,7 @@ async function handleSendMessage(event, setError) {
         setError(error.message || error);
     }
     event.target.querySelectorAll("input").forEach(a => a.disabled = false);
+    event.target.message.focus();
 }
 
 async function getUnread(setUnread, setError) {
@@ -153,9 +175,26 @@ async function getMessages(fetchedAll, from, setFrom, setMessages, setFetchedAll
     }
 }
 
+function deleteMessage(setWantToDelete) {
+    return (id) => {
+        setWantToDelete(id);
+    }
+}
+
+async function confirmDeleteMessage(id, setError, setMessages, setSuccess) {
+    try {
+        await deleteMessageById(id);
+        setMessages(prev => prev.filter(message => message._id !== id));
+        setSuccess("Message supprimé !");
+    } catch (error) {
+        setError(error.message || error);
+    }
+}
+
 function viewed(setUnread, setMessages) {
     return (id) => {
         setViewed([id]);
+
         setUnread(prev => prev - 1);
         setMessages(prev => prev.map(message => message._id === id ? { ...message, isViewed: true } : message));
     };

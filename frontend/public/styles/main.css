@@ -164,10 +164,6 @@ footer a:hover {
     opacity: 0;
 }
 
-.unread {
-    background-color: rgba(255, 0, 0, .1);
-}
-
 .warning {
     animation: warning .4s linear infinite alternate both;
 }

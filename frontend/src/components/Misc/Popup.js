@@ -13,6 +13,7 @@ export default class Popup extends Component {
         this.handleConfirm = this.handleConfirm.bind(this);
         this.close = this.close.bind(this);
         this.handleClose = this.handleClose.bind(this);
+        this.handleCancel = this.handleCancel.bind(this);
     }
 
     handleConfirm() {
@@ -30,7 +31,8 @@ export default class Popup extends Component {
     close(e) {
         e.target.hidden = true;
         this.setState({ closed: true });
-        if (this.state.action !== "cancel" && this.props.onClose) this.props.onClose();
+        if (this.state.action === "confirm" && this.props.onConfirm) this.props.onConfirm();
+        else if (this.props.onClose) this.props.onClose();
     }
 
     render() {

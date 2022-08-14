@@ -70,7 +70,7 @@ app.get("/profile/:id/avatar", SessionMiddleware.auth, async (req, res) => {
         var profile = (id == "@me" || id == req.profile._id.toString()) ? req.profile : await Profile.getProfileById(new ObjectId(id));
 
         var name = profile.avatar.flag + profile.avatar.extention;
-        if (!name || !fs.existsSync(path.join(__dirname, "avatars", name))) return res.sendFile(path.join(__dirname, "ressources", "images", "user.png"));
+        if (!name || !fs.existsSync(path.join(__dirname, "avatars", name))) return res.sendFile(path.join(__dirname, "avatars", "user.png"));
         res.sendFile(path.join(__dirname, "avatars", name));
     } catch (err) {
         console.error(err);

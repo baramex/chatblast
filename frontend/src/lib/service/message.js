@@ -19,3 +19,7 @@ export function setTyping(typing) {
 export function sendMessage(message) {
     return api('/message', "put", { content: message });
 }
+
+export function deleteMessageById(id) {
+    return api('/message/' + id, "delete");
+}

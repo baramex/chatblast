@@ -15,6 +15,7 @@ export default function Login() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    if(isLogged()) return null;
     return (<>
         {error && <ErrorPopup message={error} onClose={() => setError("")}></ErrorPopup>}
         <form id="login-form" className="position-absolute top-50 start-50 translate-middle container" onSubmit={e => handleLogin(e, setError, navigate)} style={{ width: "35%" }}>
