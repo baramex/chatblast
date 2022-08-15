@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchOnline, getUser, isLogged } from "../../lib/service/authentification";
-import { deleteMessageById, fetchMessages, fetchTyping, sendMessage, setTyping, setViewed } from "../../lib/service/message";
+import { deleteMessageById, fetchMessages, fetchTyping, sendMessage, setMessageTyping, setViewed } from "../../lib/service/message";
 import Footer from "../Layout/Footer";
 import Header from "../Layout/Header";
 import ConfirmPopup from "../Misc/ConfirmPopup";
@@ -15,9 +15,8 @@ const { io } = require("socket.io-client");
 let socket;
 
 /**
- * TODO: remove server typing when profile leave/refresh (load page)
  * TODO: fixed socket disconnect
- * TODO: fetch message when scroll to top
+ * TODO: view message list
  * */
 
 export default function Home() {
@@ -26,6 +25,7 @@ export default function Home() {
     const [wantToDelete, setWantToDelete] = useState(undefined);
     const [messages, setMessages] = useState(undefined);
     const [newMessage, setNewMessage] = useState(false);
+    const [fetchMessage, setFetchMessage] = useState(false);
     const [fetchedAll, setFetchedAll] = useState(false);
     const [unread, setUnread] = useState(undefined);
     const [typing, setTyping] = useState(undefined);
@@ -35,6 +35,8 @@ export default function Home() {
 
     useEffect(() => {
         if (!isLogged()) return navigate("/login");
+
+        if (online && online.some(a => a.id === sessionStorage.getItem("id"))) setMessageTyping(false);
 
         console.log("init socket");
         socket = io();
@@ -158,13 +160,13 @@ export default function Home() {
                 {(!unread && unread !== 0) ? <Loading color="text-light" type="grow" size="sm" /> : unread}
             </span>
 
-            <div onScroll={(fetchedAll || fetching) ? null : e => handleChatScrolling(e, fetchedAll, messages, setMessages, setFetchedAll, setFetching, setError)} className="px-5 py-4 mt-2 overflow-auto h-100 position-relative" style={{ flex: "1 0px" }}>
+            <div onScroll={(fetchedAll || fetching) ? null : e => handleChatScrolling(e, fetchedAll, messages, setMessages, setFetchedAll, setFetching, setFetchMessage, setError)} className="px-5 py-4 mt-2 overflow-auto h-100 position-relative" style={{ flex: "1 0px" }}>
                 <div className="position-absolute top-50 start-50 translate-middle text-center">
                     {
                         !messages ? <Loading size="lg" /> : messages.length === 0 ? <p id="nomes" className="fs-4 text-secondary">Aucun message</p> : null
                     }
                 </div>
-                <MessageContainer fetching={fetching} scroll={newMessage} viewed={viewed(setUnread, setMessages)} deleteMessage={deleteMessage(setWantToDelete)} messages={messages} />
+                <MessageContainer fetchedAll={fetchedAll} fetching={fetching} scroll={newMessage} fetchMessage={fetchMessage} viewed={viewed(setUnread, setMessages)} deleteMessage={deleteMessage(setWantToDelete)} messages={messages} />
             </div>
 
             <form id="send-message" onSubmit={e => handleSendMessage(e, setError)} className="d-flex p-4 position-relative">
@@ -183,18 +185,20 @@ export default function Home() {
 
 function handleInput(e, typing) {
     if ((e.nativeEvent.inputType === "insertText" && e.target.value.length === 1) || e.nativeEvent.inputType === "insertFromPaste") {
-        if (!typing.find(a => a.id === sessionStorage.getItem("id"))) setTyping(true);
+        if (!typing.find(a => a.id === sessionStorage.getItem("id"))) setMessageTyping(true);
     } else if (e.target.value.length === 0) {
-        if (typing.find(a => a.id === sessionStorage.getItem("id"))) setTyping(false);
+        if (typing.find(a => a.id === sessionStorage.getItem("id"))) setMessageTyping(false);
     }
 }
 
-function handleChatScrolling(event, fetchedAll, messages, setMessages, setFetchedAll, setFetching, setError) {
+function handleChatScrolling(event, fetchedAll, messages, setMessages, setFetchedAll, setFetching, setFetchMessage, setError) {
     if (event.target.scrollTop <= 50) {
         setFetching(true);
-        
+
+        let firstMessage = messages[0]._id;
         getMessages(fetchedAll, messages, setMessages, setFetchedAll, setError).finally(() => {
             setFetching(false);
+            setFetchMessage(firstMessage);
         });
     }
 }
@@ -249,9 +253,10 @@ async function getMessages(fetchedAll, mes, setMessages, setFetchedAll, setError
         const messages = await fetchMessages(mes?.length || 0);
         setMessages(prev => {
             if (!prev) return messages.reverse();
-            return [...messages.reverse(), ...prev];
+            return [...messages, ...prev];
         });
         setFetchedAll(messages.length < 20);
+        return messages.length;
     } catch (error) {
         setError(error.message || error);
     }

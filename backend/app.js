@@ -61,6 +61,8 @@ io.on("connection", async (socket) => {
 setInterval(() => {
     disconnected.filter(a => a.date <= new Date().getTime() - 1000 * 10).forEach(async ({ id }) => {
         if (Array.from(io.sockets.sockets.values).find(a => a.profileId.equals(id))) return;
+        var i = typing.findIndex(a => a.id.equals(id));
+        if (i != -1) typing.splice(i, 1);
         await Session.disconnectMessage(await Profile.getProfileById(id).catch(console.error)).catch(console.error);
     });
     disconnected = disconnected.filter(a => a.date > new Date().getTime() - 1000 * 10);

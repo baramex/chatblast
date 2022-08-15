@@ -12,7 +12,7 @@ export function fetchTyping() {
     return api('/profiles/typing', "get");
 }
 
-export function setTyping(typing) {
+export function setMessageTyping(typing) {
     return api('/typing', "put", { isTyping: typing });
 }
 
