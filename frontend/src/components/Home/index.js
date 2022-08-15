@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchOnline, getUser, isLogged } from "../../lib/service/authentification";
-import { deleteMessageById, fetchMessages, fetchTyping, sendMessage, setMessageTyping, setViewed } from "../../lib/service/message";
+import { addToViewToSend, deleteMessageById, fetchMessages, fetchTyping, sendMessage, sendViews, setMessageTyping } from "../../lib/service/message";
 import Footer from "../Layout/Footer";
 import Header from "../Layout/Header";
 import ConfirmPopup from "../Misc/ConfirmPopup";
@@ -15,8 +15,7 @@ const { io } = require("socket.io-client");
 let socket;
 
 /**
- * TODO: fixed socket disconnect
- * TODO: view message list
+ * TODO: on page/not: notification + view messages
  * */
 
 export default function Home() {
@@ -280,9 +279,7 @@ async function confirmDeleteMessage(id, setError, setMessages, setSuccess) {
 
 function viewed(setUnread, setMessages) {
     return (id) => {
-        setViewed([id]);
-
-        setUnread(prev => prev - 1);
-        setMessages(prev => prev.map(message => message._id === id ? { ...message, isViewed: true } : message));
+        addToViewToSend(id);
+        sendViews(setUnread, setMessages);
     };
 }
