@@ -20,6 +20,7 @@ var typing = [];
 var disconnected = [];
 
 io.on("connection", async (socket) => {
+    console.log("connect")
     var token = socket.handshake.headers.cookie?.split("; ")?.find(a => a.startsWith("token="))?.replace("token=", "");
     if (token) {
         var session = await Session.getSessionByToken(token).catch(console.error);
@@ -30,6 +31,7 @@ io.on("connection", async (socket) => {
                 socket.join(["authenticated", "profileid:" + session.profileId.toString()]);
 
                 var d = disconnected.findIndex(a => a.id.equals(profile._id));
+                console.log(d);
                 if (d != -1) disconnected.splice(d, 1);
                 else {
                     await Session.connectMessage(profile).catch(console.error);
@@ -39,6 +41,8 @@ io.on("connection", async (socket) => {
     }
 
     socket.on("disconnecting", async () => {
+        console.log("disconnecting");
+
         var profileId = socket.profileId;
         if (!profileId) return;
 
@@ -305,6 +309,7 @@ app.get("/api/profiles/typing", SessionMiddleware.auth, async (req, res) => {
 app.put("/api/typing", SessionMiddleware.auth, (req, res) => {
     try {
         var isTyping = req.body.isTyping ? true : false;
+        console.log(isTyping)
 
         var i = typing.findIndex(a => a.id.equals(req.profile._id));
         if ((i == -1 && !isTyping) || (i != -1 && isTyping)) return res.sendStatus(200);

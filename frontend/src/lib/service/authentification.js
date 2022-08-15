@@ -26,6 +26,10 @@ export function getUser() {
     return api("/profile/@me", "get")
 }
 
+export function fetchOnline() {
+    return api("/profiles/online", "get")
+}
+
 export function isLogged() {
     return (sessionStorage.getItem("id") && getCookie("token")) ? true : false;
 }

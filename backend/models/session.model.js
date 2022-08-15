@@ -28,6 +28,7 @@ session.post("validate", async function (doc, next) {
             doc.token = undefined;
             doc.markModified("token");
 
+            console.log("disconnect sockets");
             io.to("profileid:" + doc.profileId.toString()).disconnectSockets(true);
         }
     }
@@ -56,12 +57,10 @@ class Session {
     }
 
     static async disconnectMessage(profile) {
-        await Message.create({ username: "SYSTEM", id: systemId }, "<strong>" + profile.username + "</strong> a quitté la session.");
         io.to("authenticated").emit("profile.leave", { id: profile.id, username: profile.username });
     }
 
     static async connectMessage(profile) {
-        await Message.create({ username: "SYSTEM", id: systemId }, "<strong>" + profile.username + "</strong> a rejoint la session.");
         io.to("authenticated").emit("profile.join", { id: profile.id, username: profile.username });
     }
 
