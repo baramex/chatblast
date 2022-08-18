@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchOnline, getUser, isLogged } from "../../lib/service/authentification";
-import { addToViewToSend, deleteMessageById, fetchMessages, fetchTyping, sendMessage, sendViews, setMessageTyping } from "../../lib/service/message";
+import { addToMessageToView, addToViewToSend, deleteMessageById, fetchMessages, fetchTyping, sendMessage, sendViews, setMessageTyping } from "../../lib/service/message";
 import Footer from "../Layout/Footer";
 import Header from "../Layout/Header";
 import ConfirmPopup from "../Misc/ConfirmPopup";
@@ -14,10 +14,9 @@ import ObjectID from "bson-objectid";
 const { io } = require("socket.io-client");
 let socket;
 let observer;
+let isInPage = false;
 
-/**
- * TODO: on page/not: notification + view messages
- * */
+const notification = new Audio("/sounds/notification.wav");
 
 export default function Home() {
     const [error, setError] = useState(undefined);
@@ -33,7 +32,7 @@ export default function Home() {
     const [fetching, setFetching] = useState(false);
     const navigate = useNavigate();
 
-    if(!observer) observer = new IntersectionObserver(e => intersect(e, setUnread, setMessages));
+    if (!observer) observer = new IntersectionObserver(e => intersect(e, setUnread, setMessages));
 
     useEffect(() => {
         if (!isLogged()) return navigate("/login");
@@ -41,7 +40,7 @@ export default function Home() {
         if (online && online.some(a => a.id === sessionStorage.getItem("id"))) setMessageTyping(false);
 
         console.log("init home");
-        if(!socket) socket = io();
+        if (!socket) socket = io();
 
         getMessages(fetchedAll, messages, setMessages, setFetchedAll, setError);
         getUnread(setUnread, setError);
@@ -74,8 +73,12 @@ export default function Home() {
                 });
                 setNewMessage(true);
 
-                return [...prev, message];
+                prev.push(message);
+
+                return prev;
             });
+
+            if (!isInPage) notification.play();
         });
         socket.on("messages.view", views => {
             setMessages(curr => {
@@ -84,40 +87,45 @@ export default function Home() {
                     const index = curr.findIndex(a => a._id === view.id);
                     if (index !== -1) curr[index].views = view.views;
                 });
-                return [...curr];
+                return curr;
             });
         });
         socket.on("profile.join", profile => {
             console.log("join", profile);
             setMessages(prev => {
                 if (!prev) return;
-                return [...prev, {
+                prev.push({
                     _id: ObjectID().toHexString(),
-                    author: {username: "SYSTEM"},
+                    author: { username: "SYSTEM" },
                     mentions: [{ id: profile.id, username: profile.username }],
                     content: `{mention[0]} a rejoint la conversation`,
                     ephemeral: true,
                     date: new Date().toISOString()
-                }];
+                });
+                return prev;
             });
             setOnline(prev => {
                 if (!prev) return;
                 if (prev.find(a => a.id === profile.id)) return prev;
-                return [...prev, profile];
+                prev.push(profile);
+                return prev;
             });
+
+            notification.play();
         });
         socket.on("profile.leave", profile => {
             console.log("leave", profile);
             setMessages(prev => {
                 if (!prev) return;
-                return [...prev, {
+                prev.push({
                     _id: ObjectID().toHexString(),
-                    author: {username: "SYSTEM"},
+                    author: { username: "SYSTEM" },
                     mentions: [{ id: profile.id, username: profile.username }],
                     content: `{mention[0]} a quitté la conversation`,
                     ephemeral: true,
                     date: new Date().toISOString()
-                }];
+                });
+                return prev;
             });
             setTyping(prev => {
                 if (!prev) return;
@@ -127,6 +135,8 @@ export default function Home() {
                 if (!prev) return;
                 return prev.filter(a => a.id !== profile.id);
             });
+
+            notification.play();
         });
         socket.on("message.typing", _typing => {
             console.log("typing", _typing);
@@ -152,7 +162,7 @@ export default function Home() {
     }, []);
 
     if (!isLogged()) return null;
-    return (<div className="d-flex flex-column h-100">
+    return (<div onMouseEnter={() => handleMouseEnter(setUnread, setMessages)} onMouseLeave={handleMouseLeave} className="d-flex flex-column h-100">
         {error && <ErrorPopup message={error} onClose={() => setError("")} />}
         {success && <SuccessPopup message={success} onClose={() => setSuccess("")} />}
         {wantToDelete && <ConfirmPopup message="Êtes-vous sûr de vouloir supprimer ce message ?" onConfirm={() => { confirmDeleteMessage(wantToDelete, setError, setMessages, setSuccess); setWantToDelete(undefined); }} onClose={() => setWantToDelete(undefined)} />}
@@ -171,7 +181,7 @@ export default function Home() {
                         !messages ? <Loading size="lg" /> : messages.length === 0 ? <p id="nomes" className="fs-4 text-secondary">Aucun message</p> : null
                     }
                 </div>
-                <MessageContainer observer={observer} fetchedAll={fetchedAll} fetching={fetching} scroll={newMessage} fetchMessage={fetchMessage} viewed={viewed(setUnread, setMessages)} deleteMessage={deleteMessage(setWantToDelete)} messages={messages} />
+                <MessageContainer observer={observer} fetchedAll={fetchedAll} fetching={fetching} scroll={newMessage} fetchMessage={fetchMessage} deleteMessage={deleteMessage(setWantToDelete)} messages={messages} />
             </div>
 
             <form id="send-message" onSubmit={e => handleSendMessage(e, setError)} className="d-flex p-4 position-relative">
@@ -258,7 +268,8 @@ async function getMessages(fetchedAll, mes, setMessages, setFetchedAll, setError
         const messages = await fetchMessages(mes?.length || 0);
         setMessages(prev => {
             if (!prev) return messages.reverse();
-            return [...messages, ...prev];
+            messages.push(...prev);
+            return messages;
         });
         setFetchedAll(messages.length < 20);
         return messages.length;
@@ -283,20 +294,28 @@ async function confirmDeleteMessage(id, setError, setMessages, setSuccess) {
     }
 }
 
-function viewed(setUnread, setMessages) {
-    return (id) => {
+function viewed(id) {
+    if (isInPage) {
         addToViewToSend(id);
-        sendViews(setUnread, setMessages);
-    };
+    } else addToMessageToView(id);
 }
 
 function intersect(entries, setUnread, setMessages) {
     entries.forEach(entry => {
         if (entry.isIntersecting) {
-            console.log("intersect")
             observer.unobserve(entry.target);
-            addToViewToSend(entry.target.id.replace("m-", ""));
+            viewed(entry.target.id.replace("m-", ""));
         }
     });
+    if (isInPage) sendViews(setUnread, setMessages);
+}
+
+function handleMouseEnter(setUnread, setMessages) {
     sendViews(setUnread, setMessages);
+
+    isInPage = true;
+}
+
+function handleMouseLeave() {
+    isInPage = false;
 }

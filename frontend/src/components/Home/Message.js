@@ -9,7 +9,6 @@ function Message(props) {
     let content = props.content;
 
     const message = createRef();
-    //const isVisible = useElementOnScreen(message, true, props.isViewed);
 
     if (isSystem) {
         if (props.mentions) {
@@ -25,7 +24,6 @@ function Message(props) {
 
     useEffect(() => {
         let element = message.current;
-
         if (!props.isViewed && !props.ephemeral) props.observer.observe(element);
 
         if (props.scroll && element && (props.behavior === "smooth" ? element.parentElement.parentElement.scrollHeight - element.parentElement.parentElement.scrollTop - 720 < 200 : true)) {
@@ -56,12 +54,7 @@ function Message(props) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    /*useEffect(() => {
-        if (isVisible && !isSystem && !props.isViewed) {
-            props.viewed(props._id);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isVisible]);*/
+    console.log(props.isViewed);
 
     return (
         <div ref={message} id={"m-" + props._id} className={`pb-2 my-4 rounded-3 border border-secondary message ${isMy ? "bg-light" : ""} ${!props.isViewed ? "unread" : ""}`}>
