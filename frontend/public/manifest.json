@@ -1,0 +1,20 @@
+{
+  "short_name": "ChatBlast",
+  "name": "ChatBlast - chatbox universelle",
+  "icons": [
+    {
+      "src": "images/logo.png",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/png"
+    },
+    {
+      "src": "images/logo.png",
+      "type": "image/png",
+      "sizes": "390x390"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#44b996",
+  "background_color": "#44b996"
+}
