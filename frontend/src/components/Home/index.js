@@ -231,6 +231,7 @@ function handleInput(e, typing) {
 }
 
 function handleChatScrolling(event, fetchedAll, messages, setMessages, setFetchedAll, setFetching, setFetchMessage, setError) {
+    if(!messages) return;
     if (event.target.scrollTop <= 50) {
         if (event.target.scrollTop === 0) event.target.scrollTop = 1;
 
@@ -294,6 +295,7 @@ async function getMessages(fetchedAll, mes, setMessages, setFetchedAll, setError
         const messages = await fetchMessages(mes?.length || 0);
         setMessages(prev => {
             if (!prev) return messages.reverse();
+            messages.reverse()
             messages.push(...prev);
             return messages;
         });

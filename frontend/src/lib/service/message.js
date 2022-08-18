@@ -46,7 +46,7 @@ export async function sendViews(messages, setUnread, setMessages) {
         let curr = [...viewToSend, ...messageToView];
         if (!curr || curr.length === 0) return;
 
-        const ephemerals = curr.filter(a => messages && messages.find(b => b._id == a).ephemeral);
+        const ephemerals = curr.filter(a => messages && messages.find(b => b._id === a).ephemeral);
         setUnread(prev => prev - ephemerals.length);
         setMessages(prev => [...prev.map(a => {
             if (ephemerals.includes(a._id)) return { ...a, isViewed: true };
