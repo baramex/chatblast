@@ -1,20 +1,17 @@
 import { createRef, memo, useEffect } from "react";
-import useElementOnScreen from "../../lib/hooks/useElementOnScreen";
 
 function Message(props) {
     const date = new Date(props.date);
 
-    const isSystem = props.type === "system";
+    const isSystem = props.author.username === "SYSTEM";
     const isMy = !isSystem && props.author.id === sessionStorage.getItem("id");
     const formattedDate = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")} ${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}`;
-    let author = props.author;
     let content = props.content;
 
     const message = createRef();
-    const isVisible = useElementOnScreen(message, true, props.isViewed);
+    //const isVisible = useElementOnScreen(message, true, props.isViewed);
 
     if (isSystem) {
-        author = { username: "SYSTEM" };
         if (props.mentions) {
             let mentionIntance = props.content.match(/{mention\[[0-9]{1,}\]}/g);
             let tempContent = content;
@@ -27,12 +24,16 @@ function Message(props) {
     }
 
     useEffect(() => {
-        if (props.scroll && message.current && (props.behavior === "smooth" ? message.current.parentElement.parentElement.scrollHeight - message.current.parentElement.parentElement.scrollTop - 720 < 200 : true)) {
-            let scroll = message.current.parentElement.parentElement.scrollTop;
-            message.current.scrollIntoView({ behavior: props.behavior || "auto" });
+        let element = message.current;
+
+        if (!props.isViewed && !props.ephemeral) props.observer.observe(element);
+
+        if (props.scroll && element && (props.behavior === "smooth" ? element.parentElement.parentElement.scrollHeight - element.parentElement.parentElement.scrollTop - 720 < 200 : true)) {
+            let scroll = element.parentElement.parentElement.scrollTop;
+            element.scrollIntoView({ behavior: props.behavior || "auto" });
             let i = 0;
             if (props.behavior === "smooth") checkScroll();
-            let messageCopy = message.current;
+            let messageCopy = element;
 
             function checkScroll() {
                 if (i >= 3) return;
@@ -48,22 +49,26 @@ function Message(props) {
                 i++;
             }
         }
+
+        return () => {
+            props.observer.unobserve(element);
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    useEffect(() => {
+    /*useEffect(() => {
         if (isVisible && !isSystem && !props.isViewed) {
             props.viewed(props._id);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isVisible]);
+    }, [isVisible]);*/
 
     return (
         <div ref={message} id={"m-" + props._id} className={`pb-2 my-4 rounded-3 border border-secondary message ${isMy ? "bg-light" : ""} ${!props.isViewed ? "unread" : ""}`}>
             <div className="d-flex justify-content-between username-container">
                 <div className="d-flex align-items-center border-dashed username">
-                    <img className="mx-2 my-1" width="30" alt="message-avatar" src={isSystem ? "/images/system.png" : `/profile/${(isMy ? "@me" : author.id)}/avatar`} />
-                    <p className="pe-3 ps-1 py-1 fs-6 m-auto fw-bold">{author.username}</p>
+                    <img className="mx-2 my-1" width="30" alt="message-avatar" src={isSystem ? "/images/system.png" : `/profile/${(isMy ? "@me" : props.author.id)}/avatar`} />
+                    <p className="pe-3 ps-1 py-1 fs-6 m-auto fw-bold">{props.author.username}</p>
                 </div>
                 <div className="d-flex align-items-center me-2 icons" style={{ gap: 10 }}>
                     <span className="date">{formattedDate}</span>

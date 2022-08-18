@@ -34,6 +34,7 @@ export async function sendViews(setUnread, setMessages) {
     if (new Date().getTime() - lastUpdateViewMessage < 1000) return setTimeout(() => sendViews(setUnread, setMessages), new Date().getTime() - lastUpdateViewMessage);
 
     try {
+        console.log(viewToSend);
         let curr = [...viewToSend];
         if (!curr || curr.length === 0) return;
 
@@ -41,8 +42,6 @@ export async function sendViews(setUnread, setMessages) {
 
         setUnread(prev => prev - curr.length);
         setMessages(prev => prev.map(message => curr.includes(message._id) ? { ...message, isViewed: true } : message));
-
-        viewToSend = viewToSend.filter(a => curr.includes(a));
     } catch (error) { }
 
     lastUpdateViewMessage = new Date().getTime();

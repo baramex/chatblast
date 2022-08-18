@@ -13,6 +13,7 @@ import OnlineContaier from "./OnlineContainer";
 import ObjectID from "bson-objectid";
 const { io } = require("socket.io-client");
 let socket;
+let observer;
 
 /**
  * TODO: on page/not: notification + view messages
@@ -32,13 +33,15 @@ export default function Home() {
     const [fetching, setFetching] = useState(false);
     const navigate = useNavigate();
 
+    if(!observer) observer = new IntersectionObserver(e => intersect(e, setUnread, setMessages));
+
     useEffect(() => {
         if (!isLogged()) return navigate("/login");
 
         if (online && online.some(a => a.id === sessionStorage.getItem("id"))) setMessageTyping(false);
 
-        console.log("init socket");
-        socket = io();
+        console.log("init home");
+        if(!socket) socket = io();
 
         getMessages(fetchedAll, messages, setMessages, setFetchedAll, setError);
         getUnread(setUnread, setError);
@@ -90,9 +93,10 @@ export default function Home() {
                 if (!prev) return;
                 return [...prev, {
                     _id: ObjectID().toHexString(),
-                    type: "system",
+                    author: {username: "SYSTEM"},
                     mentions: [{ id: profile.id, username: profile.username }],
                     content: `{mention[0]} a rejoint la conversation`,
+                    ephemeral: true,
                     date: new Date().toISOString()
                 }];
             });
@@ -108,9 +112,10 @@ export default function Home() {
                 if (!prev) return;
                 return [...prev, {
                     _id: ObjectID().toHexString(),
-                    type: "system",
+                    author: {username: "SYSTEM"},
                     mentions: [{ id: profile.id, username: profile.username }],
                     content: `{mention[0]} a quitté la conversation`,
+                    ephemeral: true,
                     date: new Date().toISOString()
                 }];
             });
@@ -141,6 +146,7 @@ export default function Home() {
             socket.off('profile.join');
             socket.off('profile.leave');
             socket.off('message.typing');
+            socket.disconnect();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -165,7 +171,7 @@ export default function Home() {
                         !messages ? <Loading size="lg" /> : messages.length === 0 ? <p id="nomes" className="fs-4 text-secondary">Aucun message</p> : null
                     }
                 </div>
-                <MessageContainer fetchedAll={fetchedAll} fetching={fetching} scroll={newMessage} fetchMessage={fetchMessage} viewed={viewed(setUnread, setMessages)} deleteMessage={deleteMessage(setWantToDelete)} messages={messages} />
+                <MessageContainer observer={observer} fetchedAll={fetchedAll} fetching={fetching} scroll={newMessage} fetchMessage={fetchMessage} viewed={viewed(setUnread, setMessages)} deleteMessage={deleteMessage(setWantToDelete)} messages={messages} />
             </div>
 
             <form id="send-message" onSubmit={e => handleSendMessage(e, setError)} className="d-flex p-4 position-relative">
@@ -282,4 +288,15 @@ function viewed(setUnread, setMessages) {
         addToViewToSend(id);
         sendViews(setUnread, setMessages);
     };
+}
+
+function intersect(entries, setUnread, setMessages) {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            console.log("intersect")
+            observer.unobserve(entry.target);
+            addToViewToSend(entry.target.id.replace("m-", ""));
+        }
+    });
+    sendViews(setUnread, setMessages);
 }
