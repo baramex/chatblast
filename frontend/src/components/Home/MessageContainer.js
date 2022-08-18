@@ -2,7 +2,6 @@ import Loading from "../Misc/Loading";
 import Message from "./Message";
 
 export default function MessageContainer(props) {
-    console.log(props.messages);
     return (
         <div id="message-container">
             {props.fetching ?

@@ -98,13 +98,17 @@ class Message {
         return messageModel.find({ views: { $not: { $all: [profile._id] } }, date: { $gt: profile.date }, deleted: false }).count();
     }
 
+    static getUnread(profile) {
+        return messageModel.find({ views: { $not: { $all: [profile._id] } }, date: { $gt: profile.date }, deleted: false });
+    }
+
     /**
      * 
      * @param {ObjectId[]} ids
      * @param {ObjectId} id
      */
-    static async addViewToMessages(ids, id) {
-        return await messageModel.updateMany({ _id: { $in: ids } }, { $addToSet: { views: id } })
+    static addViewToMessages(ids, id) {
+        return messageModel.updateMany({ _id: { $in: ids } }, { $addToSet: { views: id } });
     }
 }
 

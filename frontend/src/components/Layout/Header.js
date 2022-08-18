@@ -16,7 +16,7 @@ export default class Header extends Component {
             this.props.navigation("/login");
         } catch (error) {
             event.target.disabled = false;
-            console.log(error);
+            console.error(error);
         }
     }
 

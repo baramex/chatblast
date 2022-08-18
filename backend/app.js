@@ -31,7 +31,6 @@ io.on("connection", async (socket) => {
                 socket.join(["authenticated", "profileid:" + session.profileId.toString()]);
 
                 var d = disconnected.findIndex(a => a.id.equals(profile._id));
-                console.log(d);
                 if (d != -1) disconnected.splice(d, 1);
                 else {
                     await Session.connectMessage(profile).catch(console.error);
@@ -271,10 +270,26 @@ app.put("/api/messages/view", SessionMiddleware.auth, async (req, res) => {
         ids = ids.filter(a => a != null);
         if (ids.length == 0) throw new Error("Requête invalide.");
 
-        var messages = await Message.addViewToMessages(ids, req.profile._id);
+        await Message.addViewToMessages(ids, req.profile._id);
 
-        res.status(200).json(messages);
+        res.sendStatus(201);
     } catch (error) {
+        console.error(error);
+        res.status(400).send(error.message || "Erreur inattendue");
+    }
+});
+
+app.put("/api/messages/view/all", SessionMiddleware.auth, async (req, res) => {
+    try {
+        const unreadMessages = await Message.getUnread(req.profile);
+
+        if(unreadMessages.length === 0) return res.sendStatus(200);
+
+        await Message.addViewToMessages(unreadMessages.map(a => a._id), req.profile._id);
+
+        res.sendStatus(201);
+    }
+    catch(error) {
         console.error(error);
         res.status(400).send(error.message || "Erreur inattendue");
     }
@@ -311,7 +326,6 @@ app.get("/api/profiles/typing", SessionMiddleware.auth, async (req, res) => {
 app.put("/api/typing", SessionMiddleware.auth, (req, res) => {
     try {
         var isTyping = req.body.isTyping ? true : false;
-        console.log(isTyping)
 
         var i = typing.findIndex(a => a.id.equals(req.profile._id));
         if ((i == -1 && !isTyping) || (i != -1 && isTyping)) return res.sendStatus(200);

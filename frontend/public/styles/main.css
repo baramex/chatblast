@@ -172,6 +172,28 @@ footer a:hover {
     animation: warning .4s linear infinite alternate both;
 }
 
+.btn-unread {
+    text-overflow: clip;
+    white-space: hidden;
+    overflow: hidden;
+    width: 0px;
+    transition: .4s ease-in-out;
+    background-color: #0b5cd6;
+    z-index: 2;
+    margin-left: -10px;
+    max-height: 24px;
+    font-size: 15px;
+    padding: 2px 0 2px 15px;
+    border-bottom-right-radius: var(--bs-border-radius-pill);
+    border-top-right-radius: var(--bs-border-radius-pill);
+    opacity: 0;
+}
+
+#unread:hover~.btn-unread, .btn-unread:hover {
+    width: 165px;
+    opacity: 1;
+}
+
 .fm-sans-serif {
     font-family: sans-serif;
 }

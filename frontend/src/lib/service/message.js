@@ -24,6 +24,10 @@ export function deleteMessageById(id) {
     return api('/message/' + id, "delete");
 }
 
+export function sendMarkAsRead() {
+    return api("/messages/view/all", "put");
+}
+
 let viewToSend = [];
 export function addToViewToSend(id) {
     viewToSend.push(id);
@@ -44,9 +48,9 @@ export async function sendViews(setUnread, setMessages) {
 
         await setViewed(curr);
 
-        setUnread(prev => prev - curr.length);
-        setMessages(prev => prev.map(message => curr.includes(message._id) ? { ...message, isViewed: true } : message));
-
+        setUnread(prev => Math.max(0, prev - curr.length));
+        setMessages(prev => [...prev.map(message => curr.includes(message._id) ? { ...message, isViewed: true } : message)]);
+        
         viewToSend = viewToSend.filter(a => !curr.includes(a));
         messageToView = messageToView.filter(a => !curr.includes(a));
     } catch (error) { console.error(error) }

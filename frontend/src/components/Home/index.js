@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchOnline, getUser, isLogged } from "../../lib/service/authentification";
-import { addToMessageToView, addToViewToSend, deleteMessageById, fetchMessages, fetchTyping, sendMessage, sendViews, setMessageTyping } from "../../lib/service/message";
+import { addToMessageToView, addToViewToSend, deleteMessageById, fetchMessages, fetchTyping, sendMarkAsRead, sendMessage, sendViews, setMessageTyping } from "../../lib/service/message";
 import Footer from "../Layout/Footer";
 import Header from "../Layout/Header";
 import ConfirmPopup from "../Misc/ConfirmPopup";
@@ -14,7 +14,7 @@ import ObjectID from "bson-objectid";
 const { io } = require("socket.io-client");
 let socket;
 let observer;
-let isInPage = false;
+let isInPage = true;
 
 const notification = new Audio("/sounds/notification.wav");
 
@@ -40,113 +40,121 @@ export default function Home() {
         if (online && online.some(a => a.id === sessionStorage.getItem("id"))) setMessageTyping(false);
 
         console.log("init home");
-        if (!socket) socket = io();
+        if (!socket) socket = io().on("connect", () => {
+            socket.on("message.delete", id => {
+                setMessages(prev => {
+                    if (!prev) return;
+                    if (prev.some(a => a._id === id)) {
+                        if (!prev.find(a => a._id === id).isViewed) setUnread(prev => {
+                            if (!prev && prev !== 0) return;
+                            return Math.max(0, prev - 1);
+                        });
+                        return prev.filter(message => message._id !== id);
+                    }
+                });
+            });
+            socket.on("message.send", message => {
+                setMessages(prev => {
+                    if (!prev) return;
+
+                    setUnread(prev => {
+                        if (!prev && prev !== 0) return;
+                        return prev + 1;
+                    });
+                    setTyping(prev => {
+                        if (!prev) return;
+                        return prev.filter(a => a.id !== message.author.id);
+                    });
+                    setNewMessage(true);
+
+                    prev.push(message);
+
+                    return prev;
+                });
+
+                if (!isInPage) notification.play().catch(() => { });
+            });
+            socket.on("messages.view", views => {
+                setMessages(curr => {
+                    if (!curr) return;
+                    views.forEach(view => {
+                        const index = curr.findIndex(a => a._id === view.id);
+                        if (index !== -1) curr[index].views = view.views;
+                    });
+                    return [...curr];
+                });
+            });
+            socket.on("profile.join", profile => {
+                console.log("join", profile);
+                setMessages(prev => {
+                    if (!prev) return;
+                    prev.push({
+                        _id: ObjectID().toHexString(),
+                        author: { username: "SYSTEM" },
+                        mentions: [{ id: profile.id, username: profile.username }],
+                        content: `{mention[0]} a rejoint la conversation`,
+                        ephemeral: true,
+                        date: new Date().toISOString()
+                    });
+                    setUnread(prev => {
+                        if (!prev && prev !== 0) return;
+                        return prev + 1;
+                    });
+                    return prev;
+                });
+                setOnline(prev => {
+                    if (!prev) return;
+                    if (prev.find(a => a.id === profile.id)) return prev;
+                    prev.push(profile);
+                    return prev;
+                });
+
+                notification.play().catch(() => { });
+            });
+            socket.on("profile.leave", profile => {
+                console.log("leave", profile);
+                setMessages(prev => {
+                    if (!prev) return;
+                    prev.push({
+                        _id: ObjectID().toHexString(),
+                        author: { username: "SYSTEM" },
+                        mentions: [{ id: profile.id, username: profile.username }],
+                        content: `{mention[0]} a quitté la conversation`,
+                        ephemeral: true,
+                        date: new Date().toISOString()
+                    });
+                    setUnread(prev => {
+                        if (!prev && prev !== 0) return;
+                        return prev + 1;
+                    });
+                    return prev;
+                });
+                setTyping(prev => {
+                    if (!prev) return;
+                    return prev.filter(a => a.id !== profile.id);
+                });
+                setOnline(prev => {
+                    if (!prev) return;
+                    return prev.filter(a => a.id !== profile.id);
+                });
+
+                notification.play().catch(() => { });
+            });
+            socket.on("message.typing", _typing => {
+                console.log("typing", _typing);
+                setTyping(prev => {
+                    if (!prev) return;
+                    if (_typing.isTyping && !prev.some(a => a.id === _typing.id)) return [...prev, { id: _typing.id, username: _typing.username }];
+                    else if (!_typing.isTyping && prev.some(a => a.id === _typing.id)) return prev.filter(a => a.id !== _typing.id);
+                    return prev;
+                });
+            });
+        });
 
         getMessages(fetchedAll, messages, setMessages, setFetchedAll, setError);
         getUnread(setUnread, setError);
         getTyping(setTyping, setError);
         getOnline(setOnline, setError);
-
-        socket.on("message.delete", id => {
-            setMessages(prev => {
-                if (!prev) return;
-                if (prev.some(a => a._id === id)) {
-                    if (!prev.find(a => a._id === id).isViewed) setUnread(prev => {
-                        if (!prev && prev !== 0) return;
-                        return prev - 1;
-                    });
-                    return prev.filter(message => message._id !== id);
-                }
-            });
-        });
-        socket.on("message.send", message => {
-            setMessages(prev => {
-                if (!prev) return;
-
-                setUnread(prev => {
-                    if (!prev && prev !== 0) return;
-                    return prev + 1;
-                });
-                setTyping(prev => {
-                    if (!prev) return;
-                    return prev.filter(a => a.id !== message.author.id);
-                });
-                setNewMessage(true);
-
-                prev.push(message);
-
-                return prev;
-            });
-
-            if (!isInPage) notification.play();
-        });
-        socket.on("messages.view", views => {
-            setMessages(curr => {
-                if (!curr) return;
-                views.forEach(view => {
-                    const index = curr.findIndex(a => a._id === view.id);
-                    if (index !== -1) curr[index].views = view.views;
-                });
-                return curr;
-            });
-        });
-        socket.on("profile.join", profile => {
-            console.log("join", profile);
-            setMessages(prev => {
-                if (!prev) return;
-                prev.push({
-                    _id: ObjectID().toHexString(),
-                    author: { username: "SYSTEM" },
-                    mentions: [{ id: profile.id, username: profile.username }],
-                    content: `{mention[0]} a rejoint la conversation`,
-                    ephemeral: true,
-                    date: new Date().toISOString()
-                });
-                return prev;
-            });
-            setOnline(prev => {
-                if (!prev) return;
-                if (prev.find(a => a.id === profile.id)) return prev;
-                prev.push(profile);
-                return prev;
-            });
-
-            notification.play();
-        });
-        socket.on("profile.leave", profile => {
-            console.log("leave", profile);
-            setMessages(prev => {
-                if (!prev) return;
-                prev.push({
-                    _id: ObjectID().toHexString(),
-                    author: { username: "SYSTEM" },
-                    mentions: [{ id: profile.id, username: profile.username }],
-                    content: `{mention[0]} a quitté la conversation`,
-                    ephemeral: true,
-                    date: new Date().toISOString()
-                });
-                return prev;
-            });
-            setTyping(prev => {
-                if (!prev) return;
-                return prev.filter(a => a.id !== profile.id);
-            });
-            setOnline(prev => {
-                if (!prev) return;
-                return prev.filter(a => a.id !== profile.id);
-            });
-
-            notification.play();
-        });
-        socket.on("message.typing", _typing => {
-            console.log("typing", _typing);
-            setTyping(prev => {
-                if (!prev) return;
-                if (_typing.isTyping && !prev.some(a => a.id === _typing.id)) return [...prev, { id: _typing.id, username: _typing.username }];
-                else if (!_typing.isTyping && prev.some(a => a.id === _typing.id)) return prev.filter(a => a.id !== _typing.id);
-                return prev;
-            });
-        });
 
         return () => {
             console.log("events off");
@@ -157,6 +165,7 @@ export default function Home() {
             socket.off('profile.leave');
             socket.off('message.typing');
             socket.disconnect();
+            socket = undefined;
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -171,9 +180,12 @@ export default function Home() {
 
         <Header navigation={navigate} />
         <div id="chat" className="mx-5 mt-3 mb-4 h-100 d-flex flex-column rounded-3 position-relative">
-            <span id="unread" className={"position-absolute badge rounded-pill fs-6 " + (unread > 0 ? "warning bg-danger" : "bg-primary")} style={{ marginTop: "-.25rem", marginLeft: "-.5rem" }}>
-                {(!unread && unread !== 0) ? <Loading color="text-light" type="grow" size="sm" /> : unread}
-            </span>
+            <div className="position-absolute d-flex align-items-center" style={{ marginTop: "-.25rem", marginLeft: "-.5rem" }}>
+                <span id="unread" className={"badge rounded-pill fs-6 " + (unread > 0 ? "warning bg-danger" : "bg-primary")} style={{ zIndex: 3, cursor: "default" }}>
+                    {(!unread && unread !== 0) ? <Loading color="text-light" type="grow" size="sm" /> : unread}
+                </span>
+                <button onClick={() => markAsRead(setUnread, setMessages)} className="btn-unread text-white border-0 text-start">marquer comme lu</button>
+            </div>
 
             <div onScroll={(fetchedAll || fetching) ? null : e => handleChatScrolling(e, fetchedAll, messages, setMessages, setFetchedAll, setFetching, setFetchMessage, setError)} className="px-5 py-4 mt-2 overflow-auto h-100 position-relative" style={{ flex: "1 0px" }}>
                 <div className="position-absolute top-50 start-50 translate-middle text-center">
@@ -195,7 +207,7 @@ export default function Home() {
             </form>
         </div>
         <Footer position={null} />
-    </div>);
+    </div >);
 }
 
 function handleInput(e, typing) {
@@ -294,6 +306,16 @@ async function confirmDeleteMessage(id, setError, setMessages, setSuccess) {
     }
 }
 
+function markAsRead(setUnread, setMessages) {
+    sendMarkAsRead().then(() => {
+        setUnread(0);
+        setMessages(prev => prev.map(message => {
+            message.isViewed = true;
+            return message;
+        }));
+    });
+}
+
 function viewed(id) {
     if (isInPage) {
         addToViewToSend(id);
@@ -314,8 +336,10 @@ function handleMouseEnter(setUnread, setMessages) {
     sendViews(setUnread, setMessages);
 
     isInPage = true;
+    console.log("enter");
 }
 
 function handleMouseLeave() {
     isInPage = false;
+    console.log("leave");
 }
