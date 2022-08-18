@@ -14,9 +14,10 @@ function Message(props) {
         if (props.mentions) {
             let mentionIntance = props.content.match(/{mention\[[0-9]{1,}\]}/g);
             let tempContent = content;
-            mentionIntance.forEach(mention => {
+            mentionIntance?.forEach(mention => {
                 let index = mention.match(/[0-9]{1,}/)[0];
-                tempContent = tempContent.replace(mention, `<strong>@${props.mentions[index]?.username || "invaliduser"}</strong>`);
+                let name = props.mentions[index] ? props.mentions[index].id === sessionStorage.getItem("id") ? "vous" : "@" + props.mentions[index].username : "invaliduser";
+                tempContent = tempContent.replace(mention, `<strong>${name}</strong>`);
             });
             content = tempContent;
         }

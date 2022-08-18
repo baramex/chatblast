@@ -92,7 +92,7 @@ export default function Home() {
                         _id: ObjectID().toHexString(),
                         author: { username: "SYSTEM" },
                         mentions: [{ id: profile.id, username: profile.username }],
-                        content: `{mention[0]} a rejoint la conversation`,
+                        content: `{mention[0]} a rejoint la conversation.`,
                         ephemeral: true,
                         date: new Date().toISOString()
                     });
@@ -119,7 +119,7 @@ export default function Home() {
                         _id: ObjectID().toHexString(),
                         author: { username: "SYSTEM" },
                         mentions: [{ id: profile.id, username: profile.username }],
-                        content: `{mention[0]} a quitté la conversation`,
+                        content: `{mention[0]} a quitté la conversation.`,
                         ephemeral: true,
                         date: new Date().toISOString()
                     });
@@ -158,14 +158,20 @@ export default function Home() {
 
         return () => {
             console.log("events off");
-            socket.off('message.delete');
-            socket.off('message.send');
-            socket.off('messages.view');
-            socket.off('profile.join');
-            socket.off('profile.leave');
-            socket.off('message.typing');
-            socket.disconnect();
-            socket = undefined;
+            if (socket) {
+                socket.off('message.delete');
+                socket.off('message.send');
+                socket.off('messages.view');
+                socket.off('profile.join');
+                socket.off('profile.leave');
+                socket.off('message.typing');
+                socket.disconnect();
+                socket = undefined;
+            }
+            if(observer) {
+                observer.disconnect();
+                observer = undefined;
+            }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -220,6 +226,8 @@ function handleInput(e, typing) {
 
 function handleChatScrolling(event, fetchedAll, messages, setMessages, setFetchedAll, setFetching, setFetchMessage, setError) {
     if (event.target.scrollTop <= 50) {
+        if (event.target.scrollTop == 0) event.target.scrollTop = 1;
+
         setFetching(true);
 
         let firstMessage = messages[0]._id;
