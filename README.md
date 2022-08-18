@@ -13,7 +13,7 @@ ChatBlast est une chatbox publique, anonyme et commune à tous les utilisateurs.
 [![](https://img.shields.io/badge/author-baramex%20&%20vipex-red?style=for-the-badge)]()
 
 # installation
-C'est un projet node, il suffit de clone le projet puis de lancer l'app.js:
+C'est un projet node, il vous faut donc node js ainsi que npm:
 ```console
 git clone git@github.com:baramex/chatbox.git
 cd frontend
