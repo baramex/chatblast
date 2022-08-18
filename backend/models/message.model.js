@@ -14,7 +14,9 @@ const messageSchema = new Schema({
 messageSchema.post("updateMany", async function (doc, next) {
     if (doc.modifiedCount >= 1) {
         var messages = await Message.getMessagesByIds(this.getQuery()._id.$in);
-        io.to("authenticated").emit("messages.view", messages.map(a => ({ id: a._id, views: a.views.length })));
+        (await io.to("authenticated").fetchSockets()).forEach(socket => {
+            socket.emit("messages.view", messages.map(a => ({ id: a._id, views: a.views.length, isViewed: a.views.includes(socket.profileId) })));
+        });
     }
     next();
 });

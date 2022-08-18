@@ -3,6 +3,7 @@ const FIELD_REGEX = /^[a-z]{1,32}$/;
 const USERNAMES_NOT_ALLOWED = ["system"];
 
 /* modules */
+require("dotenv").config();
 const rateLimit = require("express-rate-limit");
 const mongoose = require("mongoose");
 const { ObjectId } = mongoose.Types;
@@ -13,7 +14,6 @@ const fs = require("fs");
 const { Message } = require("./models/message.model");
 const { app, io, upload } = require("./server");
 const { getClientIp } = require("request-ip");
-require("dotenv").config();
 mongoose.connect(process.env.DB, { dbName: process.env.DB_NAME });
 
 var typing = [];
@@ -338,6 +338,10 @@ app.put("/api/typing", SessionMiddleware.auth, (req, res) => {
         console.error(error);
         res.status(400).send(error.message || "Erreur inattendue");
     }
+});
+
+app.get("*", (req, res) => {
+    res.sendFile("public/index.html", { root: __dirname }); 
 });
 
 function generateID(length) {

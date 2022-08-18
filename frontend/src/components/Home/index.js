@@ -32,7 +32,7 @@ export default function Home() {
     const [fetching, setFetching] = useState(false);
     const navigate = useNavigate();
 
-    if (!observer) observer = new IntersectionObserver(e => intersect(e, setUnread, setMessages));
+    if (!observer) observer = new IntersectionObserver(e => intersect(e, messages, setUnread, setMessages));
 
     useEffect(() => {
         if (!isLogged()) return navigate("/login");
@@ -77,17 +77,23 @@ export default function Home() {
             socket.on("messages.view", views => {
                 setMessages(curr => {
                     if (!curr) return;
+                    var unread_ = 0;
                     views.forEach(view => {
                         const index = curr.findIndex(a => a._id === view.id);
-                        if (index !== -1) curr[index].views = view.views;
+                        if (index !== -1) {
+                            curr[index].views = view.views;
+                            if (!curr[index].isViewed && view.isViewed) unread_++;
+                            curr[index].isViewed = view.isViewed;
+                        }
                     });
+                    setUnread(prev => prev -= unread_);
                     return [...curr];
                 });
             });
             socket.on("profile.join", profile => {
                 console.log("join", profile);
                 setMessages(prev => {
-                    if (!prev) return;
+                    if (!prev || profile.id === sessionStorage.getItem("id")) return;
                     prev.push({
                         _id: ObjectID().toHexString(),
                         author: { username: "SYSTEM" },
@@ -168,7 +174,7 @@ export default function Home() {
                 socket.disconnect();
                 socket = undefined;
             }
-            if(observer) {
+            if (observer) {
                 observer.disconnect();
                 observer = undefined;
             }
@@ -177,7 +183,7 @@ export default function Home() {
     }, []);
 
     if (!isLogged()) return null;
-    return (<div onMouseEnter={() => handleMouseEnter(setUnread, setMessages)} onMouseLeave={handleMouseLeave} className="d-flex flex-column h-100">
+    return (<div onMouseEnter={() => handleMouseEnter(messages, setUnread, setMessages)} onMouseLeave={handleMouseLeave} className="d-flex flex-column h-100">
         {error && <ErrorPopup message={error} onClose={() => setError("")} />}
         {success && <SuccessPopup message={success} onClose={() => setSuccess("")} />}
         {wantToDelete && <ConfirmPopup message="Êtes-vous sûr de vouloir supprimer ce message ?" onConfirm={() => { confirmDeleteMessage(wantToDelete, setError, setMessages, setSuccess); setWantToDelete(undefined); }} onClose={() => setWantToDelete(undefined)} />}
@@ -226,7 +232,7 @@ function handleInput(e, typing) {
 
 function handleChatScrolling(event, fetchedAll, messages, setMessages, setFetchedAll, setFetching, setFetchMessage, setError) {
     if (event.target.scrollTop <= 50) {
-        if (event.target.scrollTop == 0) event.target.scrollTop = 1;
+        if (event.target.scrollTop === 0) event.target.scrollTop = 1;
 
         setFetching(true);
 
@@ -330,18 +336,18 @@ function viewed(id) {
     } else addToMessageToView(id);
 }
 
-function intersect(entries, setUnread, setMessages) {
+function intersect(entries, messages, setUnread, setMessages) {
     entries.forEach(entry => {
         if (entry.isIntersecting) {
             observer.unobserve(entry.target);
             viewed(entry.target.id.replace("m-", ""));
         }
     });
-    if (isInPage) sendViews(setUnread, setMessages);
+    if (isInPage) sendViews(messages, setUnread, setMessages);
 }
 
-function handleMouseEnter(setUnread, setMessages) {
-    sendViews(setUnread, setMessages);
+function handleMouseEnter(messages, setUnread, setMessages) {
+    sendViews(messages, setUnread, setMessages);
 
     isInPage = true;
     console.log("enter");

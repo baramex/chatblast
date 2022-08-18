@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { resetSession } from './authentification';
 
 let pending_request = false;
 export function api(endpoint, method, data = undefined, customHeader = undefined) {
@@ -28,6 +29,7 @@ export function api(endpoint, method, data = undefined, customHeader = undefined
                 }, time * 1000);
             }
             else if (status === 401) {
+                resetSession();
                 rej(response.data);
             }
             else {

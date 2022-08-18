@@ -8,7 +8,7 @@ const app = express();
 /* middleware */
 var cors = require('cors');
 app.use(cors({
-    origin: "http://localhost:3000",
+    origin: process.env.HOST,
     credentials: true
 }));
 const rateLimit = require('express-rate-limit');
@@ -19,6 +19,7 @@ const baseLimiter = rateLimit({
     legacyHeaders: false
 });
 app.use(baseLimiter);
+app.use(express.static("public"));
 const bodyParser = require('body-parser');
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -47,7 +48,7 @@ const server = http.createServer(app);
 const { Server } = require("socket.io");
 const io = new Server(server, {
     cors: {
-        origin: "localhost:1500"
+        origin: process.env.HOST
     }
 });
 server.listen(PORT, () => {
