@@ -1,5 +1,6 @@
 import React from "react";
 import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
+import Error404 from "./Errors/404";
 import Home from "./Home";
 import Login from "./Login";
 import Register from "./Register";
@@ -15,6 +16,8 @@ export default function App() {
                 <Route path="/terms" element={<Terms />} />
 
                 <Route path="/" element={<Home />} />
+
+                <Route path="*" element={<Error404 />} />
             </Routes>
         </Router>
     );
