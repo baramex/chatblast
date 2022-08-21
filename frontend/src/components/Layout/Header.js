@@ -20,17 +20,31 @@ export default class Header extends Component {
         }
     }
 
+    accountMenu(ref) {
+        ref.addEventListener("click", (event) => {
+            ref.classList.toggle("active");
+        });
+    }
+
     render() {
         return (<>
-            <header className="text-center position-relative">
-                <h1 className="title d-inline-block ms-5">ChatBlast</h1>
-                <button onClick={this.handleLogout} id="disconnect"
-                    className="btn btn-danger btn-lg position-absolute end-0 top-50 translate-middle-y me-5 px-4">Se
-                    déconnecter</button>
-                <button onClick={this.handleLogout} id="disconnect-img"
-                    className="position-absolute end-0 top-50 translate-middle-y me-4 border-0 bg-transparent" hidden>
-                    <img width="60" src="/images/logout.png" alt="logout" />
-                </button>
+            <header className="text-center position-relative d-flex justify-content-between align-items-center px-3">
+                <div className="py-2 px-3 text-center d-flex justify-content-center align-items-center">
+                    <div className="online-circle rounded-circle me-3"></div>
+                    <span className="text-light fs-5">{((this.props.onlineCount || this.props.onlineCount === 0) ? this.props.onlineCount : "--") + " en ligne"}</span>
+                </div>
+                <h1 className="title text-light d-inline-block ms-5">ChatBlast</h1>
+                <div className="position-relative">
+                    <button ref={this.accountMenu} className="toggle-menu my-2 p-0 border-0 rounded-circle bg-light position-absolute top-0 end-0 me-3" data-bs-toggle="dropdown" aria-expanded="false" style={{ zIndex: 2 }}>
+                        <img src="/profile/@me/avatar" alt="account-menu" />
+                    </button>
+                    <div className="shadow position-absolute top-0 end-0 rounded-4 px-5 py-3 mx-3 my-2 d-flex flex-column bg-light-theme menu" style={{ zIndex: 1 }}>
+                        <p className="fw-bold fs-4">{sessionStorage.getItem("username")}</p>
+                        <ul className="p-0 mb-0 mt-2" style={{ listStyle: "none" }}>
+                            <li><button onClick={this.handleLogout} className="border-0 bg-transparent"><img width="25" className="me-2 align-bottom" src="/images/logout.png" alt="logout" />Se déconnecter</button></li>
+                        </ul>
+                    </div>
+                </div>
             </header>
         </>);
     }

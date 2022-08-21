@@ -9,7 +9,6 @@ import ErrorPopup from "../Misc/ErrorPopup";
 import Loading from "../Misc/Loading";
 import SuccessPopup from "../Misc/SuccessPopup";
 import MessageContainer from "./MessageContainer";
-import OnlineContaier from "./OnlineContainer";
 import ObjectID from "bson-objectid";
 const { io } = require("socket.io-client");
 let socket;
@@ -188,9 +187,7 @@ export default function Home() {
         {success && <SuccessPopup message={success} onClose={() => setSuccess("")} />}
         {wantToDelete && <ConfirmPopup message="Êtes-vous sûr de vouloir supprimer ce message ?" onConfirm={() => { confirmDeleteMessage(wantToDelete, setError, setMessages, setSuccess); setWantToDelete(undefined); }} onClose={() => setWantToDelete(undefined)} />}
 
-        <OnlineContaier online={online} onlineCount={online?.length} />
-
-        <Header navigation={navigate} />
+        <Header navigation={navigate} onlineCount={online?.length} />
         <div id="chat" className="mx-5 mt-3 mb-4 h-100 d-flex flex-column rounded-3 position-relative">
             <div className="position-absolute d-flex align-items-center" style={{ marginTop: "-.25rem", marginLeft: "-.5rem" }}>
                 <span id="unread" className={"badge rounded-pill fs-6 " + (unread > 0 ? "warning bg-danger" : "bg-primary")} style={{ zIndex: 3, cursor: "default" }}>
