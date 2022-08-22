@@ -31,7 +31,7 @@ export function fetchOnline() {
 }
 
 export function isLogged() {
-    return (sessionStorage.getItem("id") && getCookie("token")) ? true : false;
+    return getCookie("token") ? true : false;
 }
 
 export function resetSession() {
