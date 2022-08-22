@@ -25,9 +25,10 @@ function Message(props) {
 
     useEffect(() => {
         let element = message.current;
+        if (!element) return;
         if (!props.isViewed) props.observer.observe(element);
 
-        if (props.scroll && element && (props.behavior === "smooth" ? element.parentElement.parentElement.scrollHeight - element.parentElement.parentElement.scrollTop - 720 < 200 : true)) {
+        if (props.scroll && (props.behavior === "smooth" ? element.parentElement.parentElement.scrollHeight - element.parentElement.parentElement.scrollTop - 951 < 200 : true)) {
             let scroll = element.parentElement.parentElement.scrollTop;
             element.scrollIntoView({ behavior: props.behavior || "auto" });
             let i = 0;
@@ -56,8 +57,47 @@ function Message(props) {
     }, []);
 
     return (
-        <div ref={message} id={"m-" + props._id} className={`pb-2 my-4 rounded-3 border border-secondary message ${isMy ? "bg-light" : ""} ${!props.isViewed ? "unread" : ""}`}>
-            <div className="d-flex justify-content-between username-container">
+        <div ref={message} id={"m-" + props._id} className={`pb-2 my-4 message ${!props.isViewed ? "unread" : ""}`}>
+            <div className="d-flex justify-content-between p-2">
+                <div className="d-flex align-items-baseline">
+                    <p className="fs-4 m-0 text-black">{props.author.username}</p>
+                    <span className="ms-3">{formattedDate}</span>
+                </div>
+                <div className="d-flex align-items-center">
+                    {
+                        props.views || props.views === 0 ?
+                            <div>
+                                <span className="views">{props.views}</span>
+                                <img className="ms-1" style={{ verticalAlign: "sub" }} width="20" src="/images/eye.png" alt="message-views" />
+                            </div> : null
+                    }
+                    {
+                        isMy ?
+                            <div className="dropdown">
+                                <button className="border-0 bg-transparent" data-bs-toggle="dropdown"><img width="20" src="/images/dots.png" alt="options" /></button>
+                                <ul className="dropdown-menu">
+                                    <li>
+                                        <button onClick={() => props.deleteMessage(props._id)} className="dropdown-item text-center">Supprimer</button>
+                                    </li>
+                                </ul>
+                            </div>
+                            : null
+                    }
+                </div>
+            </div>
+
+            <div className="d-flex">
+                <img className="ms-3 rounded-circle" width="50" height="50" alt="message-avatar" src={isSystem ? "/images/system.png" : `/profile/${(isMy ? "@me" : props.author.id)}/avatar`} />
+                <p className="mx-2  mt-2 fs-6 text-break text" style={{ flexGrow: 1 }} dangerouslySetInnerHTML={isSystem ? { __html: content } : null}>
+                    {!isSystem ? content : null}
+                </p>
+            </div>
+        </div>
+    );
+}
+
+/*
+<div className="d-flex justify-content-between username-container">
                 <div className="d-flex align-items-center border-dashed username">
                     <img className="mx-2 my-1" width="30" alt="message-avatar" src={isSystem ? "/images/system.png" : `/profile/${(isMy ? "@me" : props.author.id)}/avatar`} />
                     <p className="pe-3 ps-1 py-1 fs-6 m-auto fw-bold">{props.author.username}</p>
@@ -85,8 +125,6 @@ function Message(props) {
                     </div>
                     : null}
             </div>
-        </div>
-    );
-}
+            */
 
 export default memo(Message);

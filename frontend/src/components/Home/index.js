@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchOnline, fetchUser, isLogged } from "../../lib/service/authentification";
 import { addToMessageToView, addToViewToSend, deleteMessageById, fetchMessages, fetchTyping, sendMarkAsRead, sendMessage, sendViews, setMessageTyping } from "../../lib/service/message";
-import Footer from "../Layout/Footer";
 import Header from "../Layout/Header";
 import ConfirmPopup from "../Misc/ConfirmPopup";
 import ErrorPopup from "../Misc/ErrorPopup";
@@ -32,7 +31,16 @@ export default function Home() {
     const [fetching, setFetching] = useState(false);
     const navigate = useNavigate();
 
-    if (!observer) observer = new IntersectionObserver(e => intersect(e, messages, setUnread, setMessages));
+    useEffect(() => {
+        if (!observer) observer = new IntersectionObserver(e => intersect(e, messages, setUnread, setMessages));
+
+        return () => {
+            if (observer) {
+                observer.disconnect();
+                observer = undefined;
+            }
+        }
+    }, [messages]);
 
     useEffect(() => {
         if (!isLogged()) return navigate("/login");
@@ -171,10 +179,6 @@ export default function Home() {
                 socket.disconnect();
                 socket = undefined;
             }
-            if (observer) {
-                observer.disconnect();
-                observer = undefined;
-            }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -190,15 +194,15 @@ export default function Home() {
         <div className="d-flex h-100">
             <OnlineContaier online={online} />
 
-            <div id="chat" className="mx-5 mt-3 mb-4 h-100 w-100 d-flex flex-column rounded-3 position-relative">
+            <div className="w-100 h-100 d-flex flex-column" style={{ backgroundColor: "#D7F5EA" }}>
                 <div className="position-absolute d-flex align-items-center" style={{ marginTop: "-.25rem", marginLeft: "-.5rem" }}>
-                    <span id="unread" className={"badge rounded-pill fs-6 " + (unread > 0 ? "warning bg-danger" : "bg-primary")} style={{ zIndex: 3, cursor: "default" }}>
+                    <span id="unread" className={"badge rounded-pill fs-5 " + (unread > 0 ? "warning bg-danger" : "bg-primary")} style={{ zIndex: 3, cursor: "default" }}>
                         {(!unread && unread !== 0) ? <Loading color="text-light" type="grow" size="sm" /> : unread}
                     </span>
                     <button onClick={() => markAsRead(setUnread, setMessages)} className="btn-unread text-white border-0 text-start">marquer comme lu</button>
                 </div>
 
-                <div onScroll={(fetchedAll || fetching) ? null : e => handleChatScrolling(e, fetchedAll, messages, setMessages, setFetchedAll, setFetching, setFetchMessage, setError)} className="px-5 py-4 mt-2 overflow-auto h-100 position-relative" style={{ flex: "1 0px" }}>
+                <div onScroll={(fetchedAll || fetching) ? null : e => handleChatScrolling(e, fetchedAll, messages, setMessages, setFetchedAll, setFetching, setFetchMessage, setError)} className="px-4 py-3 mt-2 overflow-auto h-100 position-relative" style={{ flex: "1 0px" }}>
                     <div className="position-absolute top-50 start-50 translate-middle text-center">
                         {
                             !messages ? <Loading size="lg" /> : messages.length === 0 ? <p id="nomes" className="fs-4 text-secondary">Aucun message</p> : null
@@ -207,19 +211,17 @@ export default function Home() {
                     <MessageContainer observer={observer} fetchedAll={fetchedAll} fetching={fetching} scroll={newMessage} fetchMessage={fetchMessage} deleteMessage={deleteMessage(setWantToDelete)} messages={messages} />
                 </div>
 
-                <form id="send-message" onSubmit={e => handleSendMessage(e, setError)} className="d-flex p-4 position-relative">
+                <div>
                     <span className="position-absolute left-0 text-secondary" style={{ top: -30 }}>
                         {typing?.filter(a => a.id !== sessionStorage.getItem("id")).length > 0 && (typing.filter(a => a.id !== sessionStorage.getItem("id")).map(a => a.username).join(", ") + " " + (typing.length === 1 ? "est" : "sont") + " en train d'écrire...")}
                     </span>
-                    <div className="input-group me-3">
-                        <input type="text" onInput={e => handleInput(e, typing)} autoComplete="off" placeholder="Message..." className="form-control form-inset fs-6" name="message" aria-label="Message" minLength="1" maxLength="512" disabled={messages ? false : true} required />
-                    </div>
-                    <input type="submit" disabled={messages ? false : true} className="px-3 btn btn-success fs-5" />
-                </form>
+                    <form onSubmit={e => handleSendMessage(e, setError)} className="d-flex position-relative shadow-lg">
+                        <input type="text" onInput={e => handleInput(e, typing)} autoComplete="off" placeholder="Tapez votre message..." className="form-control form-inset fs-5 rounded-0 border-0 py-2" name="message" aria-label="Message" minLength="1" maxLength="512" disabled={messages ? false : true} required />
+                        <input type="submit" disabled={messages ? false : true} className="px-4 border-0 bg-light" style={{ backgroundImage: "url('/images/send.png')", backgroundSize: 40, backgroundRepeat: "no-repeat", backgroundPosition: "50% 50%" }} value="" />
+                    </form>
+                </div>
             </div>
         </div>
-
-        <Footer position={null} />
     </div >);
 }
 
