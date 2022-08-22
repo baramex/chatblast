@@ -51,12 +51,51 @@ header {
 }
 
 .menu {
-    right: -100% !important;
-    transition: right .3s ease-in-out;
+    transform: translateX(calc(100% + 1rem + 5px));
+    transition: transform .3s ease-in-out;
+    border-radius: 10px 25px 10px 20px;
+}
+
+.menu ul li {
+    position: relative;
+}
+
+.menu ul li>* {
+    padding-top: 1rem;
+}
+
+.menu ul li::before {
+    content: '';
+    position: absolute;
+    width: 100px;
+    height: 1px;
+    top: 0;
+    left: 50%;
+    transform: translate(-50%);
+    background-color: #5C5B5B;
+}
+
+.menu ul li:last-of-type {
+    border-bottom-left-radius: 20px;
+    border-bottom-right-radius: 10px;
+}
+
+.menu ul li:hover {
+    background-color: #aaebd5;
 }
 
 .toggle-menu.active~.menu {
-    right: 0 !important;
+    transform: translateX(0);
+}
+
+.toggle-menu {
+    transition: padding .2s, padding-right .2s .1s;
+}
+
+.toggle-menu.active {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+    padding-right: 0.25rem !important;
 }
 
 #chat {
@@ -211,7 +250,8 @@ footer a:hover {
     opacity: 0;
 }
 
-#unread:hover~.btn-unread, .btn-unread:hover {
+#unread:hover~.btn-unread,
+.btn-unread:hover {
     width: 165px;
     opacity: 1;
 }

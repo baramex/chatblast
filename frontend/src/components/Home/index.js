@@ -57,8 +57,7 @@ export default function Home() {
                     if (!prev) return;
 
                     setUnread(prev => {
-                        if (!prev && prev !== 0) return;
-                        return prev + 1;
+                        return (prev || 0) + 1;
                     });
                     setTyping(prev => {
                         if (!prev) return;
@@ -85,14 +84,14 @@ export default function Home() {
                             curr[index].isViewed = view.isViewed;
                         }
                     });
-                    setUnread(prev => prev -= unread_);
+                    setUnread(prev => (prev || 0) - unread_);
                     return [...curr];
                 });
             });
             socket.on("profile.join", profile => {
                 console.log("join", profile);
                 setMessages(prev => {
-                    if (!prev || profile.id === sessionStorage.getItem("id")) return;
+                    if (!prev) return prev;
                     prev.push({
                         _id: ObjectID().toHexString(),
                         author: { username: "SYSTEM" },
@@ -102,8 +101,7 @@ export default function Home() {
                         date: new Date().toISOString()
                     });
                     setUnread(prev => {
-                        if (!prev && prev !== 0) return;
-                        return prev + 1;
+                        return (prev || 0) + 1;
                     });
                     return prev;
                 });
@@ -129,8 +127,7 @@ export default function Home() {
                         date: new Date().toISOString()
                     });
                     setUnread(prev => {
-                        if (!prev && prev !== 0) return;
-                        return prev + 1;
+                        return (prev || 0) + 1;
                     });
                     return prev;
                 });
@@ -187,7 +184,7 @@ export default function Home() {
         {success && <SuccessPopup message={success} onClose={() => setSuccess("")} />}
         {wantToDelete && <ConfirmPopup message="Êtes-vous sûr de vouloir supprimer ce message ?" onConfirm={() => { confirmDeleteMessage(wantToDelete, setError, setMessages, setSuccess); setWantToDelete(undefined); }} onClose={() => setWantToDelete(undefined)} />}
 
-        <Header navigation={navigate} onlineCount={online?.length} />
+        <Header onlineCount={online?.length} />
         <div id="chat" className="mx-5 mt-3 mb-4 h-100 d-flex flex-column rounded-3 position-relative">
             <div className="position-absolute d-flex align-items-center" style={{ marginTop: "-.25rem", marginLeft: "-.5rem" }}>
                 <span id="unread" className={"badge rounded-pill fs-6 " + (unread > 0 ? "warning bg-danger" : "bg-primary")} style={{ zIndex: 3, cursor: "default" }}>
@@ -228,7 +225,7 @@ function handleInput(e, typing) {
 }
 
 function handleChatScrolling(event, fetchedAll, messages, setMessages, setFetchedAll, setFetching, setFetchMessage, setError) {
-    if(!messages) return;
+    if (!messages) return;
     if (event.target.scrollTop <= 50) {
         if (event.target.scrollTop === 0) event.target.scrollTop = 1;
 
@@ -262,7 +259,7 @@ async function handleSendMessage(event, setError) {
 async function getUnread(setUnread, setError) {
     try {
         const user = await getUser();
-        setUnread(user.unread);
+        setUnread(prev => (prev || 0) + user.unread);
     } catch (error) {
         setError(error.message || error);
     }
