@@ -10,6 +10,7 @@ import Loading from "../Misc/Loading";
 import SuccessPopup from "../Misc/SuccessPopup";
 import MessageContainer from "./MessageContainer";
 import ObjectID from "bson-objectid";
+import OnlineContaier from "./OnlineContainer";
 const { io } = require("socket.io-client");
 let socket;
 let observer;
@@ -185,33 +186,39 @@ export default function Home() {
         {wantToDelete && <ConfirmPopup message="Êtes-vous sûr de vouloir supprimer ce message ?" onConfirm={() => { confirmDeleteMessage(wantToDelete, setError, setMessages, setSuccess); setWantToDelete(undefined); }} onClose={() => setWantToDelete(undefined)} />}
 
         <Header onlineCount={online?.length} />
-        <div id="chat" className="mx-5 mt-3 mb-4 h-100 d-flex flex-column rounded-3 position-relative">
-            <div className="position-absolute d-flex align-items-center" style={{ marginTop: "-.25rem", marginLeft: "-.5rem" }}>
-                <span id="unread" className={"badge rounded-pill fs-6 " + (unread > 0 ? "warning bg-danger" : "bg-primary")} style={{ zIndex: 3, cursor: "default" }}>
-                    {(!unread && unread !== 0) ? <Loading color="text-light" type="grow" size="sm" /> : unread}
-                </span>
-                <button onClick={() => markAsRead(setUnread, setMessages)} className="btn-unread text-white border-0 text-start">marquer comme lu</button>
-            </div>
 
-            <div onScroll={(fetchedAll || fetching) ? null : e => handleChatScrolling(e, fetchedAll, messages, setMessages, setFetchedAll, setFetching, setFetchMessage, setError)} className="px-5 py-4 mt-2 overflow-auto h-100 position-relative" style={{ flex: "1 0px" }}>
-                <div className="position-absolute top-50 start-50 translate-middle text-center">
-                    {
-                        !messages ? <Loading size="lg" /> : messages.length === 0 ? <p id="nomes" className="fs-4 text-secondary">Aucun message</p> : null
-                    }
-                </div>
-                <MessageContainer observer={observer} fetchedAll={fetchedAll} fetching={fetching} scroll={newMessage} fetchMessage={fetchMessage} deleteMessage={deleteMessage(setWantToDelete)} messages={messages} />
-            </div>
+        <div className="d-flex h-100">
+            <OnlineContaier online={online} />
 
-            <form id="send-message" onSubmit={e => handleSendMessage(e, setError)} className="d-flex p-4 position-relative">
-                <span className="position-absolute left-0 text-secondary" style={{ top: -30 }}>
-                    {typing?.filter(a => a.id !== sessionStorage.getItem("id")).length > 0 && (typing.filter(a => a.id !== sessionStorage.getItem("id")).map(a => a.username).join(", ") + " " + (typing.length === 1 ? "est" : "sont") + " en train d'écrire...")}
-                </span>
-                <div className="input-group me-3">
-                    <input type="text" onInput={e => handleInput(e, typing)} autoComplete="off" placeholder="Message..." className="form-control form-inset fs-6" name="message" aria-label="Message" minLength="1" maxLength="512" disabled={messages ? false : true} required />
+            <div id="chat" className="mx-5 mt-3 mb-4 h-100 w-100 d-flex flex-column rounded-3 position-relative">
+                <div className="position-absolute d-flex align-items-center" style={{ marginTop: "-.25rem", marginLeft: "-.5rem" }}>
+                    <span id="unread" className={"badge rounded-pill fs-6 " + (unread > 0 ? "warning bg-danger" : "bg-primary")} style={{ zIndex: 3, cursor: "default" }}>
+                        {(!unread && unread !== 0) ? <Loading color="text-light" type="grow" size="sm" /> : unread}
+                    </span>
+                    <button onClick={() => markAsRead(setUnread, setMessages)} className="btn-unread text-white border-0 text-start">marquer comme lu</button>
                 </div>
-                <input type="submit" disabled={messages ? false : true} className="px-3 btn btn-success fs-5" />
-            </form>
+
+                <div onScroll={(fetchedAll || fetching) ? null : e => handleChatScrolling(e, fetchedAll, messages, setMessages, setFetchedAll, setFetching, setFetchMessage, setError)} className="px-5 py-4 mt-2 overflow-auto h-100 position-relative" style={{ flex: "1 0px" }}>
+                    <div className="position-absolute top-50 start-50 translate-middle text-center">
+                        {
+                            !messages ? <Loading size="lg" /> : messages.length === 0 ? <p id="nomes" className="fs-4 text-secondary">Aucun message</p> : null
+                        }
+                    </div>
+                    <MessageContainer observer={observer} fetchedAll={fetchedAll} fetching={fetching} scroll={newMessage} fetchMessage={fetchMessage} deleteMessage={deleteMessage(setWantToDelete)} messages={messages} />
+                </div>
+
+                <form id="send-message" onSubmit={e => handleSendMessage(e, setError)} className="d-flex p-4 position-relative">
+                    <span className="position-absolute left-0 text-secondary" style={{ top: -30 }}>
+                        {typing?.filter(a => a.id !== sessionStorage.getItem("id")).length > 0 && (typing.filter(a => a.id !== sessionStorage.getItem("id")).map(a => a.username).join(", ") + " " + (typing.length === 1 ? "est" : "sont") + " en train d'écrire...")}
+                    </span>
+                    <div className="input-group me-3">
+                        <input type="text" onInput={e => handleInput(e, typing)} autoComplete="off" placeholder="Message..." className="form-control form-inset fs-6" name="message" aria-label="Message" minLength="1" maxLength="512" disabled={messages ? false : true} required />
+                    </div>
+                    <input type="submit" disabled={messages ? false : true} className="px-3 btn btn-success fs-5" />
+                </form>
+            </div>
         </div>
+
         <Footer position={null} />
     </div >);
 }

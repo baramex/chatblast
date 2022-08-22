@@ -1,9 +1,9 @@
-import { createRef, useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { logoutUser, resetSession } from "../../lib/service/authentification";
 
 export default function Header({ onlineCount }) {
-    const button = createRef();
+    const button = useRef();
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -42,7 +42,7 @@ export default function Header({ onlineCount }) {
                     <img className="rounded-circle bg-light h-100" src="/profile/@me/avatar" alt="account-menu" />
                 </button>
                 <div className="shadow-lg position-absolute top-0 end-0 mt-1 d-flex flex-column bg-light-theme menu" style={{ zIndex: 1 }}>
-                    <p className="fw-bold fs-4 mt-3" style={{ color: "#737373", marginRight: 60, marginLeft: 60 }}>{sessionStorage.getItem("username")}</p>
+                    <p className="fw-bold fs-4 mt-2" style={{ color: "#737373", marginRight: 60, marginLeft: 60 }}>{sessionStorage.getItem("username")}</p>
                     <ul className="p-0 m-0" style={{ listStyle: "none" }}>
                         <li><button onClick={e => handleLogout(e, navigate)} className="border-0 bg-transparent pb-3 px-5"><img width="25" className="me-2 align-bottom" src="/images/logout.png" alt="logout" />Se déconnecter</button></li>
                     </ul>
