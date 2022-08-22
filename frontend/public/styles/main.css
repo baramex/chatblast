@@ -168,16 +168,16 @@ header {
 }
 
 .online-menu .online p {
-    max-width: 0;
+    width: 0;
     overflow: hidden;
-    transition: max-width .3s ease-in-out, margin-right .3s ease-in-out;
+    text-overflow: ellipsis;
+    transition: width .3s ease-in-out, margin-right .3s ease-in-out;
 }
 
 /* TODO: menu min width */
 
 .online-menu.active .online p {
-    max-width: 150px;
-    text-overflow: ellipsis;
+    width: 150px;
     margin-right: 1.25rem;
 }
 

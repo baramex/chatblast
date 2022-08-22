@@ -22,7 +22,7 @@ export function logoutUser() {
     return api("/profile", "delete");
 }
 
-export function getUser() {
+export function fetchUser() {
     return api("/profile/@me", "get")
 }
 

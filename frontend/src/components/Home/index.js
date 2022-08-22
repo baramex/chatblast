@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchOnline, getUser, isLogged } from "../../lib/service/authentification";
+import { fetchOnline, fetchUser, isLogged } from "../../lib/service/authentification";
 import { addToMessageToView, addToViewToSend, deleteMessageById, fetchMessages, fetchTyping, sendMarkAsRead, sendMessage, sendViews, setMessageTyping } from "../../lib/service/message";
 import Footer from "../Layout/Footer";
 import Header from "../Layout/Header";
@@ -154,8 +154,8 @@ export default function Home() {
             });
         });
 
+        getUser(setUnread, setError);
         getMessages(fetchedAll, messages, setMessages, setFetchedAll, setError);
-        getUnread(setUnread, setError);
         getTyping(setTyping, setError);
         getOnline(setOnline, setError);
 
@@ -263,10 +263,12 @@ async function handleSendMessage(event, setError) {
     event.target.message.focus();
 }
 
-async function getUnread(setUnread, setError) {
+async function getUser(setUnread, setError) {
     try {
-        const user = await getUser();
+        const user = await fetchUser();
         setUnread(prev => (prev || 0) + user.unread);
+        sessionStorage.setItem("id", user.id);
+        sessionStorage.setItem("username", user.username);
     } catch (error) {
         setError(error.message || error);
     }
