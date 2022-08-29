@@ -57,9 +57,9 @@ function Message(props) {
     }, []);
 
     return (
-        <div ref={message} id={"m-" + props._id} className={`pb-2 my-4 message ${!props.isViewed ? "unread" : ""}`}>
+        <div ref={message} id={"m-" + props._id} className={`p${isMy ? "s" : "e"}-4 pb-3 my-4 m${isMy ? "s" : "e"}-4 message ${!props.isViewed ? "unread" : ""} rounded-pill rounded-${isMy ? "end" : "start"} ${isMy ? "my" : ""}`}>
             <div className="d-flex justify-content-between p-2">
-                <div className="d-flex align-items-baseline">
+                <div className="ms-2 d-flex align-items-baseline">
                     <p className="fs-4 m-0 text-black">{props.author.username}</p>
                     <span className="ms-3">{formattedDate}</span>
                 </div>
@@ -95,36 +95,5 @@ function Message(props) {
         </div>
     );
 }
-
-/*
-<div className="d-flex justify-content-between username-container">
-                <div className="d-flex align-items-center border-dashed username">
-                    <img className="mx-2 my-1" width="30" alt="message-avatar" src={isSystem ? "/images/system.png" : `/profile/${(isMy ? "@me" : props.author.id)}/avatar`} />
-                    <p className="pe-3 ps-1 py-1 fs-6 m-auto fw-bold">{props.author.username}</p>
-                </div>
-                <div className="d-flex align-items-center me-2 icons" style={{ gap: 10 }}>
-                    <span className="date">{formattedDate}</span>
-                    {
-                        props.views || props.views === 0 ?
-                            <div>
-                                <span className="views">{props.views}</span>
-                                <img className="ms-1" style={{ verticalAlign: "sub" }} width="20" src="/images/eye.png" alt="message-views" />
-                            </div> : null
-                    }
-                </div>
-            </div>
-            <div className="d-flex">
-                <p className="my-4 mx-4 fs-6 text-break text" style={{ flexGrow: 1 }} dangerouslySetInnerHTML={isSystem ? { __html: content } : null}>
-                    {!isSystem ? content : null}
-                </p>
-                {isMy ?
-                    <div className="d-flex flex-column me-2" style={{ gap: 5 }}>
-                        <button onClick={() => props.deleteMessage(props._id)} className="border-0 bg-transparent p-0">
-                            <img width="20" src="/images/bin.png" alt="delete-message" />
-                        </button>
-                    </div>
-                    : null}
-            </div>
-            */
 
 export default memo(Message);

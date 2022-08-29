@@ -193,12 +193,12 @@ footer a:hover {
     animation: warning .4s linear infinite alternate both;
 }
 
-.message {
-    background-color: #cdf7e8;
+.message.my {
+    background-color: #a9e9d3;
 }
 
-.message:nth-child(2n+3) {
-    background-color: #c2edde;
+.message:not(.my) {
+    background-color: #cec8c8;
 }
 
 .btn-unread {
@@ -226,6 +226,89 @@ footer a:hover {
 
 .fm-sans-serif {
     font-family: sans-serif;
+}
+
+.burger {
+    user-select: none;
+}
+
+.burger input {
+    display: block;
+    position: absolute;
+    cursor: pointer;
+    opacity: 0;
+    width: 35px;
+    height: 24px;
+    -webkit-touch-callout: none;
+}
+
+.burger span {
+    display: block;
+    width: 35px;
+    height: 4px;
+    position: relative;
+
+    background: #cdcdcd;
+    border-radius: 3px;  
+    transform-origin: 4px 0px;
+
+    transition: transform 0.5s cubic-bezier(0.77, 0.2, 0.05, 1.0),
+        opacity 0.55s ease;
+}
+
+.burger span:not(:last-of-type) {
+    margin-bottom: 6px;
+}
+
+.burger span:first-child {
+    transform-origin: 0% 0%;
+}
+
+.burger span:nth-last-child(2) {
+    transform-origin: 0% 100%;
+}
+
+.burger input:checked~span {
+    opacity: 1;
+    transform: rotate(45deg);
+}
+
+.burger input:checked~span:nth-last-child(3) {
+    opacity: 0;
+    transform: rotate(0deg);
+}
+
+.burger input:checked~span:nth-last-child(2) {
+    transform: rotate(-45deg);
+}
+
+#menu {
+    position: absolute;
+    width: 300px;
+    margin: -100px 0 0 -50px;
+    padding: 50px;
+    padding-top: 125px;
+
+    background: #ededed;
+    list-style-type: none;
+    -webkit-font-smoothing: antialiased;
+
+    transform-origin: 0% 0%;
+    transform: translate(-100%, 0);
+
+    transition: transform 0.5s cubic-bezier(0.77, 0.2, 0.05, 1.0);
+}
+
+#menu li {
+    padding: 10px 0;
+    font-size: 22px;
+}
+
+/*
+ * And let's slide it in from the left
+ */
+.burger input:checked~ul {
+    transform: none;
 }
 
 @keyframes scaleIn {
@@ -288,11 +371,21 @@ footer a:hover {
     }
 }
 
-@media screen and (max-width: 650px) {
-    header {
-        margin-top: 60px;
+@media screen and (max-width: 725px) {
+    header>:last-child {
+        display: none;
     }
 
+    header .onlines {
+        display: none !important;
+    }
+
+    header .burger {
+        display: block !important;
+    }
+}
+
+@media screen and (max-width: 650px) {
     #register-form div.inputs-container {
         flex-direction: column;
         align-items: center;
