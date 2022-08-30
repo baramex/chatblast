@@ -162,10 +162,10 @@ export default function Home() {
             });
         });
 
+        getOnline(setOnline, setError);
+        getTyping(setTyping, setError);
         getUser(setUnread, setError);
         getMessages(fetchedAll, messages, setMessages, setFetchedAll, setError);
-        getTyping(setTyping, setError);
-        getOnline(setOnline, setError);
 
         return () => {
             console.log("events off");
