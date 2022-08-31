@@ -88,7 +88,7 @@ export default function Home() {
                         const index = curr.findIndex(a => a._id === view.id);
                         if (index !== -1) {
                             curr[index].views = view.views;
-                            if (!curr[index].isViewed && view.isViewed) unread_++;
+                            if (!curr[index].isViewed && view.isViewed) unread_--;
                             curr[index].isViewed = view.isViewed;
                         }
                     });
