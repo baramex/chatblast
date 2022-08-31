@@ -20,7 +20,6 @@ var typing = [];
 var disconnected = [];
 
 io.on("connection", async (socket) => {
-    console.log("connect")
     var token = socket.handshake.headers.cookie?.split("; ")?.find(a => a.startsWith("token="))?.replace("token=", "");
     if (token) {
         var session = await Session.getSessionByToken(token).catch(console.error);
@@ -40,8 +39,6 @@ io.on("connection", async (socket) => {
     }
 
     socket.on("disconnecting", async () => {
-        console.log("disconnecting");
-
         var profileId = socket.profileId;
         if (!profileId) return;
 

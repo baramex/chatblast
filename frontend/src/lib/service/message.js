@@ -43,7 +43,6 @@ export async function sendViews(messages, setUnread, setMessages) {
     if (new Date().getTime() - lastUpdateViewMessage < 1000) return setTimeout(() => sendViews(messages, setUnread, setMessages), new Date().getTime() - lastUpdateViewMessage);
 
     try {
-        console.log(messages)
         let curr = [...viewToSend, ...messageToView];
         if (!curr || curr.length === 0) return;
 

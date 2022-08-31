@@ -28,7 +28,6 @@ session.post("validate", async function (doc, next) {
             doc.token = undefined;
             doc.markModified("token");
 
-            console.log("disconnect sockets");
             io.to("profileid:" + doc.profileId.toString()).disconnectSockets(true);
         }
     }

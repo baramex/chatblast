@@ -47,7 +47,6 @@ export default function Home() {
 
         if (online && online.some(a => a.id === sessionStorage.getItem("id"))) setMessageTyping(false);
 
-        console.log("init home");
         if (!socket) socket = io().on("connect", () => {
             socket.on("message.delete", id => {
                 setMessages(prev => {
@@ -93,12 +92,11 @@ export default function Home() {
                             curr[index].isViewed = view.isViewed;
                         }
                     });
-                    setUnread(prev => (prev || 0) - unread_);
+                    setUnread(prev => Math.max((prev || 0) - unread_, 0));
                     return [...curr];
                 });
             });
             socket.on("profile.join", profile => {
-                console.log("join", profile);
                 setMessages(prev => {
                     if (!prev) return prev;
                     prev.push({
@@ -124,7 +122,6 @@ export default function Home() {
                 notification.play().catch(() => { });
             });
             socket.on("profile.leave", profile => {
-                console.log("leave", profile);
                 setMessages(prev => {
                     if (!prev) return;
                     prev.push({
@@ -152,7 +149,6 @@ export default function Home() {
                 notification.play().catch(() => { });
             });
             socket.on("message.typing", _typing => {
-                console.log("typing", _typing);
                 setTyping(prev => {
                     if (!prev) return;
                     if (_typing.isTyping && !prev.some(a => a.id === _typing.id)) return [...prev, { id: _typing.id, username: _typing.username }];
@@ -168,7 +164,6 @@ export default function Home() {
         getMessages(fetchedAll, messages, setMessages, setFetchedAll, setError);
 
         return () => {
-            console.log("events off");
             if (socket) {
                 socket.off('message.delete');
                 socket.off('message.send');
@@ -211,8 +206,8 @@ export default function Home() {
                     <MessageContainer observer={observer} fetchedAll={fetchedAll} fetching={fetching} scroll={newMessage} fetchMessage={fetchMessage} deleteMessage={deleteMessage(setWantToDelete)} messages={messages} />
                 </div>
 
-                <div>
-                    <span className="position-absolute left-0 text-secondary" style={{ top: -30 }}>
+                <div className="position-relative">
+                    <span className="position-absolute left-0 ms-2 text-secondary" style={{top: "-24px"}}>
                         {typing?.filter(a => a.id !== sessionStorage.getItem("id")).length > 0 && (typing.filter(a => a.id !== sessionStorage.getItem("id")).map(a => a.username).join(", ") + " " + (typing.length === 1 ? "est" : "sont") + " en train d'écrire...")}
                     </span>
                     <form onSubmit={e => handleSendMessage(e, setError)} className="d-flex position-relative shadow-lg">
@@ -357,10 +352,8 @@ function handleMouseEnter(messages, setUnread, setMessages) {
     sendViews(messages, setUnread, setMessages);
 
     isInPage = true;
-    console.log("enter");
 }
 
 function handleMouseLeave() {
     isInPage = false;
-    console.log("leave");
 }
