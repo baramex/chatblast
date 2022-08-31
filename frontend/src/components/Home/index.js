@@ -1,16 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchOnline, getUser, isLogged } from "../../lib/service/authentification";
+import { fetchOnline, fetchUser, isLogged } from "../../lib/service/authentification";
 import { addToMessageToView, addToViewToSend, deleteMessageById, fetchMessages, fetchTyping, sendMarkAsRead, sendMessage, sendViews, setMessageTyping } from "../../lib/service/message";
-import Footer from "../Layout/Footer";
 import Header from "../Layout/Header";
 import ConfirmPopup from "../Misc/ConfirmPopup";
 import ErrorPopup from "../Misc/ErrorPopup";
 import Loading from "../Misc/Loading";
 import SuccessPopup from "../Misc/SuccessPopup";
 import MessageContainer from "./MessageContainer";
-import OnlineContaier from "./OnlineContainer";
 import ObjectID from "bson-objectid";
+import OnlineContaier from "./OnlineContainer";
 const { io } = require("socket.io-client");
 let socket;
 let observer;
@@ -32,7 +31,16 @@ export default function Home() {
     const [fetching, setFetching] = useState(false);
     const navigate = useNavigate();
 
-    if (!observer) observer = new IntersectionObserver(e => intersect(e, messages, setUnread, setMessages));
+    useEffect(() => {
+        if (!observer) observer = new IntersectionObserver(e => intersect(e, messages, setUnread, setMessages));
+
+        return () => {
+            if (observer) {
+                observer.disconnect();
+                observer = undefined;
+            }
+        }
+    }, [messages]);
 
     useEffect(() => {
         if (!isLogged()) return navigate("/login");
@@ -58,8 +66,7 @@ export default function Home() {
                     if (!prev) return;
 
                     setUnread(prev => {
-                        if (!prev && prev !== 0) return;
-                        return prev + 1;
+                        return (prev || 0) + 1;
                     });
                     setTyping(prev => {
                         if (!prev) return;
@@ -86,14 +93,14 @@ export default function Home() {
                             curr[index].isViewed = view.isViewed;
                         }
                     });
-                    setUnread(prev => prev -= unread_);
+                    setUnread(prev => (prev || 0) - unread_);
                     return [...curr];
                 });
             });
             socket.on("profile.join", profile => {
                 console.log("join", profile);
                 setMessages(prev => {
-                    if (!prev || profile.id === sessionStorage.getItem("id")) return;
+                    if (!prev) return prev;
                     prev.push({
                         _id: ObjectID().toHexString(),
                         author: { username: "SYSTEM" },
@@ -103,8 +110,7 @@ export default function Home() {
                         date: new Date().toISOString()
                     });
                     setUnread(prev => {
-                        if (!prev && prev !== 0) return;
-                        return prev + 1;
+                        return (prev || 0) + 1;
                     });
                     return prev;
                 });
@@ -130,8 +136,7 @@ export default function Home() {
                         date: new Date().toISOString()
                     });
                     setUnread(prev => {
-                        if (!prev && prev !== 0) return;
-                        return prev + 1;
+                        return (prev || 0) + 1;
                     });
                     return prev;
                 });
@@ -157,10 +162,10 @@ export default function Home() {
             });
         });
 
-        getMessages(fetchedAll, messages, setMessages, setFetchedAll, setError);
-        getUnread(setUnread, setError);
-        getTyping(setTyping, setError);
         getOnline(setOnline, setError);
+        getTyping(setTyping, setError);
+        getUser(setUnread, setError);
+        getMessages(fetchedAll, messages, setMessages, setFetchedAll, setError);
 
         return () => {
             console.log("events off");
@@ -174,10 +179,6 @@ export default function Home() {
                 socket.disconnect();
                 socket = undefined;
             }
-            if (observer) {
-                observer.disconnect();
-                observer = undefined;
-            }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -188,37 +189,39 @@ export default function Home() {
         {success && <SuccessPopup message={success} onClose={() => setSuccess("")} />}
         {wantToDelete && <ConfirmPopup message="Êtes-vous sûr de vouloir supprimer ce message ?" onConfirm={() => { confirmDeleteMessage(wantToDelete, setError, setMessages, setSuccess); setWantToDelete(undefined); }} onClose={() => setWantToDelete(undefined)} />}
 
-        <OnlineContaier online={online} onlineCount={online?.length} />
+        <Header onlineCount={online?.length} onlines={online} />
 
-        <Header navigation={navigate} />
-        <div id="chat" className="mx-5 mt-3 mb-4 h-100 d-flex flex-column rounded-3 position-relative">
-            <div className="position-absolute d-flex align-items-center" style={{ marginTop: "-.25rem", marginLeft: "-.5rem" }}>
-                <span id="unread" className={"badge rounded-pill fs-6 " + (unread > 0 ? "warning bg-danger" : "bg-primary")} style={{ zIndex: 3, cursor: "default" }}>
-                    {(!unread && unread !== 0) ? <Loading color="text-light" type="grow" size="sm" /> : unread}
-                </span>
-                <button onClick={() => markAsRead(setUnread, setMessages)} className="btn-unread text-white border-0 text-start">marquer comme lu</button>
-            </div>
+        <div className="d-flex h-100">
+            <OnlineContaier online={online} />
 
-            <div onScroll={(fetchedAll || fetching) ? null : e => handleChatScrolling(e, fetchedAll, messages, setMessages, setFetchedAll, setFetching, setFetchMessage, setError)} className="px-5 py-4 mt-2 overflow-auto h-100 position-relative" style={{ flex: "1 0px" }}>
-                <div className="position-absolute top-50 start-50 translate-middle text-center">
-                    {
-                        !messages ? <Loading size="lg" /> : messages.length === 0 ? <p id="nomes" className="fs-4 text-secondary">Aucun message</p> : null
-                    }
+            <div className="w-100 h-100 d-flex flex-column" style={{ backgroundColor: "#D7F5EA" }}>
+                <div className="position-absolute d-flex align-items-center unread-container" style={{ marginTop: "-.25rem", marginLeft: "-.5rem" }}>
+                    <span id="unread" className={"badge rounded-pill fs-5 " + (unread > 0 ? "warning bg-danger" : "bg-primary")} style={{ zIndex: 2, cursor: "default" }}>
+                        {(!unread && unread !== 0) ? <Loading color="text-light" type="grow" size="sm" /> : unread}
+                    </span>
+                    <button onClick={() => markAsRead(setUnread, setMessages)} className="btn-unread text-white border-0 text-start">marquer comme lu</button>
                 </div>
-                <MessageContainer observer={observer} fetchedAll={fetchedAll} fetching={fetching} scroll={newMessage} fetchMessage={fetchMessage} deleteMessage={deleteMessage(setWantToDelete)} messages={messages} />
-            </div>
 
-            <form id="send-message" onSubmit={e => handleSendMessage(e, setError)} className="d-flex p-4 position-relative">
-                <span className="position-absolute left-0 text-secondary" style={{ top: -30 }}>
-                    {typing?.filter(a => a.id !== sessionStorage.getItem("id")).length > 0 && (typing.filter(a => a.id !== sessionStorage.getItem("id")).map(a => a.username).join(", ") + " " + (typing.length === 1 ? "est" : "sont") + " en train d'écrire...")}
-                </span>
-                <div className="input-group me-3">
-                    <input type="text" onInput={e => handleInput(e, typing)} autoComplete="off" placeholder="Message..." className="form-control form-inset fs-6" name="message" aria-label="Message" minLength="1" maxLength="512" disabled={messages ? false : true} required />
+                <div onScroll={(fetchedAll || fetching) ? null : e => handleChatScrolling(e, fetchedAll, messages, setMessages, setFetchedAll, setFetching, setFetchMessage, setError)} className="pt-3 overflow-auto h-100 position-relative" style={{ flex: "1 0px" }}>
+                    <div className="position-absolute top-50 start-50 translate-middle text-center">
+                        {
+                            !messages ? <Loading size="lg" /> : messages.length === 0 ? <p id="nomes" className="fs-4 text-secondary">Aucun message</p> : null
+                        }
+                    </div>
+                    <MessageContainer observer={observer} fetchedAll={fetchedAll} fetching={fetching} scroll={newMessage} fetchMessage={fetchMessage} deleteMessage={deleteMessage(setWantToDelete)} messages={messages} />
                 </div>
-                <input type="submit" disabled={messages ? false : true} className="px-3 btn btn-success fs-5" />
-            </form>
+
+                <div>
+                    <span className="position-absolute left-0 text-secondary" style={{ top: -30 }}>
+                        {typing?.filter(a => a.id !== sessionStorage.getItem("id")).length > 0 && (typing.filter(a => a.id !== sessionStorage.getItem("id")).map(a => a.username).join(", ") + " " + (typing.length === 1 ? "est" : "sont") + " en train d'écrire...")}
+                    </span>
+                    <form onSubmit={e => handleSendMessage(e, setError)} className="d-flex position-relative shadow-lg">
+                        <input type="text" onInput={e => handleInput(e, typing)} autoComplete="off" placeholder="Tapez votre message..." className="form-control form-inset fs-5 rounded-0 border-0 py-2" name="message" aria-label="Message" minLength="1" maxLength="512" disabled={messages ? false : true} required />
+                        <input type="submit" disabled={messages ? false : true} className="px-4 border-0 bg-light" style={{ backgroundImage: "url('/images/send.png')", backgroundSize: 40, backgroundRepeat: "no-repeat", backgroundPosition: "50% 50%" }} value="" />
+                    </form>
+                </div>
+            </div>
         </div>
-        <Footer position={null} />
     </div >);
 }
 
@@ -231,7 +234,7 @@ function handleInput(e, typing) {
 }
 
 function handleChatScrolling(event, fetchedAll, messages, setMessages, setFetchedAll, setFetching, setFetchMessage, setError) {
-    if(!messages) return;
+    if (!messages) return;
     if (event.target.scrollTop <= 50) {
         if (event.target.scrollTop === 0) event.target.scrollTop = 1;
 
@@ -262,10 +265,12 @@ async function handleSendMessage(event, setError) {
     event.target.message.focus();
 }
 
-async function getUnread(setUnread, setError) {
+async function getUser(setUnread, setError) {
     try {
-        const user = await getUser();
-        setUnread(user.unread);
+        const user = await fetchUser();
+        setUnread(prev => (prev || 0) + user.unread);
+        sessionStorage.setItem("id", user.id);
+        sessionStorage.setItem("username", user.username);
     } catch (error) {
         setError(error.message || error);
     }
