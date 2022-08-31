@@ -47,18 +47,20 @@ export async function sendViews(messages, setUnread, setMessages) {
         if (!curr || curr.length === 0) return;
 
         const ephemerals = curr.filter(a => !messages || messages.find(b => b._id === a)?.ephemeral);
-        setUnread(prev => (prev || 0) - ephemerals.length);
-        setMessages(prev => {
-            if (!prev) return;
-            return [...prev.map(a => {
-                if (ephemerals.includes(a._id)) return { ...a, isViewed: true };
-                return a;
-            })];
-        });
-        viewToSend = viewToSend.filter(a => !ephemerals.includes(a));
-        messageToView = messageToView.filter(a => !ephemerals.includes(a));
-        curr = curr.filter(a => !ephemerals.includes(a));
-        if (curr.length === 0) return;
+        if (ephemerals.length > 0) {
+            setUnread(prev => Math.max((prev || 0) - ephemerals.length, 0));
+            setMessages(prev => {
+                if (!prev) return;
+                return [...prev.map(a => {
+                    if (ephemerals.includes(a._id)) return { ...a, isViewed: true };
+                    return a;
+                })];
+            });
+            viewToSend = viewToSend.filter(a => !ephemerals.includes(a));
+            messageToView = messageToView.filter(a => !ephemerals.includes(a));
+            curr = curr.filter(a => !ephemerals.includes(a));
+            if (curr.length === 0) return;
+        }
 
         await setViewed(curr);
 
