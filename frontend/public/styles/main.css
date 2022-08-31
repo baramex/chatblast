@@ -208,7 +208,7 @@ footer a:hover {
     width: 0px;
     transition: .4s ease-in-out;
     background-color: #0b5cd6;
-    z-index: 2;
+    z-index: 1;
     margin-left: -10px;
     max-height: 24px;
     font-size: 15px;
@@ -228,87 +228,87 @@ footer a:hover {
     font-family: sans-serif;
 }
 
-.burger {
-    user-select: none;
+#burger-tab {
+    z-index: 2;
 }
 
-.burger input {
+.burger {
+    width: 40px;
+    height: 45px;
+}
+
+.burger>div {
+    z-index: 4;
+}
+
+.burger>div span,
+.burger>div span::before,
+.burger>div span::after {
+    width: 100%;
+    height: 4px;
+    background-color: white;
+    opacity: 1;
     display: block;
     position: absolute;
-    cursor: pointer;
-    opacity: 0;
-    width: 35px;
-    height: 24px;
-    -webkit-touch-callout: none;
+    top: 50%;
+    transform: translateY(-50%);
+    border-radius: 50px;
+    transition: background-color 0.4s ease-in-out, transform 0.4s ease-in-out;
 }
 
-.burger span {
-    display: block;
-    width: 35px;
-    height: 4px;
-    position: relative;
-
-    background: #cdcdcd;
-    border-radius: 3px;  
-    transform-origin: 4px 0px;
-
-    transition: transform 0.5s cubic-bezier(0.77, 0.2, 0.05, 1.0),
-        opacity 0.55s ease;
+.burger>div span::before,
+.burger>div span::after {
+    content: "";
+    top: 0;
 }
 
-.burger span:not(:last-of-type) {
-    margin-bottom: 6px;
+.burger>div span::before {
+    transform: translateY(-12px);
 }
 
-.burger span:first-child {
-    transform-origin: 0% 0%;
+.burger>div span::after {
+    transform: translateY(12px);
 }
 
-.burger span:nth-last-child(2) {
-    transform-origin: 0% 100%;
+.burger.active>div span {
+    background-color: transparent;
 }
 
-.burger input:checked~span {
-    opacity: 1;
+.burger.active>div span::before {
     transform: rotate(45deg);
 }
 
-.burger input:checked~span:nth-last-child(3) {
-    opacity: 0;
-    transform: rotate(0deg);
-}
-
-.burger input:checked~span:nth-last-child(2) {
+.burger.active>div span::after {
     transform: rotate(-45deg);
 }
 
-#menu {
-    position: absolute;
-    width: 300px;
-    margin: -100px 0 0 -50px;
-    padding: 50px;
-    padding-top: 125px;
+.burger .menu {
+    z-index: 3;
+    min-width: 300px;
+    max-width: 500px;
+    height: 100vh;
 
-    background: #ededed;
+    background-color: rgb(19, 135, 94);
     list-style-type: none;
-    -webkit-font-smoothing: antialiased;
 
     transform-origin: 0% 0%;
     transform: translate(-100%, 0);
 
-    transition: transform 0.5s cubic-bezier(0.77, 0.2, 0.05, 1.0);
+    transition: transform 0.4s cubic-bezier(0.77, 0.2, 0.05, 1.0);
 }
 
-#menu li {
-    padding: 10px 0;
-    font-size: 22px;
-}
-
-/*
- * And let's slide it in from the left
- */
-.burger input:checked~ul {
+.burger.active .menu {
     transform: none;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 @keyframes scaleIn {
@@ -382,6 +382,19 @@ footer a:hover {
 
     header .burger {
         display: block !important;
+    }
+
+    .online-menu {
+        display: none;
+    }
+
+    .unread-container {
+        margin-left: 0 !important;
+        margin-top: -.5rem !important;
+    }
+
+    .title {
+        font-size: 2.5rem;
     }
 }
 

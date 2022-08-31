@@ -189,14 +189,14 @@ export default function Home() {
         {success && <SuccessPopup message={success} onClose={() => setSuccess("")} />}
         {wantToDelete && <ConfirmPopup message="Êtes-vous sûr de vouloir supprimer ce message ?" onConfirm={() => { confirmDeleteMessage(wantToDelete, setError, setMessages, setSuccess); setWantToDelete(undefined); }} onClose={() => setWantToDelete(undefined)} />}
 
-        <Header onlineCount={online?.length} />
+        <Header onlineCount={online?.length} onlines={online} />
 
         <div className="d-flex h-100">
             <OnlineContaier online={online} />
 
             <div className="w-100 h-100 d-flex flex-column" style={{ backgroundColor: "#D7F5EA" }}>
-                <div className="position-absolute d-flex align-items-center" style={{ marginTop: "-.25rem", marginLeft: "-.5rem" }}>
-                    <span id="unread" className={"badge rounded-pill fs-5 " + (unread > 0 ? "warning bg-danger" : "bg-primary")} style={{ zIndex: 3, cursor: "default" }}>
+                <div className="position-absolute d-flex align-items-center unread-container" style={{ marginTop: "-.25rem", marginLeft: "-.5rem" }}>
+                    <span id="unread" className={"badge rounded-pill fs-5 " + (unread > 0 ? "warning bg-danger" : "bg-primary")} style={{ zIndex: 2, cursor: "default" }}>
                         {(!unread && unread !== 0) ? <Loading color="text-light" type="grow" size="sm" /> : unread}
                     </span>
                     <button onClick={() => markAsRead(setUnread, setMessages)} className="btn-unread text-white border-0 text-start">marquer comme lu</button>
