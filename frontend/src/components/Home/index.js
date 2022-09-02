@@ -179,7 +179,7 @@ export default function Home() {
     }, []);
 
     if (!isLogged()) return null;
-    return (<div onMouseEnter={() => handleMouseEnter(messages, setUnread, setMessages)} onMouseLeave={handleMouseLeave} className="d-flex flex-column h-100">
+    return (<div onMouseEnter={() => handleMouseEnter(messages, setUnread, setMessages)} onMouseLeave={handleMouseLeave} className="d-flex flex-column" style={{height: "100vh"}}>
         {error && <ErrorPopup message={error} onClose={() => setError("")} />}
         {success && <SuccessPopup message={success} onClose={() => setSuccess("")} />}
         {wantToDelete && <ConfirmPopup message="Êtes-vous sûr de vouloir supprimer ce message ?" onConfirm={() => { confirmDeleteMessage(wantToDelete, setError, setMessages, setSuccess); setWantToDelete(undefined); }} onClose={() => setWantToDelete(undefined)} />}

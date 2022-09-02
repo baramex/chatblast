@@ -6,8 +6,8 @@ export default function Terms() {
     document.title = "ChatBlast | terms";
 
     return (<>
-        <div className="container text-center mt-5 px-0">
-            <h1><Link to="/" className="text-center mt-4 mb-5 text-decoration-none title">ChartBlast</Link></h1>
+        <div className="container text-center pt-5 px-0" style={{marginBottom: 60}}>
+            <h1><Link to="/" className="text-center text-decoration-none title">ChartBlast</Link></h1>
             <ol className="ps-0">
                 <Article index="1" content="Une fois connecté, votre adresse IP, le pseudo choisi ainsi que votre fingerprint sont
                     enregistrés temporairement. Ces informations seront supprimées 2 heures plus tard, ou alors lors de

@@ -16,7 +16,7 @@ header {
 }
 
 #root {
-    height: 100vh;
+    min-height: 100vh;
 }
 
 .unread {
@@ -361,7 +361,9 @@ footer a:hover {
 }
 
 @media screen and (max-width: 750px) {
-    footer>a {
+
+    footer> :first-child,
+    footer>:last-child {
         display: none;
     }
 
