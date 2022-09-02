@@ -20,7 +20,7 @@ export default function Register() {
         {error && <ErrorPopup message={error} onClose={() => setError("")}></ErrorPopup>}
         <div className="d-flex justify-content-center align-items-center" style={{ height: "100vh", marginBottom: 60 }}>
             <form id="register-form"
-                style={{ maxWidth: 800 }} onSubmit={e => handleRegister(e, setError, navigate)}>
+                style={{ maxWidth: 800, minWidth: "40%" }} onSubmit={e => handleRegister(e, setError, navigate)}>
                 <div className="text-center">
                     <h1 className="mb-4 fw-normal form-label">Bienvenue sur <strong>ChatBlast</strong></h1>
                     <div className="d-flex direction-column mt-4 justify-content-evenly w-100 inputs-container">
