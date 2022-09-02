@@ -147,7 +147,7 @@ app.post("/api/profile", rateLimit({
         var ip = getClientIp(req);
         var session = await Session.create(profile._id, req.fingerprint.hash, ip);
         var expires = new Date(24 * 60 * 60 * 1000 + new Date().getTime());
-        res.cookie("token", session.token, { expires }).cookie("id", session._id.toString(), { expires }).json({ username: profile.username, id: profile._id, unread: await Message.getUnreadCount(profile) });
+        res.cookie("token", session.token, { expires, sameSite: "none", secure: "true" }).cookie("id", session._id.toString(), { expires, sameSite: "none", secure: "true" }).json({ username: profile.username, id: profile._id, unread: await Message.getUnreadCount(profile) });
     }
     catch (error) {
         console.error(error);
@@ -189,7 +189,7 @@ app.post("/api/login", SessionMiddleware.isAuthed, async (req, res) => {
         }
 
         var expires = new Date(24 * 60 * 60 * 1000 + new Date().getTime());
-        res.cookie("token", session.token, { expires }).cookie("id", session._id.toString(), { expires }).json({ username: profile.username, id: profile._id, unread: await Message.getUnreadCount(profile) });
+        res.cookie("token", session.token, { expires, sameSite: "none", secure: "true" }).cookie("id", session._id.toString(), { expires, sameSite: "none", secure: "true" }).json({ username: profile.username, id: profile._id, unread: await Message.getUnreadCount(profile) });
     } catch (error) {
         console.error(error);
         res.status(400).send(error.message || "Erreur inattendue");
@@ -280,13 +280,13 @@ app.put("/api/messages/view/all", SessionMiddleware.auth, async (req, res) => {
     try {
         const unreadMessages = await Message.getUnread(req.profile);
 
-        if(unreadMessages.length === 0) return res.sendStatus(200);
+        if (unreadMessages.length === 0) return res.sendStatus(200);
 
         await Message.addViewToMessages(unreadMessages.map(a => a._id), req.profile._id);
 
         res.sendStatus(201);
     }
-    catch(error) {
+    catch (error) {
         console.error(error);
         res.status(400).send(error.message || "Erreur inattendue");
     }
@@ -338,7 +338,7 @@ app.put("/api/typing", SessionMiddleware.auth, (req, res) => {
 });
 
 app.get("*", (req, res) => {
-    res.sendFile("public/index.html", { root: __dirname }); 
+    res.sendFile("public/index.html", { root: __dirname });
 });
 
 function generateID(length) {

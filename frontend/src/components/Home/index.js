@@ -88,7 +88,7 @@ export default function Home() {
                         const index = curr.findIndex(a => a._id === view.id);
                         if (index !== -1) {
                             curr[index].views = view.views;
-                            if (!curr[index].isViewed && view.isViewed) unread_--;
+                            if (!curr[index].isViewed && view.isViewed) unread_++;
                             curr[index].isViewed = view.isViewed;
                         }
                     });
@@ -207,7 +207,7 @@ export default function Home() {
                 </div>
 
                 <div className="position-relative">
-                    <span className="position-absolute left-0 ms-2 text-secondary" style={{top: "-24px"}}>
+                    <span className="position-absolute left-0 ms-2 text-secondary" style={{ top: "-24px" }}>
                         {typing?.filter(a => a.id !== sessionStorage.getItem("id")).length > 0 && (typing.filter(a => a.id !== sessionStorage.getItem("id")).map(a => a.username).join(", ") + " " + (typing.length === 1 ? "est" : "sont") + " en train d'écrire...")}
                     </span>
                     <form onSubmit={e => handleSendMessage(e, setError)} className="d-flex position-relative shadow-lg">
