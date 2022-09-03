@@ -298,7 +298,7 @@ app.delete("/api/message/:id", SessionMiddleware.auth, async (req, res) => {
         var id = req.params.id;
         var message = await Message.getById(new ObjectId(id));
         console.log(message);
-        if (!message.author.id.equals(req.profile._id)) return res.sendStatus(403);
+        if (!message.author._id.equals(req.profile._id)) return res.sendStatus(403);
 
         message.deleted = true;
         await message.save();

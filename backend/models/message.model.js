@@ -63,7 +63,7 @@ class Message {
      */
     static async editMessage(author, id, content) {
         var doc = await Message.getById(id);
-        if (doc.author != author) throw new Error("Vous ne pouvez pas modifier un message ne vous appartenant pas.");
+        if (!doc.author.equals(author)) throw new Error("Vous ne pouvez pas modifier un message ne vous appartenant pas.");
         doc.edits.push({ content: doc.message });
         doc.message = content;
         return doc.save({ validateBeforeSave: true });
