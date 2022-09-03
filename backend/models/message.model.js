@@ -5,6 +5,7 @@ const { ObjectId } = mongoose.Types;
 const messageSchema = new Schema({
     author: { type: ObjectId, ref: "Profile", required: true },
     content: { type: String, required: true, validate: /^.{1,512}$/ },
+    integrationId: { type: ObjectId, required: true },
     deleted: { type: Boolean, default: false },
     edits: { type: [{ content: { type: String, required: true }, date: { type: Date, default: new Date() } }], default: [] },
     views: { type: [ObjectId], default: [] },

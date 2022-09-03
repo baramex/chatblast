@@ -81,8 +81,8 @@ async function handleRegister(event, setError, navigate) {
 
         const user = await registerUser(username, password, avatar);
 
-        sessionStorage.setItem("username", user.username);
-        sessionStorage.setItem("id", user.id);
+        sessionStorage.setItem("chatblast-username", user.username);
+        sessionStorage.setItem("chatblast-id", user.id);
 
         navigate("/");
     } catch (error) {

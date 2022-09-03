@@ -1,11 +1,8 @@
 const { Schema, model, default: mongoose } = require("mongoose");
 const token = require("random-web-token");
 const { io } = require("../server");
-const { Message } = require("./message.model");
 const { Profile } = require("./profile.model");
 const { ObjectId } = mongoose.Types;
-
-const systemId = new ObjectId(0);
 
 const session = new Schema({
     token: { type: String },
@@ -93,8 +90,8 @@ class Session {
      * @param {String} token 
      * @param {String} fingerprint
      */
-    static getSession(id, token, fingerprint) {
-        return SessionModel.findOne({ _id: id, token, fingerprints: { $all: [fingerprint] }, active: true });
+    static getSession(token, fingerprint) {
+        return SessionModel.findOne({ token, fingerprints: { $all: [fingerprint] }, active: true });
     }
 
     static getSessionByToken(token) {
@@ -119,11 +116,11 @@ class Session {
 
         io.sockets.sockets.forEach(async socket => {
             if (socket.rooms.has("authenticated")) {
-                var id = socket.profileId;
-                var profile = await Profile.getProfileById(id);
+                const id = socket.profileId;
+                const profile = await Profile.getProfileById(id);
                 if (!profile) return socket.leave("authenticated");
 
-                var session = await Session.getSessionByProfileId(id);
+                const session = await Session.getSessionByProfileId(id);
                 if (!session || !session.active) socket.leave("authenticated");
             }
         });
@@ -133,10 +130,12 @@ class Session {
 class SessionMiddleware {
     static async auth(req, res, next) {
         try {
-            var session = await Session.getSession(req.cookies?.id, req.cookies?.token, req.fingerprint.hash);
+            if (!req.cookies) return res.sendStatus(401);
+
+            const session = await Session.getSession(req.cookies["chatblast-token"], req.fingerprint.hash);
             if (!session) return res.sendStatus(401);
 
-            var profile = await Profile.getProfileById(session.profileId);
+            const profile = await Profile.getProfileById(session.profileId);
             if (!profile) return res.sendStatus(401);
 
             req.session = session;
@@ -149,11 +148,13 @@ class SessionMiddleware {
 
     static async isAuthed(req, res, next) {
         try {
-            var session = await Session.getSession(req.cookies?.id, req.cookies?.token, req.fingerprint.hash);
-            if (!session) throw new Error();
+            if (req.cookies) {
+                const session = await Session.getSession(req.cookies["chatblast-token"], req.fingerprint.hash);
+                if (!session) throw new Error();
 
-            var profile = await Profile.getProfileById(session.profileId);
-            if (!profile) throw new Error();
+                const profile = await Profile.getProfileById(session.profileId);
+                if (!profile) throw new Error();
+            }
 
             req.isAuthed = true;
             next();

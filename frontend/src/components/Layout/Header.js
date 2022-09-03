@@ -74,8 +74,8 @@ export default function Header({ onlineCount, onlines }) {
 
                     <ul className="menu position-absolute top-0 start-0 pt-5 px-3 rounded-0 text-start">
                         <li className="d-flex align-items-center mt-4">
-                            <img width="55" className="rounded-circle bg-light" src={`/profile/${sessionStorage.getItem("id")}/avatar`} alt="account-menu" />
-                            <p className="fw-bold fs-4 ms-3 text-white m-0">{sessionStorage.getItem("username")}</p>
+                            <img width="55" className="rounded-circle bg-light" src={`/profile/${sessionStorage.getItem("chatblast-id")}/avatar`} alt="account-menu" />
+                            <p className="fw-bold fs-4 ms-3 text-white m-0">{sessionStorage.getItem("chatblast-username")}</p>
                         </li>
                         <li><button onClick={e => handleLogout(e, navigate)} className="btn btn-danger w-100 py-2 fs-5 rounded-pill mt-3 mb-2">Se déconnecter</button></li>
                         <li className="mb-3 mt-4"><span className="text-white fs-5">{((onlineCount || onlineCount === 0) ? onlineCount : "--") + " en ligne"}</span></li>
@@ -90,11 +90,11 @@ export default function Header({ onlineCount, onlines }) {
             </div>
             <h1 className="title text-light d-inline-block">ChatBlast</h1>
             <div className="position-relative w-100 h-100">
-                <button ref={button} className="toggle-menu px-0 py-1 border-0 rounded-circle position-absolute top-0 end-0 bg-transparent h-100" data-bs-toggle="dropdown" aria-expanded="false" style={{ zIndex: 2 }}>
-                    <img className="rounded-circle bg-light h-100" src={`/profile/${sessionStorage.getItem("id")}/avatar`} alt="account-menu" />
+                <button ref={button} className="toggle-menu px-0 py-1 border-0 rounded-circle position-absolute top-0 end-0 bg-transparent h-100" aria-expanded="false" style={{ zIndex: 2 }}>
+                    <img className="rounded-circle bg-light h-100" src={`/profile/${sessionStorage.getItem("chatblast-id")}/avatar`} alt="account-menu" />
                 </button>
                 <div className="shadow-lg position-fixed top-0 end-0 me-3 mt-1 d-flex flex-column bg-light-theme menu" style={{ zIndex: 1 }}>
-                    <p className="fw-bold fs-4 mt-2" style={{ color: "#737373", marginRight: 60, marginLeft: 60 }}>{sessionStorage.getItem("username")}</p>
+                    <p className="fw-bold fs-4 mt-2" style={{ color: "#737373", marginRight: 60, marginLeft: 60 }}>{sessionStorage.getItem("chatblast-username")}</p>
                     <ul className="p-0 m-0" style={{ listStyle: "none" }}>
                         <li><button onClick={e => handleLogout(e, navigate)} className="border-0 bg-transparent pb-3 px-5"><img width="25" className="me-2 align-bottom" src="/images/logout.png" alt="logout" />Se déconnecter</button></li>
                     </ul>

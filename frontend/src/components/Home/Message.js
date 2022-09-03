@@ -5,7 +5,7 @@ function Message(props) {
     const date = new Date(props.date);
 
     const isSystem = props.author.username === "SYSTEM";
-    const isMy = !isSystem && props.author._id === sessionStorage.getItem("id");
+    const isMy = !isSystem && props.author._id === sessionStorage.getItem("chatblast-id");
     const formattedDate = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")} ${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}`;
     let content = props.content;
 
@@ -18,7 +18,7 @@ function Message(props) {
             let tempContent = content;
             mentionIntance?.forEach(mention => {
                 let index = mention.match(/[0-9]{1,}/)[0];
-                let name = props.mentions[index] ? props.mentions[index].id === sessionStorage.getItem("id") ? "vous" : "@" + props.mentions[index].username : "invaliduser";
+                let name = props.mentions[index] ? props.mentions[index].id === sessionStorage.getItem("chatblast-id") ? "vous" : "@" + props.mentions[index].username : "invaliduser";
                 tempContent = tempContent.replace(mention, `<strong>${name}</strong>`);
             });
             content = tempContent;

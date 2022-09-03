@@ -33,7 +33,7 @@ export default function Home() {
     useEffect(() => {
         if (!isLogged()) return navigate("/login");
 
-        if (online && online.some(a => a.id === sessionStorage.getItem("id"))) setMessageTyping(false);
+        if (online && online.some(a => a.id === sessionStorage.getItem("chatblast-id"))) setMessageTyping(false);
 
         if (!socket) socket = io().on("connect", () => {
             socket.on("message.delete", id => {
@@ -196,7 +196,7 @@ export default function Home() {
 
                 <div className="position-relative">
                     <span className="position-absolute left-0 ms-2 text-secondary" style={{ top: "-24px" }}>
-                        {typing?.filter(a => a.id !== sessionStorage.getItem("id")).length > 0 && (typing?.filter(a => a.id !== sessionStorage.getItem("id")).map(a => a.username).join(", ") + " " + (typing?.filter(a => a.id !== sessionStorage.getItem("id")).length === 1 ? "est" : "sont") + " en train d'écrire...")}
+                        {typing?.filter(a => a.id !== sessionStorage.getItem("chatblast-id")).length > 0 && (typing?.filter(a => a.id !== sessionStorage.getItem("chatblast-id")).map(a => a.username).join(", ") + " " + (typing?.filter(a => a.id !== sessionStorage.getItem("chatblast-id")).length === 1 ? "est" : "sont") + " en train d'écrire...")}
                     </span>
                     <form onSubmit={e => handleSendMessage(e, setError)} className="d-flex position-relative shadow-lg">
                         <input type="text" onInput={e => handleInput(e, typing)} autoComplete="off" placeholder="Tapez votre message..." className="form-control form-inset fs-5 rounded-0 border-0 py-2" name="message" aria-label="Message" minLength="1" maxLength="512" disabled={messages ? false : true} required />
@@ -210,9 +210,9 @@ export default function Home() {
 
 function handleInput(e, typing) {
     if ((e.nativeEvent.inputType === "insertText" && e.target.value.length === 1) || e.nativeEvent.inputType === "insertFromPaste") {
-        if (!typing.find(a => a.id === sessionStorage.getItem("id"))) setMessageTyping(true);
+        if (!typing.find(a => a.id === sessionStorage.getItem("chatblast-id"))) setMessageTyping(true);
     } else if (e.target.value.length === 0) {
-        if (typing.find(a => a.id === sessionStorage.getItem("id"))) setMessageTyping(false);
+        if (typing.find(a => a.id === sessionStorage.getItem("chatblast-id"))) setMessageTyping(false);
     }
 }
 
@@ -251,8 +251,8 @@ async function getUser(setUnread, setError) {
     try {
         const user = await fetchUser();
         setUnread(prev => (prev || 0) + user.unread);
-        sessionStorage.setItem("id", user.id);
-        sessionStorage.setItem("username", user.username);
+        sessionStorage.setItem("chatblast-id", user.id);
+        sessionStorage.setItem("chatblast-username", user.username);
     } catch (error) {
         setError(error.message || error);
     }

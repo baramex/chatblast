@@ -31,11 +31,10 @@ export function fetchOnline() {
 }
 
 export function isLogged() {
-    return getCookie("token") ? true : false;
+    return getCookie("chatblast-token") ? true : false;
 }
 
 export function resetSession() {
     sessionStorage.clear();
-    deleteCookie("token");
-    deleteCookie("id");
+    deleteCookie("chatblast-token");
 }

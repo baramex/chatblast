@@ -45,8 +45,8 @@ async function handleLogin(event, setError, navigate) {
 
         const response = await loginUser(username, password);
 
-        sessionStorage.setItem("username", response.username);
-        sessionStorage.setItem("id", response.id);
+        sessionStorage.setItem("chatblast-username", response.username);
+        sessionStorage.setItem("chatblast-id", response.id);
 
         navigate("/");
     } catch (error) {
