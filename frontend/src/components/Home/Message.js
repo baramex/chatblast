@@ -1,14 +1,16 @@
 import { createRef, memo, useEffect } from "react";
+import useElementOnScreen from "../../lib/hooks/useElementOnScreen";
 
 function Message(props) {
     const date = new Date(props.date);
 
     const isSystem = props.author.username === "SYSTEM";
-    const isMy = !isSystem && props.author.id === sessionStorage.getItem("id");
+    const isMy = !isSystem && props.author._id === sessionStorage.getItem("id");
     const formattedDate = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")} ${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}`;
     let content = props.content;
 
     const message = createRef();
+    const isVisible = useElementOnScreen(message, true, props.isViewed);
 
     if (isSystem) {
         if (props.mentions) {
@@ -24,9 +26,15 @@ function Message(props) {
     }
 
     useEffect(() => {
+        if (isVisible) {
+            props.viewed(props._id);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isVisible]);
+
+    useEffect(() => {
         let element = message.current;
         if (!element) return;
-        if (!props.isViewed) props.observer.observe(element);
 
         if (props.scroll && (props.behavior === "smooth" ? element.parentElement.parentElement.scrollHeight - element.parentElement.parentElement.scrollTop - 951 < 200 : true)) {
             let scroll = element.parentElement.parentElement.scrollTop;
@@ -49,10 +57,6 @@ function Message(props) {
                 i++;
             }
         }
-
-        return () => {
-            props.observer.unobserve(element);
-        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -87,7 +91,7 @@ function Message(props) {
             </div>
 
             <div className="d-flex">
-                <img className="ms-3 rounded-circle" width="50" height="50" alt="message-avatar" src={isSystem ? "/images/system.png" : `/profile/${(isMy ? "@me" : props.author.id)}/avatar`} />
+                <img className="ms-3 rounded-circle" width="50" height="50" alt="message-avatar" src={isSystem ? "/images/system.png" : `/profile/${(isMy ? "@me" : props.author._id)}/avatar`} />
                 <p className="mx-2  mt-2 fs-6 text-break text" style={{ flexGrow: 1 }} dangerouslySetInnerHTML={isSystem ? { __html: content } : null}>
                     {!isSystem ? content : null}
                 </p>

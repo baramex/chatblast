@@ -3,7 +3,7 @@ const { io } = require("../server");
 const { ObjectId } = mongoose.Types;
 
 const messageSchema = new Schema({
-    author: { type: { username: String, id: ObjectId, _id: false }, required: true },
+    author: { type: ObjectId, ref: "Profile", required: true },
     content: { type: String, required: true, validate: /^.{1,512}$/ },
     deleted: { type: Boolean, default: false },
     edits: { type: [{ content: { type: String, required: true }, date: { type: Date, default: new Date() } }], default: [] },
@@ -26,8 +26,9 @@ messageSchema.pre("save", function (next) {
     }
     next();
 });
-messageSchema.post("validate", (doc, next) => {
+messageSchema.post("validate", async (doc, next) => {
     if (doc.isNew) {
+        await doc.populate({ path: "author", select: "username" });
         io.to("authenticated").emit("message.send", { _id: doc._id, author: doc.author, content: doc.content, date: doc.date, views: 0, isViewed: false });
     }
     next();
@@ -38,11 +39,11 @@ const messageModel = model("Message", messageSchema, "messages");
 class Message {
     /**
      * 
-     * @param {*} profile 
+     * @param {ObjectId} profileId 
      * @param {String} content 
      */
-    static create(profile, content) {
-        return new messageModel({ author: { id: profile._id, username: profile.username }, content }).save();
+    static create(profileId, content) {
+        return new messageModel({ author: profileId, content }).save();
     }
 
     /**
@@ -50,7 +51,7 @@ class Message {
      * @param {ObjectId} id 
      */
     static getById(id) {
-        return messageModel.findById(id).where("deleted", false);
+        return messageModel.findById(id, {}, { populate: { path: "author", select: "username" } }).where("deleted", false);
     }
 
     /**
@@ -62,7 +63,7 @@ class Message {
      */
     static async editMessage(author, id, content) {
         var doc = await Message.getById(id);
-        if (doc.author.id != author) throw new Error("Vous ne pouvez pas modifier un message ne vous appartenant pas.");
+        if (doc.author != author) throw new Error("Vous ne pouvez pas modifier un message ne vous appartenant pas.");
         doc.edits.push({ content: doc.message });
         doc.message = content;
         return doc.save({ validateBeforeSave: true });
@@ -77,7 +78,7 @@ class Message {
     static async getMessages(profile, from, number) {
         if (!from || isNaN(from) || from < 0) throw new Error("La valeur de départ doit être supérieure à 0.");
         if (number > 50) throw new Error("Le nombre de message ne peut pas excéder 50.");
-        return Message.getMessagesFields(profile, await messageModel.find({}).sort({ date: -1 }).where("deleted", false).skip(from).limit(number));
+        return Message.getMessagesFields(profile, await messageModel.find({}, {}, { populate: { path: "author", select: "username" } }).sort({ date: -1 }).where("deleted", false).skip(from).limit(number));
     }
 
     /**
@@ -85,7 +86,7 @@ class Message {
      * @param {ObjectId[]} ids 
      */
     static getMessagesByIds(ids) {
-        return messageModel.find({ _id: { $in: ids } });
+        return messageModel.find({ _id: { $in: ids } }, {}, { populate: { path: "author", select: "username" } });
     }
 
     static getMessagesFields(profile, docs) {

@@ -68,9 +68,9 @@ export default function Header({ onlineCount, onlines }) {
                 </div>
 
                 <div className="burger" hidden>
-                    <div ref={burger} className="position-relative w-100 h-100">
+                    <button ref={burger} className="position-relative w-100 h-100 bg-transparent border-0 p-0">
                         <span></span>
-                    </div>
+                    </button>
 
                     <ul className="menu position-absolute top-0 start-0 pt-5 px-3 rounded-0 text-start">
                         <li className="d-flex align-items-center mt-4">

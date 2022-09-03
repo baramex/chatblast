@@ -237,13 +237,13 @@ footer a:hover {
     height: 45px;
 }
 
-.burger>div {
+.burger>button {
     z-index: 4;
 }
 
-.burger>div span,
-.burger>div span::before,
-.burger>div span::after {
+.burger>button span,
+.burger>button span::before,
+.burger>button span::after {
     width: 100%;
     height: 4px;
     background-color: white;
@@ -256,29 +256,29 @@ footer a:hover {
     transition: background-color 0.4s ease-in-out, transform 0.4s ease-in-out;
 }
 
-.burger>div span::before,
-.burger>div span::after {
+.burger>button span::before,
+.burger>button span::after {
     content: "";
     top: 0;
 }
 
-.burger>div span::before {
+.burger>button span::before {
     transform: translateY(-12px);
 }
 
-.burger>div span::after {
+.burger>button span::after {
     transform: translateY(12px);
 }
 
-.burger.active>div span {
+.burger.active>button span {
     background-color: transparent;
 }
 
-.burger.active>div span::before {
+.burger.active>button span::before {
     transform: rotate(45deg);
 }
 
-.burger.active>div span::after {
+.burger.active>button span::after {
     transform: rotate(-45deg);
 }
 

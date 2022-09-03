@@ -212,7 +212,7 @@ app.put("/api/message", rateLimit({
         if (!req.body || !req.body.content) throw new Error("Requête invalide.");
 
         var content = req.body.content.trim();
-        await Message.create(req.profile, content);
+        await Message.create(req.profile._id, content);
 
         var i = typing.findIndex(a => a.id.equals(req.profile._id));
         if (i != -1) typing.splice(i, 1);
@@ -297,6 +297,7 @@ app.delete("/api/message/:id", SessionMiddleware.auth, async (req, res) => {
     try {
         var id = req.params.id;
         var message = await Message.getById(new ObjectId(id));
+        console.log(message);
         if (!message.author.id.equals(req.profile._id)) return res.sendStatus(403);
 
         message.deleted = true;

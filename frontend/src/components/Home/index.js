@@ -12,7 +12,6 @@ import ObjectID from "bson-objectid";
 import OnlineContaier from "./OnlineContainer";
 const { io } = require("socket.io-client");
 let socket;
-let observer;
 let isInPage = true;
 
 const notification = new Audio("/sounds/notification.wav");
@@ -30,17 +29,6 @@ export default function Home() {
     const [online, setOnline] = useState(undefined);
     const [fetching, setFetching] = useState(false);
     const navigate = useNavigate();
-
-    useEffect(() => {
-        if (!observer) observer = new IntersectionObserver(e => intersect(e, messages, setUnread, setMessages));
-
-        return () => {
-            if (observer) {
-                observer.disconnect();
-                observer = undefined;
-            }
-        }
-    }, [messages]);
 
     useEffect(() => {
         if (!isLogged()) return navigate("/login");
@@ -69,7 +57,7 @@ export default function Home() {
                     });
                     setTyping(prev => {
                         if (!prev) return;
-                        return prev.filter(a => a.id !== message.author.id);
+                        return prev.filter(a => a.id !== message.author._id);
                     });
                     setNewMessage(true);
 
@@ -93,7 +81,7 @@ export default function Home() {
                         }
                     });
                     setUnread(prev => Math.max((prev || 0) - unread_, 0));
-                    return [...curr];
+                    return curr;
                 });
             });
             socket.on("profile.join", profile => {
@@ -179,7 +167,7 @@ export default function Home() {
     }, []);
 
     if (!isLogged()) return null;
-    return (<div onMouseEnter={() => handleMouseEnter(messages, setUnread, setMessages)} onMouseLeave={handleMouseLeave} className="d-flex flex-column" style={{height: "100vh"}}>
+    return (<div onMouseEnter={() => handleMouseEnter(messages, setUnread, setMessages)} onMouseLeave={handleMouseLeave} className="d-flex flex-column" style={{ height: "100vh" }}>
         {error && <ErrorPopup message={error} onClose={() => setError("")} />}
         {success && <SuccessPopup message={success} onClose={() => setSuccess("")} />}
         {wantToDelete && <ConfirmPopup message="Êtes-vous sûr de vouloir supprimer ce message ?" onConfirm={() => { confirmDeleteMessage(wantToDelete, setError, setMessages, setSuccess); setWantToDelete(undefined); }} onClose={() => setWantToDelete(undefined)} />}
@@ -197,18 +185,18 @@ export default function Home() {
                     <button onClick={() => markAsRead(setUnread, setMessages)} className="btn-unread text-white border-0 text-start">marquer comme lu</button>
                 </div>
 
-                <div onScroll={(fetchedAll || fetching) ? null : e => handleChatScrolling(e, fetchedAll, messages, setMessages, setFetchedAll, setFetching, setFetchMessage, setError)} className="pt-3 overflow-auto h-100 position-relative" style={{ flex: "1 0px" }}>
+                <div onScroll={fetchedAll ? null : fetching ? e => e.target.scrollTop === 0 ? e.target.scrollTop = 1 : null : e => handleChatScrolling(e, fetchedAll, messages, setMessages, setFetchedAll, setFetching, setFetchMessage, setError)} className="pt-3 overflow-auto h-100 position-relative" style={{ flex: "1 0px" }}>
                     <div className="position-absolute top-50 start-50 translate-middle text-center">
                         {
                             !messages ? <Loading size="lg" /> : messages.length === 0 ? <p id="nomes" className="fs-4 text-secondary">Aucun message</p> : null
                         }
                     </div>
-                    <MessageContainer observer={observer} fetchedAll={fetchedAll} fetching={fetching} scroll={newMessage} fetchMessage={fetchMessage} deleteMessage={deleteMessage(setWantToDelete)} messages={messages} />
+                    <MessageContainer viewed={id => intersect(id, messages, setUnread, setMessages)} fetchedAll={fetchedAll} fetching={fetching} scroll={newMessage} fetchMessage={fetchMessage} deleteMessage={deleteMessage(setWantToDelete)} messages={messages} />
                 </div>
 
                 <div className="position-relative">
                     <span className="position-absolute left-0 ms-2 text-secondary" style={{ top: "-24px" }}>
-                        {typing?.filter(a => a.id !== sessionStorage.getItem("id")).length > 0 && (typing.filter(a => a.id !== sessionStorage.getItem("id")).map(a => a.username).join(", ") + " " + (typing.length === 1 ? "est" : "sont") + " en train d'écrire...")}
+                        {typing?.filter(a => a.id !== sessionStorage.getItem("id")).length > 0 && (typing?.filter(a => a.id !== sessionStorage.getItem("id")).map(a => a.username).join(", ") + " " + (typing?.filter(a => a.id !== sessionStorage.getItem("id")).length === 1 ? "est" : "sont") + " en train d'écrire...")}
                     </span>
                     <form onSubmit={e => handleSendMessage(e, setError)} className="d-flex position-relative shadow-lg">
                         <input type="text" onInput={e => handleInput(e, typing)} autoComplete="off" placeholder="Tapez votre message..." className="form-control form-inset fs-5 rounded-0 border-0 py-2" name="message" aria-label="Message" minLength="1" maxLength="512" disabled={messages ? false : true} required />
@@ -229,10 +217,9 @@ function handleInput(e, typing) {
 }
 
 function handleChatScrolling(event, fetchedAll, messages, setMessages, setFetchedAll, setFetching, setFetchMessage, setError) {
-    if (!messages) return;
+    if (event.target.scrollTop === 0) event.target.scrollTop = 1;
+    if (!messages || messages.length < 20) return;
     if (event.target.scrollTop <= 50) {
-        if (event.target.scrollTop === 0) event.target.scrollTop = 1;
-
         setFetching(true);
 
         let firstMessage = messages[0]._id;
@@ -338,13 +325,8 @@ function viewed(id) {
     } else addToMessageToView(id);
 }
 
-function intersect(entries, messages, setUnread, setMessages) {
-    entries.forEach(entry => {
-        if (entry.isIntersecting) {
-            observer.unobserve(entry.target);
-            viewed(entry.target.id.replace("m-", ""));
-        }
-    });
+function intersect(id, messages, setUnread, setMessages) {
+    viewed(id);
     if (isInPage) sendViews(messages, setUnread, setMessages);
 }
 

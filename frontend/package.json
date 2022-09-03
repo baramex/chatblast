@@ -1,6 +1,6 @@
 {
   "name": "chatblast",
-  "version": "2.2.3",
+  "version": "2.2.4",
   "proxy": "http://localhost:1500/",
   "private": true,
   "dependencies": {
