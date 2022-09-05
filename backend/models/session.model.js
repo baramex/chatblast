@@ -53,10 +53,12 @@ class Session {
     }
 
     static async disconnectMessage(profile) {
+        if (!profile) return;
         io.to("authenticated").emit("profile.leave", { id: profile.id, username: profile.username });
     }
 
     static async connectMessage(profile) {
+        if (!profile) return;
         io.to("authenticated").emit("profile.join", { id: profile.id, username: profile.username });
     }
 

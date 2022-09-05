@@ -110,7 +110,7 @@ async function handleLogout(event, navigate) {
     try {
         await logoutUser();
         resetSession();
-        navigate("/login")
+        navigate("/login");
     } catch (error) {
         event.target.disabled = false;
         console.error(error);

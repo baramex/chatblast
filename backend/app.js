@@ -74,6 +74,8 @@ app.get("/profile/:id/avatar", SessionMiddleware.auth, async (req, res) => {
         if (!id || (!ObjectId.isValid(id) && id != "@me")) throw new Error("Requête invalide.");
         const profile = (id == "@me" || id == req.profile._id.toString()) ? req.profile : await Profile.getProfileById(new ObjectId(id));
 
+        if (profile.avatar.url) return res.redirect(profile.avatar.url);
+
         const name = profile.avatar.flag + profile.avatar.extention;
         if (!name || !fs.existsSync(path.join(__dirname, "avatars", name))) return res.sendFile(path.join(__dirname, "avatars", "user.png"));
         res.sendFile(path.join(__dirname, "avatars", name));
@@ -111,28 +113,42 @@ app.post("/api/integration/:int_id/profile/oauth", SessionMiddleware.isAuthed, a
         if (!integration) throw new Error("Intégration introuvable.");
 
         if (integration.type === INTEGRATIONS_TYPE.CUSTOM_AUTH) {
-            const token = req.headers.authorization.replace("Token", "");
+            const token = req.headers.authorization.replace("Token ", "");
             if (!token) throw new Error("Requête invalide.");
 
             let config = {};
             switch (integration.options.verifyAuthToken.token.place) {
-                case TOKEN_PLACES_TYPE.AUTHORIZATION: config = { headers: { authorization: integration.options.verifyAuthToken.token.key + token } }; break;
+                case TOKEN_PLACES_TYPE.AUTHORIZATION: config = { headers: { authorization: integration.options.verifyAuthToken.token.key + " " + token } }; break;
                 case TOKEN_PLACES_TYPE.QUERY: config = { params: { [integration.options.verifyAuthToken.token.key]: token } }; break;
                 case TOKEN_PLACES_TYPE.URLENCODED: config = { data: qs.stringify({ [integration.options.verifyAuthToken.token.key]: token }), headers: { 'content-type': 'application/x-www-form-urlencoded' } }; break;
             }
 
             let result = (await axios.get(integration.options.verifyAuthToken.route, config).catch(() => { throw new Error("Erreur de vérification du token.") })).data;
-            if (!result || !result.username || !result.id) throw new Error("Erreur de vérification du token.");
+            if (!result || !result.username || !result.id || typeof result.username != "string" || typeof result.id != "string" || typeof result.avatar != "string") throw new Error("Erreur de vérification du token.");
 
-            let i = 0;
-            while (await Profile.usernameExists(result.username) && i < 10) {
-                result.username += Math.floor(Math.random() * 10);
-                i++;
+            // get/update or create user
+            const profile = await Profile.getProfileByUserId(result.id) ||
+                await Profile.create(await Profile.generateUnsedUsername(result.username).catch(() => { throw new Error("Erreur de vérification du token.") }), undefined, result.id, result.avatar, integration._id);
+            if (profile.username != result.username || profile.avatar.url != result.avatar) {
+                console.log("save")
+                profile.username = result.username === profile.username ? profile.username : await Profile.generateUnsedUsername(result.username).catch(() => { throw new Error("Erreur de vérification du token.") });
+                profile.avatar.url = result.avatar;
+
+                await profile.save({ validateBeforeSave: true });
             }
-            if (i === 10) throw new Error("Erreur de vérification du token.");
 
-            const profile = await Profile.create(result.username, undefined, result.id, result.avatar, integration._id);
-            const session = await Session.create(profile._id, req.fingerprint.hash, getClientIp(req));
+            // update or create session
+            let session = await Session.getSessionByProfileId(profile._id);
+            const ip = getClientIp(req);
+            if (session) {
+                session.active = true;
+                if (!session.fingerprints.includes(req.fingerprint.hash)) session.fingerprints.push(req.fingerprint.hash);
+                if (!session.ips.includes(ip)) session.ips.push(ip);
+                await session.save({ validateBeforeSave: true });
+            } else {
+                session = await Session.create(profile._id, req.fingerprint.hash, ip);
+            }
+
             const expires = new Date(24 * 60 * 60 * 1000 + new Date().getTime());
             res.cookie("chatblast-token", session.token, { expires, sameSite: "none", secure: "true" }).json({ id: profile._id, username: profile.username });
         }
@@ -146,7 +162,7 @@ app.post("/api/integration/:int_id/profile/oauth", SessionMiddleware.isAuthed, a
 });
 
 app.get("/api/user/@me", (req, res) => {
-    res.send({ id: "abc123", username: "test", avatar: "https://cdn.discordapp.com/avatars/123456789012345678/123456789012345678.png" });
+    res.send({ id: "abc123", username: "titout", avatar: "https://cdn.pixabay.com/photo/2015/04/23/22/00/tree-736885__480.jpg" });
 });
 
 // utilisateurs en ligne
@@ -201,7 +217,7 @@ app.post("/api/profile", rateLimit({
 }), SessionMiddleware.isAuthed, async (req, res) => {
     try {
         if (req.isAuthed) throw new Error("Vous êtes déjà authentifié.");
-        if (!req.body || !req.body.username || !req.body.password) throw new Error("Requête invalide.");
+        if (!req.body || !req.body.username || !req.body.password || typeof req.body.username != "string" || typeof req.body.password != "string") throw new Error("Requête invalide.");
 
         let { username, password } = req.body;
         username = username.toLowerCase().trim();
@@ -226,7 +242,7 @@ app.post("/api/profile", rateLimit({
 app.delete("/api/profile", SessionMiddleware.auth, async (req, res) => {
     try {
         await Session.disable(req.session);
-        res.sendStatus(200);
+        res.clearCookie("chatblast-token", { sameSite: "none", secure: "true" }).sendStatus(200);
     } catch (error) {
         console.error(error);
         res.status(400).send(error.message || "Erreur inattendue");
@@ -237,7 +253,7 @@ app.delete("/api/profile", SessionMiddleware.auth, async (req, res) => {
 app.post("/api/login", SessionMiddleware.isAuthed, async (req, res) => {
     try {
         if (req.isAuthed) throw new Error("Vous êtes déjà authentifié.");
-        if (!req.body || !req.body.username || !req.body.password) throw new Error("Requête invalide.");
+        if (!req.body || !req.body.username || !req.body.password || typeof req.body.username != "string") throw new Error("Requête invalide.");
 
         const { username, password } = req.body;
 
@@ -276,7 +292,7 @@ app.put("/api/message", rateLimit({
     legacyHeaders: false
 }), SessionMiddleware.auth, async (req, res) => {
     try {
-        if (!req.body || !req.body.content) throw new Error("Requête invalide.");
+        if (!req.body || !req.body.content || typeof req.body.content != "string") throw new Error("Requête invalide.");
 
         const content = req.body.content.trim();
         await Message.create(req.profile._id, content);

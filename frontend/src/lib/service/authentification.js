@@ -1,5 +1,5 @@
 import { api } from ".";
-import { deleteCookie, getCookie } from "../utils/cookie";
+import { getCookie } from "../utils/cookie";
 
 export function loginUser(username, password) {
     return api("/login", "post", { username, password });
@@ -36,5 +36,4 @@ export function isLogged() {
 
 export function resetSession() {
     sessionStorage.clear();
-    deleteCookie("chatblast-token");
 }
