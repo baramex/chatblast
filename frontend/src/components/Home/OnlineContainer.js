@@ -28,7 +28,7 @@ export default function OnlineContaier({ online }) {
                 {
                     online && online.map((item) =>
                         <div className="online d-flex align-items-center" key={item.id}>
-                            <img width="50" className="rounded-circle" style={{ border: "#2DBF8F solid 1px" }} src={`/profile/${item.id}/avatar`} alt="avatar" />
+                            <img width="50" height="50" className="rounded-circle object-fit-cover" style={{ border: "#2DBF8F solid 1px" }} src={`/profile/${item.id}/avatar`} alt="avatar" />
                             <p className="mb-0 text-white">{item.username}</p>
                         </div>
                     )

@@ -151,6 +151,10 @@ header {
     transform: rotate(180deg);
 }
 
+.object-fit-cover {
+    object-fit: cover;
+}
+
 .pointer {
     cursor: pointer;
 }

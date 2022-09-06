@@ -74,14 +74,14 @@ export default function Header({ onlineCount, onlines }) {
 
                     <ul className="menu position-absolute top-0 start-0 pt-5 px-3 rounded-0 text-start">
                         <li className="d-flex align-items-center mt-4">
-                            <img width="55" className="rounded-circle bg-light" src={`/profile/${sessionStorage.getItem("chatblast-id")}/avatar`} alt="account-menu" />
+                            <img width="55" height="55" className="rounded-circle bg-light object-fit-cover" src={`/profile/${sessionStorage.getItem("chatblast-id")}/avatar`} alt="account-menu" />
                             <p className="fw-bold fs-4 ms-3 text-white m-0">{sessionStorage.getItem("chatblast-username")}</p>
                         </li>
                         <li><button onClick={e => handleLogout(e, navigate)} className="btn btn-danger w-100 py-2 fs-5 rounded-pill mt-3 mb-2">Se déconnecter</button></li>
                         <li className="mb-3 mt-4"><span className="text-white fs-5">{((onlineCount || onlineCount === 0) ? onlineCount : "--") + " en ligne"}</span></li>
                         {
                             onlines && onlines.map(online => <li className="online d-flex align-items-center ms-1 my-2" key={online.id}>
-                                <img width="50" className="rounded-circle" src={`/profile/${online.id}/avatar`} alt="avatar" />
+                                <img width="50" height="55" className="rounded-circle object-fit-cover" src={`/profile/${online.id}/avatar`} alt="avatar" />
                                 <p className="mb-0 ms-2 text-white">{online.username}</p>
                             </li>)
                         }
@@ -91,7 +91,7 @@ export default function Header({ onlineCount, onlines }) {
             <h1 className="title text-light d-inline-block">ChatBlast</h1>
             <div className="position-relative w-100 h-100">
                 <button ref={button} className="toggle-menu px-0 py-1 border-0 rounded-circle position-absolute top-0 end-0 bg-transparent h-100" aria-expanded="false" style={{ zIndex: 2 }}>
-                    <img className="rounded-circle bg-light h-100" src={`/profile/${sessionStorage.getItem("chatblast-id")}/avatar`} alt="account-menu" />
+                    <img className="rounded-circle bg-light h-100 object-fit-cover" style={{ aspectRatio: "1/1" }} src={`/profile/${sessionStorage.getItem("chatblast-id")}/avatar`} alt="account-menu" />
                 </button>
                 <div className="shadow-lg position-fixed top-0 end-0 me-3 mt-1 d-flex flex-column bg-light-theme menu" style={{ zIndex: 1 }}>
                     <p className="fw-bold fs-4 mt-2" style={{ color: "#737373", marginRight: 60, marginLeft: 60 }}>{sessionStorage.getItem("chatblast-username")}</p>
