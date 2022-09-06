@@ -30,8 +30,8 @@ export function fetchOnline() {
     return api("/profiles/online", "get")
 }
 
-export function isLogged() {
-    return getCookie("chatblast-token") ? true : false;
+export function isLogged(integrationId) {
+    return getCookie(integrationId ? integrationId + "-token" : "token") ? true : false;
 }
 
 export function resetSession() {

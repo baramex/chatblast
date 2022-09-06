@@ -91,7 +91,7 @@ function Message(props) {
             </div>
 
             <div className="d-flex">
-                <img className="ms-3 rounded-circle object-fit-cover" width="50" height="50" alt="message-avatar" src={isSystem ? "/images/system.png" : `/profile/${(isMy ? "@me" : props.author._id)}/avatar`} />
+                <img className="ms-3 rounded-circle object-fit-cover" width="50" height="50" alt="message-avatar" src={isSystem ? "/images/system.png" : `/profile/${(props.author._id)}/avatar`} />
                 <p className="mx-2  mt-2 fs-6 text-break text" style={{ flexGrow: 1 }} dangerouslySetInnerHTML={isSystem ? { __html: content } : null}>
                     {!isSystem ? content : null}
                 </p>

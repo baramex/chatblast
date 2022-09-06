@@ -1,3 +1,4 @@
+const { ObjectId } = require("mongodb");
 const { Schema, model, Types } = require("mongoose");
 
 const TOKEN_PLACES_TYPE = {
@@ -83,4 +84,24 @@ class Integration {
     }
 }
 
-module.exports = { Integration, INTEGRATIONS_TYPE, TOKEN_PLACES_TYPE };
+class IntegrationMiddleware {
+    static async parseIntegration(req, res, next) {
+        try {
+            const id = req.headers.referer.includes(process.env.HOST + "/integrations/") ? req.headers.referer?.split("/").pop() : undefined;
+            if (id && !ObjectId.isValid(id)) throw new Error("Requête invalide.");
+
+            req.integration = await Integration.getById(new ObjectId(id));
+
+            if (req.profile && req.integration) {
+                if (!req.profile.integrationId?.equals(req.integration._id)) return res.status(403).send("Non autorisé.");
+            }
+
+            return next();
+        } catch (error) {
+            console.error(error);
+            res.status(400).send(error.message || "Erreur inattendue");
+        }
+    }
+}
+
+module.exports = { Integration, IntegrationMiddleware, INTEGRATIONS_TYPE, TOKEN_PLACES_TYPE };

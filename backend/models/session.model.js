@@ -54,12 +54,12 @@ class Session {
 
     static async disconnectMessage(profile) {
         if (!profile) return;
-        io.to("authenticated").emit("profile.leave", { id: profile.id, username: profile.username });
+        io.to("integrationid:" + profile.integrationId?.toString()).emit("profile.leave", { id: profile.id, username: profile.username });
     }
 
     static async connectMessage(profile) {
         if (!profile) return;
-        io.to("authenticated").emit("profile.join", { id: profile.id, username: profile.username });
+        io.to("integrationid:" + profile.integrationId?.toString()).emit("profile.join", { id: profile.id, username: profile.username });
     }
 
     static disable(session) {
@@ -134,7 +134,10 @@ class SessionMiddleware {
         try {
             if (!req.cookies) return res.sendStatus(401);
 
-            const session = await Session.getSession(req.cookies["chatblast-token"], req.fingerprint.hash);
+            const id = req.headers.referer?.split("/").pop();
+            const cookieName = ObjectId.isValid(id) ? id + "-token" : "token";
+
+            const session = await Session.getSession(req.cookies[cookieName], req.fingerprint.hash);
             if (!session) return res.sendStatus(401);
 
             const profile = await Profile.getProfileById(session.profileId);
@@ -151,7 +154,10 @@ class SessionMiddleware {
     static async isAuthed(req, res, next) {
         try {
             if (req.cookies) {
-                const session = await Session.getSession(req.cookies["chatblast-token"], req.fingerprint.hash);
+                const id = req.headers.referer?.split("/").pop();
+                const cookieName = ObjectId.isValid(id) ? id + "-token" : "token";
+
+                const session = await Session.getSession(req.cookies[cookieName], req.fingerprint.hash);
                 if (!session) throw new Error();
 
                 const profile = await Profile.getProfileById(session.profileId);

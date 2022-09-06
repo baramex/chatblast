@@ -11,7 +11,7 @@ const INTEGRATIONS_TYPE = {
 };
 
 export default function Integration() {
-    const [id] = useState(window.location.pathname.split("/").reverse()[0]);
+    const [id] = useState(window.location.pathname.split("/").pop());
     const [integration, setIntegration] = useState(null);
     const [error, setError] = useState(null);
     const [token, setToken] = useState(null);
@@ -38,7 +38,7 @@ export default function Integration() {
     }, []);
 
     useEffect(() => {
-        if (integration && !error && !isLogged()) {
+        if (integration && !error && !isLogged(id)) {
             if (integration.type === INTEGRATIONS_TYPE.CUSTOM_AUTH) {
                 if (!token) setError("Connectez-vous au site pour accéder à cette page.");
                 else {
@@ -54,7 +54,7 @@ export default function Integration() {
 
     return (<>
         {
-            error ? <ErrorPopup message={error} canClose={false} /> : integration && isLogged() ? <Home /> : <div className="position-absolute top-50 start-50 translate-middle"><Loading color="text-white" size="lg" /></div>
+            error ? <ErrorPopup message={error} canClose={false} /> : integration && isLogged(id) ? <Home /> : <div className="position-absolute top-50 start-50 translate-middle"><Loading color="text-white" size="lg" /></div>
         }
     </>);
 }

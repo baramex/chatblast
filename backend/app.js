@@ -15,22 +15,29 @@ const fs = require("fs");
 const { Message } = require("./models/message.model");
 const { app, io, upload } = require("./server");
 const { getClientIp } = require("request-ip");
-const { Integration, INTEGRATIONS_TYPE, TOKEN_PLACES_TYPE } = require("./models/integration.model");
+const { Integration, INTEGRATIONS_TYPE, TOKEN_PLACES_TYPE, IntegrationMiddleware } = require("./models/integration.model");
 const { default: axios } = require("axios");
 mongoose.connect(process.env.DB, { dbName: process.env.DB_NAME });
+
+// BUG: integration: double socket join
+// BUG: integration: read message
 
 let typing = [];
 let disconnected = [];
 
 io.on("connection", async (socket) => {
-    const token = socket.handshake.headers.cookie?.split("; ")?.find(a => a.startsWith("chatblast-token="))?.replace("chatblast-token=", "");
+    const id = socket.handshake.headers.referer?.split("/").pop();
+    const cookieName = ObjectId.isValid(id) ? id + "-token" : "token";
+    const token = socket.handshake.headers.cookie?.split("; ")?.find(a => a.startsWith(cookieName + "="))?.replace(cookieName + "=", "");
     if (token) {
         const session = await Session.getSessionByToken(token).catch(console.error);
         if (session) {
             const profile = await Profile.getProfileById(session.profileId).catch(console.error);
             if (profile) {
                 socket.profileId = session.profileId;
-                socket.join(["authenticated", "profileid:" + session.profileId.toString()]);
+                socket.integrationId = profile.integrationId;
+
+                socket.join(["authenticated", "profileid:" + session.profileId.toString(), "integrationid:" + profile.integrationId?.toString()]);
 
                 const d = disconnected.findIndex(a => a.id.equals(profile._id));
                 if (d != -1) disconnected.splice(d, 1);
@@ -102,33 +109,29 @@ app.get("/api/integration/:id", async (req, res) => {
     }
 });
 
-app.post("/api/integration/:int_id/profile/oauth", SessionMiddleware.isAuthed, async (req, res) => {
+app.post("/api/integration/:int_id/profile/oauth", SessionMiddleware.isAuthed, IntegrationMiddleware.parseIntegration, async (req, res) => {
     try {
         if (req.isAuthed) throw new Error("Vous êtes déjà authentifié.");
 
-        const intId = req.params.int_id;
-        if (!ObjectId.isValid(intId)) throw new Error("Requête invalide.");
+        if (!req.integration) throw new Error("Intégration introuvable.");
 
-        const integration = await Integration.getById(new ObjectId(intId));
-        if (!integration) throw new Error("Intégration introuvable.");
-
-        if (integration.type === INTEGRATIONS_TYPE.CUSTOM_AUTH) {
+        if (req.integration.type === INTEGRATIONS_TYPE.CUSTOM_AUTH) {
             const token = req.headers.authorization.replace("Token ", "");
             if (!token) throw new Error("Requête invalide.");
 
             let config = {};
-            switch (integration.options.verifyAuthToken.token.place) {
-                case TOKEN_PLACES_TYPE.AUTHORIZATION: config = { headers: { authorization: integration.options.verifyAuthToken.token.key + " " + token } }; break;
-                case TOKEN_PLACES_TYPE.QUERY: config = { params: { [integration.options.verifyAuthToken.token.key]: token } }; break;
-                case TOKEN_PLACES_TYPE.URLENCODED: config = { data: qs.stringify({ [integration.options.verifyAuthToken.token.key]: token }), headers: { 'content-type': 'application/x-www-form-urlencoded' } }; break;
+            switch (req.integration.options.verifyAuthToken.token.place) {
+                case TOKEN_PLACES_TYPE.AUTHORIZATION: config = { headers: { authorization: req.integration.options.verifyAuthToken.token.key + " " + token } }; break;
+                case TOKEN_PLACES_TYPE.QUERY: config = { params: { [req.integration.options.verifyAuthToken.token.key]: token } }; break;
+                case TOKEN_PLACES_TYPE.URLENCODED: config = { data: qs.stringify({ [req.integration.options.verifyAuthToken.token.key]: token }), headers: { 'content-type': 'application/x-www-form-urlencoded' } }; break;
             }
 
-            let result = (await axios.get(integration.options.verifyAuthToken.route, config).catch(() => { throw new Error("Erreur de vérification du token.") })).data;
+            let result = (await axios.get(req.integration.options.verifyAuthToken.route, config).catch(() => { throw new Error("Erreur de vérification du token.") })).data;
             if (!result || !result.username || !result.id || typeof result.username != "string" || typeof result.id != "string" || typeof result.avatar != "string") throw new Error("Erreur de vérification du token.");
 
             // get/update or create user
             const profile = await Profile.getProfileByUserId(result.id) ||
-                await Profile.create(await Profile.generateUnsedUsername(result.username).catch(() => { throw new Error("Erreur de vérification du token.") }), undefined, result.id, result.avatar, integration._id);
+                await Profile.create(await Profile.generateUnsedUsername(result.username).catch(() => { throw new Error("Erreur de vérification du token.") }), undefined, result.id, result.avatar, req.integration._id);
             if (profile.username != result.username || profile.avatar.url != result.avatar) {
                 console.log("save")
                 profile.username = result.username === profile.username ? profile.username : await Profile.generateUnsedUsername(result.username).catch(() => { throw new Error("Erreur de vérification du token.") });
@@ -150,7 +153,7 @@ app.post("/api/integration/:int_id/profile/oauth", SessionMiddleware.isAuthed, a
             }
 
             const expires = new Date(24 * 60 * 60 * 1000 + new Date().getTime());
-            res.cookie("chatblast-token", session.token, { expires, sameSite: "none", secure: "true" }).json({ id: profile._id, username: profile.username });
+            res.cookie(req.integration ? req.integration._id.toString() + "-token" : "token", session.token, { expires, sameSite: "none", secure: "true" }).json({ id: profile._id, username: profile.username });
         }
         else {
             // TODO: anonymous auth
@@ -161,14 +164,15 @@ app.post("/api/integration/:int_id/profile/oauth", SessionMiddleware.isAuthed, a
     }
 });
 
+// example route oauth
 app.get("/api/user/@me", (req, res) => {
     res.send({ id: "abc123", username: "titout", avatar: "https://cdn.pixabay.com/photo/2015/04/23/22/00/tree-736885__480.jpg" });
 });
 
 // utilisateurs en ligne
-app.get("/api/profiles/online", SessionMiddleware.auth, async (req, res) => {
+app.get("/api/profiles/online", SessionMiddleware.auth, IntegrationMiddleware.parseIntegration, async (req, res) => {
     try {
-        const online = (await io.to("authenticated").fetchSockets()).map(a => a.profileId).concat(disconnected.map(a => a.id));
+        const online = (await io.to("integrationid:" + req.integration?._id.toString()).fetchSockets()).map(a => a.profileId).concat(disconnected.map(a => a.id));
         res.status(200).send((await Profile.getUsernamesByIds(online)).map(a => ({ id: a._id, username: a.username })));
     } catch (error) {
         console.error(error);
@@ -177,7 +181,7 @@ app.get("/api/profiles/online", SessionMiddleware.auth, async (req, res) => {
 });
 
 // récupérer profil
-app.get("/api/profile/@me", SessionMiddleware.auth, async (req, res) => {
+app.get("/api/profile/@me", SessionMiddleware.auth, IntegrationMiddleware.parseIntegration, async (req, res) => {
     res.status(200).send({ username: req.profile.username, id: req.profile._id, unread: await Message.getUnreadCount(req.profile) });
 });
 
@@ -187,7 +191,7 @@ app.put("/api/profile/@me/avatar", rateLimit({
     max: 5,
     standardHeaders: true,
     legacyHeaders: false
-}), SessionMiddleware.auth, upload.single("avatar"), async (req, res) => {
+}), SessionMiddleware.auth, IntegrationMiddleware.parseIntegration, upload.single("avatar"), async (req, res) => {
     try {
         if (!req.file) throw new Error("Requête invalide.");
 
@@ -214,7 +218,7 @@ app.post("/api/profile", rateLimit({
     max: 5,
     standardHeaders: true,
     legacyHeaders: false
-}), SessionMiddleware.isAuthed, async (req, res) => {
+}), SessionMiddleware.isAuthed, IntegrationMiddleware.parseIntegration, async (req, res) => {
     try {
         if (req.isAuthed) throw new Error("Vous êtes déjà authentifié.");
         if (!req.body || !req.body.username || !req.body.password || typeof req.body.username != "string" || typeof req.body.password != "string") throw new Error("Requête invalide.");
@@ -226,11 +230,11 @@ app.post("/api/profile", rateLimit({
         if (USERNAMES_NOT_ALLOWED.includes(username)) throw new Error("Nom d'utilisateur non autorisé.");
         if (!/^(((?=.*[a-z])(?=.*[A-Z]))|((?=.*[a-z])(?=.*[0-9]))|((?=.*[A-Z])(?=.*[0-9])))(?=.{6,32}$)/.test(password) || !FIELD_REGEX.test(username)) throw new Error("Requête invalide.");
 
-        const profile = await Profile.create(username, password);
+        const profile = await Profile.create(username, password, undefined, undefined, req.integration?._id);
         const ip = getClientIp(req);
         const session = await Session.create(profile._id, req.fingerprint.hash, ip);
         const expires = new Date(24 * 60 * 60 * 1000 + new Date().getTime());
-        res.cookie("chatblast-token", session.token, { expires, sameSite: "none", secure: "true" }).json({ username: profile.username, id: profile._id, unread: await Message.getUnreadCount(profile) });
+        res.cookie(req.integration ? req.integration._id.toString() + "-token" : "token", session.token, { expires, sameSite: "none", secure: "true" }).json({ username: profile.username, id: profile._id, unread: await Message.getUnreadCount(profile) });
     }
     catch (error) {
         console.error(error);
@@ -239,10 +243,10 @@ app.post("/api/profile", rateLimit({
 });
 
 // supprimer la session
-app.delete("/api/profile", SessionMiddleware.auth, async (req, res) => {
+app.delete("/api/profile", SessionMiddleware.auth, IntegrationMiddleware.parseIntegration, async (req, res) => {
     try {
         await Session.disable(req.session);
-        res.clearCookie("chatblast-token", { sameSite: "none", secure: "true" }).sendStatus(200);
+        res.clearCookie(req.integration ? req.integration._id.toString() + "-token" : "token", { sameSite: "none", secure: "true" }).sendStatus(200);
     } catch (error) {
         console.error(error);
         res.status(400).send(error.message || "Erreur inattendue");
@@ -250,7 +254,7 @@ app.delete("/api/profile", SessionMiddleware.auth, async (req, res) => {
 });
 
 // connexion
-app.post("/api/login", SessionMiddleware.isAuthed, async (req, res) => {
+app.post("/api/login", SessionMiddleware.isAuthed, IntegrationMiddleware.parseIntegration, async (req, res) => {
     try {
         if (req.isAuthed) throw new Error("Vous êtes déjà authentifié.");
         if (!req.body || !req.body.username || !req.body.password || typeof req.body.username != "string") throw new Error("Requête invalide.");
@@ -258,7 +262,7 @@ app.post("/api/login", SessionMiddleware.isAuthed, async (req, res) => {
         const { username, password } = req.body;
 
         const profile = await Profile.check(username, password);
-        if (!profile) throw new Error("Identifants incorrects.");
+        if (!profile || (profile.integrationId ? !profile.integrationId?.equals(req.integration?._id) : false)) throw new Error("Identifants incorrects.");
 
         let session = await Session.getSessionByProfileId(profile._id);
         const ip = getClientIp(req);
@@ -272,7 +276,7 @@ app.post("/api/login", SessionMiddleware.isAuthed, async (req, res) => {
         }
 
         const expires = new Date(24 * 60 * 60 * 1000 + new Date().getTime());
-        res.cookie("chatblast-token", session.token, { expires, sameSite: "none", secure: "true" }).json({ username: profile.username, id: profile._id, unread: await Message.getUnreadCount(profile) });
+        res.cookie(req.integration ? req.integration._id.toString() + "-token" : "token", session.token, { expires, sameSite: "none", secure: "true" }).json({ username: profile.username, id: profile._id, unread: await Message.getUnreadCount(profile) });
     } catch (error) {
         console.error(error);
         res.status(400).send(error.message || "Erreur inattendue");
@@ -290,12 +294,12 @@ app.put("/api/message", rateLimit({
     max: 20,
     standardHeaders: true,
     legacyHeaders: false
-}), SessionMiddleware.auth, async (req, res) => {
+}), SessionMiddleware.auth, IntegrationMiddleware.parseIntegration, async (req, res) => {
     try {
         if (!req.body || !req.body.content || typeof req.body.content != "string") throw new Error("Requête invalide.");
 
         const content = req.body.content.trim();
-        await Message.create(req.profile._id, content);
+        await Message.create(req.profile._id, content, req.integration?._id);
 
         const i = typing.findIndex(a => a.id.equals(req.profile._id));
         if (i != -1) typing.splice(i, 1);
@@ -308,7 +312,7 @@ app.put("/api/message", rateLimit({
 });
 
 // récupérer des messages
-app.get("/api/messages", SessionMiddleware.auth, async (req, res) => {
+app.get("/api/messages", SessionMiddleware.auth, IntegrationMiddleware.parseIntegration, async (req, res) => {
     try {
         if (!req.query || !req.query.from) throw new Error("Requête invalide.");
 
@@ -321,25 +325,8 @@ app.get("/api/messages", SessionMiddleware.auth, async (req, res) => {
     }
 });
 
-// mettre à jour un message
-app.put("/api/message/:id", (req, res) => {
-    return res.status(400).send("Cette méthode n'est pas encore implémentée.");
-    /*try {
-        const profile = Profile.getProfile(req.cookies["chatblast-token"], req.fingerprint);
-        if (!profile) return res.sendStatus(401);
-
-        const id = req.params.id;
-        const content = req.body.content.trim();
-        const message = await Message.editMessage(profile.id, new ObjectId(id), content);
-        res.status(200).json(Message.getMessageFields(profile, message));
-    } catch (error) {
-        console.error(error);
-        res.status(400).send(error.message || "Erreur inattendue");
-    }*/
-});
-
 // voir des messages
-app.put("/api/messages/view", SessionMiddleware.auth, async (req, res) => {
+app.put("/api/messages/view", SessionMiddleware.auth, IntegrationMiddleware.parseIntegration, async (req, res) => {
     try {
         if (!req.body || !req.body.ids) throw new Error("Requête invalide.");
 
@@ -359,7 +346,7 @@ app.put("/api/messages/view", SessionMiddleware.auth, async (req, res) => {
     }
 });
 
-app.put("/api/messages/view/all", SessionMiddleware.auth, async (req, res) => {
+app.put("/api/messages/view/all", SessionMiddleware.auth, IntegrationMiddleware.parseIntegration, async (req, res) => {
     try {
         const unreadMessages = await Message.getUnread(req.profile);
 
@@ -376,7 +363,7 @@ app.put("/api/messages/view/all", SessionMiddleware.auth, async (req, res) => {
 });
 
 // supprimer un message
-app.delete("/api/message/:id", SessionMiddleware.auth, async (req, res) => {
+app.delete("/api/message/:id", SessionMiddleware.auth, IntegrationMiddleware.parseIntegration, async (req, res) => {
     try {
         const id = req.params.id;
         const message = await Message.getById(new ObjectId(id));
@@ -393,9 +380,9 @@ app.delete("/api/message/:id", SessionMiddleware.auth, async (req, res) => {
 });
 
 // récupérer ceux qui évrivent
-app.get("/api/profiles/typing", SessionMiddleware.auth, async (req, res) => {
+app.get("/api/profiles/typing", SessionMiddleware.auth, IntegrationMiddleware.parseIntegration, async (req, res) => {
     try {
-        res.status(200).json(typing);
+        res.status(200).json(typing.filter(a => a.integrationId?.equals(req.integration?._id)));
     } catch (error) {
         console.error(error);
         res.status(400).send(error.message || "Erreur inattendue");
@@ -403,7 +390,7 @@ app.get("/api/profiles/typing", SessionMiddleware.auth, async (req, res) => {
 });
 
 // écrire
-app.put("/api/typing", SessionMiddleware.auth, (req, res) => {
+app.put("/api/typing", SessionMiddleware.auth, IntegrationMiddleware.parseIntegration, (req, res) => {
     try {
         const isTyping = req.body.isTyping ? true : false;
 
@@ -420,18 +407,17 @@ app.put("/api/typing", SessionMiddleware.auth, (req, res) => {
     }
 });
 
-app.get("/integrations/:id", async (req, res, next) => {
+app.get("/integrations/:id", IntegrationMiddleware.parseIntegration, async (req, res, next) => {
     try {
         const id = req.params.id;
         if (!ObjectId.isValid(id)) throw new Error();
 
-        const integration = await Integration.getById(new ObjectId(id));
-        if (!integration) throw new Error();
+        if (!req.integration) throw new Error();
 
         cors((req, callback) => {
             if (!req.headers.referer) return callback("Not allowed by CORS.");
             if (req.headers.referer.endsWith("/")) req.headers.referer = req.headers.referer.slice(0, -1);
-            if (req.headers.referer !== integration.options.domain) return callback("Not allowed by CORS.");
+            if (req.headers.referer !== req.integration.options.domain) return callback("Not allowed by CORS.");
             callback(null, { origin: true });
         })(req, res, next);
     } catch (error) {
@@ -456,8 +442,8 @@ function generateID(length) {
 
 function addTyping(profile) {
     if (!typing.some(a => a.id.equals(profile._id))) {
-        typing.push({ id: profile._id, username: profile.username });
-        io.to("authenticated").emit("message.typing", { isTyping: true, id: profile._id, username: profile.username });
+        typing.push({ id: profile._id, username: profile.username, integrationId: profile.integrationId });
+        io.to("integrationid:" + profile.integrationId?.toString()).emit("message.typing", { isTyping: true, id: profile._id, username: profile.username });
     }
 }
 
@@ -465,6 +451,6 @@ function removeTyping(profile) {
     const i = typing.findIndex(a => a.id.equals(profile._id));
     if (i != -1) {
         typing.splice(i, 1);
-        io.to("authenticated").emit("message.typing", { isTyping: false, id: profile._id, username: profile.username });
+        io.to("integrationid:" + profile.integrationId?.toString()).emit("message.typing", { isTyping: false, id: profile._id, username: profile.username });
     }
 }
