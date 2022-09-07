@@ -120,10 +120,10 @@ class Session {
             if (socket.rooms.has("authenticated")) {
                 const id = socket.profileId;
                 const profile = await Profile.getProfileById(id);
-                if (!profile) return socket.leave("authenticated");
+                if (!profile) return socket.disconnect();
 
                 const session = await Session.getSessionByProfileId(id);
-                if (!session || !session.active) socket.leave("authenticated");
+                if (!session || !session.active) socket.disconnect();
             }
         });
     }

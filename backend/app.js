@@ -19,12 +19,11 @@ const { Integration, INTEGRATIONS_TYPE, TOKEN_PLACES_TYPE, IntegrationMiddleware
 const { default: axios } = require("axios");
 mongoose.connect(process.env.DB, { dbName: process.env.DB_NAME });
 
-// BUG: integration: double socket join
-
 let typing = [];
 let disconnected = [];
 
 io.on("connection", async (socket) => {
+    console.log(io.sockets.sockets.keys());
     const id = socket.handshake.headers.referer?.split("/").pop();
     const cookieName = ObjectId.isValid(id) ? id + "-token" : "token";
     const token = socket.handshake.headers.cookie?.split("; ")?.find(a => a.startsWith(cookieName + "="))?.replace(cookieName + "=", "");
@@ -48,24 +47,22 @@ io.on("connection", async (socket) => {
     }
 
     socket.on("disconnecting", async () => {
-        const profileId = socket.profileId;
-        if (!profileId) return;
-
         const rooms = socket.rooms;
+        const profileId = socket.profileId;
+        if (!profileId || !rooms.has("authenticated")) return;
+
+        disconnected.push({ id: profileId, date: new Date().getTime() });
+
 
         const profile = await Profile.getProfileById(profileId);
-        if (!profile) return;
-
-        if (rooms.has("authenticated")) {
-            disconnected.push({ id: profileId, date: new Date().getTime() });
-        }
+        if (!profile) disconnected = disconnected.filter(a => !a.id.equals(profileId));
     });
 });
 
 // disconnect
 setInterval(() => {
     disconnected.filter(a => a.date <= new Date().getTime() - 1000 * 10).forEach(async ({ id }) => {
-        if (Array.from(io.sockets.sockets.values).find(a => a.profileId.equals(id))) return;
+        if (Array.from(io.sockets.sockets.values()).find(a => a.profileId.equals(id))) return;
         const i = typing.findIndex(a => a.id.equals(id));
         if (i != -1) typing.splice(i, 1);
         await Session.disconnectMessage(await Profile.getProfileById(id).catch(console.error)).catch(console.error);

@@ -35,116 +35,119 @@ export default function Home({ integration = null }) {
 
         if (online && online.some(a => a.id === sessionStorage.getItem("chatblast-id"))) setMessageTyping(false);
 
-        if (!socket) socket = io().on("connect", () => {
-            socket.on("message.delete", id => {
-                setMessages(prev => {
-                    if (!prev) return;
-                    if (prev.some(a => a._id === id)) {
-                        if (!prev.find(a => a._id === id).isViewed) setUnread(prev => {
-                            if (!prev && prev !== 0) return;
-                            return Math.max(0, prev - 1);
+        if (!socket) {
+            socket = io({ closeOnBeforeunload: true })
+                .on("connect", () => {
+                    socket.on("message.delete", id => {
+                        setMessages(prev => {
+                            if (!prev) return;
+                            if (prev.some(a => a._id === id)) {
+                                if (!prev.find(a => a._id === id).isViewed) setUnread(prev => {
+                                    if (!prev && prev !== 0) return;
+                                    return Math.max(0, prev - 1);
+                                });
+                                return prev.filter(message => message._id !== id);
+                            }
                         });
-                        return prev.filter(message => message._id !== id);
-                    }
-                });
-            });
-            socket.on("message.send", message => {
-                setMessages(prev => {
-                    if (!prev) return;
+                    });
+                    socket.on("message.send", message => {
+                        setMessages(prev => {
+                            if (!prev) return;
 
-                    setUnread(prev => {
-                        return (prev || 0) + 1;
-                    });
-                    setTyping(prev => {
-                        if (!prev) return;
-                        return prev.filter(a => a.id !== message.author._id);
-                    });
-                    setNewMessage(true);
+                            setUnread(prev => {
+                                return (prev || 0) + 1;
+                            });
+                            setTyping(prev => {
+                                if (!prev) return;
+                                return prev.filter(a => a.id !== message.author._id);
+                            });
+                            setNewMessage(true);
 
-                    prev.push(message);
+                            prev.push(message);
 
-                    return prev;
-                });
+                            return prev;
+                        });
 
-                if (!isInPage) notification.play().catch(() => { });
-            });
-            socket.on("messages.view", views => {
-                setMessages(curr => {
-                    if (!curr) return;
-                    var unread_ = 0;
-                    views.forEach(view => {
-                        const index = curr.findIndex(a => a._id === view.id);
-                        if (index !== -1) {
-                            curr[index].views = view.views;
-                            if (!curr[index].isViewed && view.isViewed) unread_++;
-                            curr[index].isViewed = view.isViewed;
-                        }
+                        if (!isInPage) notification.play().catch(() => { });
                     });
-                    setUnread(prev => Math.max((prev || 0) - unread_, 0));
-                    return curr;
-                });
-            });
-            socket.on("profile.join", profile => {
-                setMessages(prev => {
-                    if (!prev) return prev;
-                    prev.push({
-                        _id: ObjectID().toHexString(),
-                        author: { username: "SYSTEM" },
-                        mentions: [{ id: profile.id, username: profile.username }],
-                        content: `{mention[0]} a rejoint la conversation.`,
-                        ephemeral: true,
-                        date: new Date().toISOString()
+                    socket.on("messages.view", views => {
+                        setMessages(curr => {
+                            if (!curr) return;
+                            var unread_ = 0;
+                            views.forEach(view => {
+                                const index = curr.findIndex(a => a._id === view.id);
+                                if (index !== -1) {
+                                    curr[index].views = view.views;
+                                    if (!curr[index].isViewed && view.isViewed) unread_++;
+                                    curr[index].isViewed = view.isViewed;
+                                }
+                            });
+                            setUnread(prev => Math.max((prev || 0) - unread_, 0));
+                            return curr;
+                        });
                     });
-                    setUnread(prev => {
-                        return (prev || 0) + 1;
-                    });
-                    return prev;
-                });
-                setOnline(prev => {
-                    if (!prev) return;
-                    if (prev.find(a => a.id === profile.id)) return prev;
-                    prev.push(profile);
-                    return prev;
-                });
+                    socket.on("profile.join", profile => {
+                        setMessages(prev => {
+                            if (!prev) return prev;
+                            prev.push({
+                                _id: ObjectID().toHexString(),
+                                author: { username: "SYSTEM" },
+                                mentions: [{ id: profile.id, username: profile.username }],
+                                content: `{mention[0]} a rejoint la conversation.`,
+                                ephemeral: true,
+                                date: new Date().toISOString()
+                            });
+                            setUnread(prev => {
+                                return (prev || 0) + 1;
+                            });
+                            return prev;
+                        });
+                        setOnline(prev => {
+                            if (!prev) return;
+                            if (prev.find(a => a.id === profile.id)) return prev;
+                            prev.push(profile);
+                            return prev;
+                        });
 
-                notification.play().catch(() => { });
-            });
-            socket.on("profile.leave", profile => {
-                setMessages(prev => {
-                    if (!prev) return;
-                    prev.push({
-                        _id: ObjectID().toHexString(),
-                        author: { username: "SYSTEM" },
-                        mentions: [{ id: profile.id, username: profile.username }],
-                        content: `{mention[0]} a quitté la conversation.`,
-                        ephemeral: true,
-                        date: new Date().toISOString()
+                        notification.play().catch(() => { });
                     });
-                    setUnread(prev => {
-                        return (prev || 0) + 1;
-                    });
-                    return prev;
-                });
-                setTyping(prev => {
-                    if (!prev) return;
-                    return prev.filter(a => a.id !== profile.id);
-                });
-                setOnline(prev => {
-                    if (!prev) return;
-                    return prev.filter(a => a.id !== profile.id);
-                });
+                    socket.on("profile.leave", profile => {
+                        setMessages(prev => {
+                            if (!prev) return;
+                            prev.push({
+                                _id: ObjectID().toHexString(),
+                                author: { username: "SYSTEM" },
+                                mentions: [{ id: profile.id, username: profile.username }],
+                                content: `{mention[0]} a quitté la conversation.`,
+                                ephemeral: true,
+                                date: new Date().toISOString()
+                            });
+                            setUnread(prev => {
+                                return (prev || 0) + 1;
+                            });
+                            return prev;
+                        });
+                        setTyping(prev => {
+                            if (!prev) return;
+                            return prev.filter(a => a.id !== profile.id);
+                        });
+                        setOnline(prev => {
+                            if (!prev) return;
+                            return prev.filter(a => a.id !== profile.id);
+                        });
 
-                notification.play().catch(() => { });
-            });
-            socket.on("message.typing", _typing => {
-                setTyping(prev => {
-                    if (!prev) return;
-                    if (_typing.isTyping && !prev.some(a => a.id === _typing.id)) return [...prev, { id: _typing.id, username: _typing.username }];
-                    else if (!_typing.isTyping && prev.some(a => a.id === _typing.id)) return prev.filter(a => a.id !== _typing.id);
-                    return prev;
+                        notification.play().catch(() => { });
+                    });
+                    socket.on("message.typing", _typing => {
+                        setTyping(prev => {
+                            if (!prev) return;
+                            if (_typing.isTyping && !prev.some(a => a.id === _typing.id)) return [...prev, { id: _typing.id, username: _typing.username }];
+                            else if (!_typing.isTyping && prev.some(a => a.id === _typing.id)) return prev.filter(a => a.id !== _typing.id);
+                            return prev;
+                        });
+                    });
                 });
-            });
-        });
+        }
 
         getOnline(setOnline, setError);
         getTyping(setTyping, setError);
@@ -153,12 +156,6 @@ export default function Home({ integration = null }) {
 
         return () => {
             if (socket) {
-                socket.off('message.delete');
-                socket.off('message.send');
-                socket.off('messages.view');
-                socket.off('profile.join');
-                socket.off('profile.leave');
-                socket.off('message.typing');
                 socket.disconnect();
                 socket = undefined;
             }
