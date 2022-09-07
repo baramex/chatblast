@@ -15,7 +15,7 @@ const messageSchema = new Schema({
 messageSchema.post("updateMany", async function (doc, next) {
     if (doc.modifiedCount >= 1) {
         var messages = await Message.getMessagesByIds(this.getQuery()._id.$in);
-        (await io.to("integrationid:" + doc.integrationId?.toString()).fetchSockets()).forEach(socket => {
+        (await io.to("integrationid:" + messages[0].integrationId?.toString()).fetchSockets()).forEach(socket => {
             socket.emit("messages.view", messages.map(a => ({ id: a._id, views: a.views.length, isViewed: a.views.includes(socket.profileId) })));
         });
     }

@@ -16,7 +16,7 @@ let isInPage = true;
 
 const notification = new Audio("/sounds/notification.wav");
 
-export default function Home() {
+export default function Home({ integration = null }) {
     const [error, setError] = useState(undefined);
     const [success, setSuccess] = useState(undefined);
     const [wantToDelete, setWantToDelete] = useState(undefined);
@@ -31,7 +31,7 @@ export default function Home() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        if (!isLogged()) return navigate("/login");
+        if (!isLogged(integration)) return navigate("/login");
 
         if (online && online.some(a => a.id === sessionStorage.getItem("chatblast-id"))) setMessageTyping(false);
 
@@ -166,7 +166,7 @@ export default function Home() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    if (!isLogged()) return null;
+    if (!isLogged(integration)) return null;
     return (<div onMouseEnter={() => handleMouseEnter(messages, setUnread, setMessages)} onMouseLeave={handleMouseLeave} className="d-flex flex-column" style={{ height: "100vh" }}>
         {error && <ErrorPopup message={error} onClose={() => setError("")} />}
         {success && <SuccessPopup message={success} onClose={() => setSuccess("")} />}

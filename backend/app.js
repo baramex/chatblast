@@ -20,7 +20,6 @@ const { default: axios } = require("axios");
 mongoose.connect(process.env.DB, { dbName: process.env.DB_NAME });
 
 // BUG: integration: double socket join
-// BUG: integration: read message
 
 let typing = [];
 let disconnected = [];

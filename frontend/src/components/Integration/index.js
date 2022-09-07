@@ -15,6 +15,8 @@ export default function Integration() {
     const [integration, setIntegration] = useState(null);
     const [error, setError] = useState(null);
     const [token, setToken] = useState(null);
+    // eslint-disable-next-line no-unused-vars
+    const [update, setUpdate] = useState(null);
 
     useEffect(() => {
         getIntegration(id, setIntegration, setError);
@@ -42,7 +44,7 @@ export default function Integration() {
             if (integration.type === INTEGRATIONS_TYPE.CUSTOM_AUTH) {
                 if (!token) setError("Connectez-vous au site pour accéder à cette page.");
                 else {
-                    oauthProfile_(id, token, setError);
+                    oauthProfile_(id, token, setError, setUpdate);
                 }
             }
             else {
@@ -54,7 +56,7 @@ export default function Integration() {
 
     return (<>
         {
-            error ? <ErrorPopup message={error} canClose={false} /> : integration && isLogged(id) ? <Home /> : <div className="position-absolute top-50 start-50 translate-middle"><Loading color="text-white" size="lg" /></div>
+            error ? <ErrorPopup message={error} canClose={false} /> : integration && isLogged(id) ? <Home integration={id} /> : <div className="position-absolute top-50 start-50 translate-middle"><Loading color="text-white" size="lg" /></div>
         }
     </>);
 }
@@ -68,12 +70,13 @@ async function getIntegration(id, setIntegration, setError) {
     }
 }
 
-async function oauthProfile_(id, token, setError) {
+async function oauthProfile_(id, token, setError, setUpdate) {
     try {
         const profile = await oauthProfile(id, token);
 
         sessionStorage.setItem("chatblast-id", profile.id);
         sessionStorage.setItem("chatblast-username", profile.username);
+        setUpdate(true);
     } catch (error) {
         setError(error.message || error);
     }
