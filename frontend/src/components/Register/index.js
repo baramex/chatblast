@@ -2,25 +2,28 @@ import React, { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { isLogged, registerUser } from "../../lib/service/authentification";
 import Footer from "../Layout/Footer";
+import ConfirmPopup from "../Misc/ConfirmPopup";
 import ErrorPopup from "../Misc/ErrorPopup";
 
 export default function Register() {
     const [error, setError] = React.useState(undefined);
     const [avatar, setAvatar] = React.useState(undefined);
+    const [requestTerms, setRequestTerms] = React.useState(undefined);
     const navigate = useNavigate();
 
     useEffect(() => {
-        if (isLogged()) navigate("/");
+        if (isLogged()) navigate(window.location.pathname + "/../");
         document.title = "ChatBlast | inscription";
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     if (isLogged()) return null;
     return (<>
+        {requestTerms && <ConfirmPopup type="terms" onConfirm={() => { localStorage.setItem("terms", true); setRequestTerms(false); requestTerms.callback(); }} onClose={() => setRequestTerms(false)} />}
         {error && <ErrorPopup message={error} onClose={() => setError("")}></ErrorPopup>}
         <div className="d-flex justify-content-center align-items-center" style={{ height: "100vh", marginBottom: 60 }}>
             <form id="register-form"
-                style={{ maxWidth: 800, minWidth: "40%" }} onSubmit={e => handleRegister(e, setError, navigate)}>
+                style={{ maxWidth: 800, minWidth: "40%" }} onSubmit={e => handleRegister(e, setError, setRequestTerms, navigate)}>
                 <div className="text-center">
                     <h1 className="mb-4 fw-normal form-label">Bienvenue sur <strong>ChatBlast</strong></h1>
                     <div className="d-flex direction-column mt-4 justify-content-evenly w-100 inputs-container">
@@ -62,8 +65,12 @@ function handleAvatar(event, setAvatar, setError) {
     }
 }
 
-async function handleRegister(event, setError, navigate) {
+async function handleRegister(event, setError, setRequestTerms, navigate) {
     event.preventDefault();
+
+    if (!localStorage.getItem("terms")) {
+        return setRequestTerms({ callback: () => handleRegister(event, setError, setRequestTerms, navigate) });
+    }
 
     event.target.querySelectorAll("input").forEach(a => a.disabled = true);
     try {
@@ -83,8 +90,9 @@ async function handleRegister(event, setError, navigate) {
 
         sessionStorage.setItem("chatblast-username", user.username);
         sessionStorage.setItem("chatblast-id", user.id);
+        sessionStorage.setItem("chatblast-anonyme", user.anonyme || false);
 
-        navigate("/");
+        navigate(window.location.pathname + "/../");
     } catch (error) {
         setError(error.message || error);
         event.target.querySelectorAll("input").forEach(a => a.disabled = false);

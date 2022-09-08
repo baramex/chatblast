@@ -2,13 +2,9 @@ import { useEffect, useState } from "react";
 import { isLogged } from "../../lib/service/authentification";
 import { fetchIntegration, oauthProfile } from "../../lib/service/integration";
 import Home from "../Home";
+import ConfirmPopup from "../Misc/ConfirmPopup";
 import ErrorPopup from "../Misc/ErrorPopup";
 import Loading from "../Misc/Loading";
-
-const INTEGRATIONS_TYPE = {
-    CUSTOM_AUTH: 0,
-    ANONYMOUS_AUTH: 1,
-};
 
 export default function Integration() {
     const [id] = useState(window.location.pathname.split("/").pop());
@@ -17,6 +13,7 @@ export default function Integration() {
     const [token, setToken] = useState(null);
     // eslint-disable-next-line no-unused-vars
     const [update, setUpdate] = useState(null);
+    const [requestTerms, setRequestTerms] = useState(undefined);
 
     useEffect(() => {
         getIntegration(id, setIntegration, setError);
@@ -40,23 +37,21 @@ export default function Integration() {
     }, []);
 
     useEffect(() => {
-        if (integration && !error && !isLogged(id)) {
-            if (integration.type === INTEGRATIONS_TYPE.CUSTOM_AUTH) {
+        if (integration && !error && !isLogged(id) && !requestTerms) {
+            if (!localStorage.getItem("terms")) setRequestTerms(true);
+            else {
                 if (!token) setError("Connectez-vous au site pour accéder à cette page.");
                 else {
                     oauthProfile_(id, token, setError, setUpdate);
                 }
             }
-            else {
-
-            }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [integration, token]);
+    }, [integration, token, requestTerms]);
 
     return (<>
         {
-            error ? <ErrorPopup message={error} canClose={false} /> : integration && isLogged(id) ? <Home integration={id} /> : <div className="position-absolute top-50 start-50 translate-middle"><Loading color="text-white" size="lg" /></div>
+            error ? <ErrorPopup message={error} canClose={false} /> : requestTerms ? <ConfirmPopup type="terms" onConfirm={() => { localStorage.setItem("terms", true); setRequestTerms(false); }} onClose={() => setRequestTerms(false)} /> : integration && isLogged(id) ? <Home integration={id} /> : <div className="position-absolute top-50 start-50 translate-middle"><Loading color="text-white" size="lg" /></div>
         }
     </>);
 }
@@ -76,6 +71,7 @@ async function oauthProfile_(id, token, setError, setUpdate) {
 
         sessionStorage.setItem("chatblast-id", profile.id);
         sessionStorage.setItem("chatblast-username", profile.username);
+        sessionStorage.setItem("chatblast-anonyme", profile.anonyme || false);
         setUpdate(true);
     } catch (error) {
         setError(error.message || error);

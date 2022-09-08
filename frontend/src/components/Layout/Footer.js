@@ -7,7 +7,7 @@ export default function Footer({ extra = "Conditions d'utilisation", extralink =
                 <p className="mb-0 text-white w-100">Tous droits réservés 2022</p>
                 <p className="mb-0 text-white w-100 text-center">Développé par <a rel="noreferrer" href="https://www.github.com/baramex" target="_blank">Baramex</a> & <a rel="noreferrer" href="https://github.com/vipexe" target="_blank">VipeX</a>
                 </p>
-                <p className="w-100 text-end mb-0"><Link to={extralink}>{extra}</Link></p>
+                <p className="w-100 text-end mb-0"><Link target={extralink === "/terms" ? "_blank" : ""} to={extralink}>{extra}</Link></p>
             </footer>
         </>
     );

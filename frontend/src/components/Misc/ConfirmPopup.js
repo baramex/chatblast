@@ -1,5 +1,5 @@
 import Popup from "./Popup";
 
-export default function ConfirmPopup({ message, onClose = undefined, onConfirm = undefined, canClose = true }) {
-    return <Popup message={message} type="confirm" onConfirm={onConfirm} onClose={onClose} canClose={canClose} />;
+export default function ConfirmPopup({ message, onClose = undefined, onConfirm = undefined, type, canClose = true }) {
+    return <Popup message={message} type={type} onConfirm={onConfirm} onClose={onClose} canClose={canClose} />;
 }

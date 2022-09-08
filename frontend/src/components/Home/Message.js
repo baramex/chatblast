@@ -4,8 +4,8 @@ import useElementOnScreen from "../../lib/hooks/useElementOnScreen";
 function Message(props) {
     const date = new Date(props.date);
 
-    const isSystem = props.author.username === "SYSTEM";
-    const isMy = !isSystem && props.author._id === sessionStorage.getItem("chatblast-id");
+    const isSystem = props.author?.username === "SYSTEM";
+    const isMy = !isSystem && props.author?._id === sessionStorage.getItem("chatblast-id");
     const formattedDate = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")} ${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}`;
     let content = props.content;
 
@@ -64,7 +64,7 @@ function Message(props) {
         <div ref={message} id={"m-" + props._id} className={`p${isMy ? "s" : "e"}-4 pb-3 my-4 m${isMy ? "s" : "e"}-4 message ${!props.isViewed ? "unread" : ""} rounded-pill rounded-${isMy ? "end" : "start"} ${isMy ? "my" : ""}`}>
             <div className="d-flex justify-content-between p-2">
                 <div className="ms-2 d-flex align-items-baseline">
-                    <p className="fs-4 m-0 text-black">{props.author.username}</p>
+                    <p className="fs-4 m-0 text-black">{props.author?.username || "Deleted user"}</p>
                     <span className="ms-3">{formattedDate}</span>
                 </div>
                 <div className="d-flex align-items-center">
@@ -91,7 +91,7 @@ function Message(props) {
             </div>
 
             <div className="d-flex">
-                <img className="ms-3 rounded-circle object-fit-cover" width="50" height="50" alt="message-avatar" src={isSystem ? "/images/system.png" : `/profile/${(props.author._id)}/avatar`} />
+                <img className="ms-3 rounded-circle object-fit-cover" width="50" height="50" alt="message-avatar" src={isSystem ? "/images/system.png" : `/profile/${props.author?._id || "deleted"}/avatar`} />
                 <p className="mx-2  mt-2 fs-6 text-break text" style={{ flexGrow: 1 }} dangerouslySetInnerHTML={isSystem ? { __html: content } : null}>
                     {!isSystem ? content : null}
                 </p>

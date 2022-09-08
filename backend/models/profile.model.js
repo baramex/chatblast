@@ -9,6 +9,7 @@ const profileSchema = new Schema({
     password: { type: String },
     integrationId: { type: Types.ObjectId },
     avatar: { type: { flag: String, extention: String, url: { type: String, validate: (e) => isURL(e) || isDataURI(e) }, _id: false }, default: { flag: "", extention: "", url: "" } },
+    anonyme: Boolean,
     date: { type: Date, default: Date.now }
 });
 
@@ -19,9 +20,9 @@ profileSchema.path("userId").validate(async function (v) {
 const profileModel = model("Profile", profileSchema, "profiles");
 
 class Profile {
-    static create(username, password, id, avatar, integrationId) {
+    static create(username, password, id, avatar, integrationId, anonyme = false) {
         return new Promise(async (res, rej) => {
-            new profileModel({ username, password: password ? await bcrypt.hash(password, 10) : undefined, userId: id, avatar: avatar ? { url: avatar } : undefined, integrationId }).save().then(res).catch((error) => {
+            new profileModel({ username, password: password ? await bcrypt.hash(password, 10) : undefined, userId: id, avatar: avatar ? { url: avatar } : undefined, integrationId, anonyme }).save().then(res).catch((error) => {
                 if (error.code == 11000 && error.keyPattern.username) rej(new Error("Un compte est déjà asssocié à ce nom d'utilisateur."));
                 else rej(error);
             });
@@ -43,6 +44,7 @@ class Profile {
     static async check(username, password) {
         var profile = await profileModel.findOne({ username });
         if (!profile) return false;
+        if (!profile.password) return false;
         if (await bcrypt.compare(password, profile.password)) return profile;
         return false;
     }

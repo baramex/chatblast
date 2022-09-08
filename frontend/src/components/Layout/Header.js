@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { logoutUser, resetSession } from "../../lib/service/authentification";
 import HiddenTab from "../Misc/HiddenTab";
 
@@ -77,7 +77,11 @@ export default function Header({ onlineCount, onlines }) {
                             <img width="55" height="55" className="rounded-circle bg-light object-fit-cover" src={`/profile/${sessionStorage.getItem("chatblast-id")}/avatar`} alt="account-menu" />
                             <p className="fw-bold fs-4 ms-3 text-white m-0">{sessionStorage.getItem("chatblast-username")}</p>
                         </li>
-                        <li><button onClick={e => handleLogout(e, navigate)} className="btn btn-danger w-100 py-2 fs-5 rounded-pill mt-3 mb-2">Se déconnecter</button></li>
+                        <li>
+                            {
+                                sessionStorage.getItem("chatblast-anonyme") ? <Link to="login">connectez-vous</Link> : <button onClick={e => handleLogout(e, navigate)} className="btn btn-danger w-100 py-2 fs-5 rounded-pill mt-3 mb-2">Se déconnecter</button>
+                            }
+                        </li>
                         <li className="mb-3 mt-4"><span className="text-white fs-5">{((onlineCount || onlineCount === 0) ? onlineCount : "--") + " en ligne"}</span></li>
                         {
                             onlines && onlines.map(online => <li className="online d-flex align-items-center ms-1 my-2" key={online.id}>
@@ -110,7 +114,7 @@ async function handleLogout(event, navigate) {
     try {
         await logoutUser();
         resetSession();
-        navigate("/login");
+        navigate("login");
     } catch (error) {
         event.target.disabled = false;
         console.error(error);

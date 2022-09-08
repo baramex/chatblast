@@ -31,7 +31,7 @@ export default function Home({ integration = null }) {
     const navigate = useNavigate();
 
     useEffect(() => {
-        if (!isLogged(integration)) return navigate("/login");
+        if (!isLogged(integration)) return navigate("login");
 
         if (online && online.some(a => a.id === sessionStorage.getItem("chatblast-id"))) setMessageTyping(false);
 
@@ -250,6 +250,7 @@ async function getUser(setUnread, setError) {
         setUnread(prev => (prev || 0) + user.unread);
         sessionStorage.setItem("chatblast-id", user.id);
         sessionStorage.setItem("chatblast-username", user.username);
+        sessionStorage.setItem("chatblast-anonyme", user.anonyme || false);
     } catch (error) {
         setError(error.message || error);
     }

@@ -138,10 +138,10 @@ class SessionMiddleware {
             const cookieName = ObjectId.isValid(id) ? id + "-token" : "token";
 
             const session = await Session.getSession(req.cookies[cookieName], req.fingerprint.hash);
-            if (!session) return res.sendStatus(401);
+            if (!session) return res.clearCookie(cookieName, { sameSite: "none", secure: "true" }).sendStatus(401);
 
             const profile = await Profile.getProfileById(session.profileId);
-            if (!profile) return res.sendStatus(401);
+            if (!profile) return res.clearCookie(cookieName, { sameSite: "none", secure: "true" }).sendStatus(401);
 
             req.session = session;
             req.profile = profile;
