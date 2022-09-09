@@ -51,9 +51,9 @@ async function handleLogin(event, setError, setRequestTerms, navigate) {
 
         const response = await loginUser(username, password);
 
-        sessionStorage.setItem("chatblast-username", response.username);
-        sessionStorage.setItem("chatblast-id", response.id);
-        sessionStorage.setItem("chatblast-anonyme", response.anonyme || false);
+        sessionStorage.setItem("username", response.username);
+        sessionStorage.setItem("id", response.id);
+        sessionStorage.setItem("type", response.type);
 
         navigate(window.location.pathname + "/../");
     } catch (error) {

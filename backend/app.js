@@ -1,7 +1,3 @@
-/* constantes */
-const FIELD_REGEX = /^[a-z]{1,32}$/;
-const USERNAMES_NOT_ALLOWED = ["system"];
-
 /* modules */
 require("dotenv").config();
 const cors = require('cors');
@@ -9,7 +5,7 @@ const rateLimit = require("express-rate-limit");
 const mongoose = require("mongoose");
 const { ObjectId } = mongoose.Types;
 const path = require("path");
-const { Profile } = require("./models/profile.model");
+const { Profile, USERS_TYPE, FIELD_REGEX } = require("./models/profile.model");
 const { Session, SessionMiddleware } = require("./models/session.model");
 const fs = require("fs");
 const { Message } = require("./models/message.model");
@@ -27,13 +23,14 @@ let disconnected = [];
 
 io.on("connection", async (socket) => {
     const id = socket.handshake.headers.referer?.split("/").pop();
-    const cookieName = ObjectId.isValid(id) ? id + "-token" : "token";
+    const cookieName = (ObjectId.isValid(id) && socket.handshake.headers.cookie?.includes(id + "-token=")) ? id + "-token" : "token";
     const token = socket.handshake.headers.cookie?.split("; ")?.find(a => a.startsWith(cookieName + "="))?.replace(cookieName + "=", "");
     if (token) {
         const session = await Session.getSessionByToken(token).catch(console.error);
         if (session) {
             const profile = await Profile.getProfileById(session.profileId).catch(console.error);
-            if (profile) {
+            const integration = await Integration.getById(id);
+            if (profile && !(ObjectId.isValid(id) && cookieName === "token" && profile.type !== USERS_TYPE.DEFAULT) && (integration ? integration.type === INTEGRATIONS_TYPE.ANONYMOUS_AUTH ? profile.type !== USERS_TYPE.OAUTHED : profile.type !== USERS_TYPE.ANONYME : profile.type === USERS_TYPE.DEFAULT)) {
                 socket.profileId = session.profileId;
                 socket.integrationId = profile.integrationId;
 
@@ -47,6 +44,8 @@ io.on("connection", async (socket) => {
             }
         }
     }
+
+    if (!socket.rooms.has("authenticated")) return socket.disconnect(true);
 
     socket.on("disconnecting", async () => {
         const rooms = socket.rooms;
@@ -74,7 +73,7 @@ setInterval(() => {
 }, 1000 * 10);
 
 // récupérer avatar
-app.get("/profile/:id/avatar", SessionMiddleware.auth, async (req, res) => {
+app.get("/profile/:id/avatar", SessionMiddleware.auth, IntegrationMiddleware.parseIntegration, async (req, res) => {
     try {
         const id = req.params.id;
         if (!id || (!ObjectId.isValid(id) && id != "@me" && id != "deleted")) throw new Error("Requête invalide.");
@@ -110,7 +109,12 @@ app.get("/api/integration/:id", async (req, res) => {
     }
 });
 
-app.post("/api/integration/:int_id/profile/oauth", SessionMiddleware.isAuthed, IntegrationMiddleware.parseIntegration, async (req, res) => {
+app.post("/api/integration/:int_id/profile/oauth", rateLimit({
+    windowMs: 1000 * 60 * 2,
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false
+}), SessionMiddleware.isAuthed, IntegrationMiddleware.parseIntegration, async (req, res) => {
     try {
         if (req.isAuthed) throw new Error("Vous êtes déjà authentifié.");
 
@@ -128,13 +132,13 @@ app.post("/api/integration/:int_id/profile/oauth", SessionMiddleware.isAuthed, I
             }
 
             let result = (await axios.get(req.integration.options.verifyAuthToken.route, config).catch(() => { throw new Error("Erreur de vérification du token.") })).data;
-            if (!result || !result.username || !result.id || typeof result.username != "string" || typeof result.id != "string" || typeof result.avatar != "string" || USERNAMES_NOT_ALLOWED.includes(result.username)) throw new Error("Erreur de vérification du token.");
+            if (!result || !result.username || !result.id || typeof result.username != "string" || typeof result.id != "string" || typeof result.avatar != "string") throw new Error("Erreur de vérification du token.");
 
             // get/update or create user
             var profile = await Profile.getProfileByUserId(result.id) ||
-                await Profile.create(await Profile.generateUnsedUsername(result.username).catch(() => { throw new Error("Erreur de vérification du token.") }), undefined, result.id, result.avatar, req.integration._id);
+                await Profile.create(await Profile.generateUnsedUsername(USERS_TYPE.OAUTHED, result.username, req.integration._id).catch(() => { throw new Error("Erreur de vérification du token.") }), undefined, result.id, result.avatar, req.integration._id, USERS_TYPE.OAUTHED);
             if (profile.username != result.username || profile.avatar.url != result.avatar) {
-                profile.username = result.username === profile.username ? profile.username : await Profile.generateUnsedUsername(result.username).catch(() => { throw new Error("Erreur de vérification du token.") });
+                profile.username = result.username === profile.username ? profile.username : await Profile.generateUnsedUsername(USERS_TYPE.OAUTHED, result.username, req.integration._id).catch(() => { throw new Error("Erreur de vérification du token.") });
                 profile.avatar.url = result.avatar;
 
                 await profile.save({ validateBeforeSave: true });
@@ -154,13 +158,13 @@ app.post("/api/integration/:int_id/profile/oauth", SessionMiddleware.isAuthed, I
         }
         else {
             // anonyme login
-            const username = await Profile.generateUnsedUsername("ano" + Math.floor(Math.random() * 1000).toString().padStart(3, "0"));
-            var profile = await Profile.create(username, undefined, undefined, undefined, req.integration._id, true);
+            const username = await Profile.generateUnsedUsername(USERS_TYPE.ANONYME, "ano" + Math.floor(Math.random() * 1000).toString().padStart(3, "0"), req.integration._id);
+            var profile = await Profile.create(username, undefined, undefined, undefined, req.integration._id, USERS_TYPE.ANONYME);
             var session = await Session.create(profile._id, req.fingerprint.hash, getClientIp(req));
         }
 
         const expires = new Date(24 * 60 * 60 * 1000 + new Date().getTime());
-        res.cookie(req.integration ? req.integration._id.toString() + "-token" : "token", session.token, { expires, sameSite: "none", secure: "true" }).json({ id: profile._id, username: profile.username, anonyme: profile.anonyme });
+        res.cookie(profile.type === USERS_TYPE.DEFAULT ? "token" : req.integration._id.toString() + "-token", session.token, { expires, sameSite: "none", secure: "true" }).json({ id: profile._id, username: profile.username, type: profile.type });
     } catch (error) {
         console.error(error);
         res.status(400).send(error.message || "Erreur inattendue");
@@ -185,7 +189,7 @@ app.get("/api/profiles/online", SessionMiddleware.auth, IntegrationMiddleware.pa
 
 // récupérer profil
 app.get("/api/profile/@me", SessionMiddleware.auth, IntegrationMiddleware.parseIntegration, async (req, res) => {
-    res.status(200).send({ username: req.profile.username, id: req.profile._id, unread: await Message.getUnreadCount(req.profile), anonyme: req.profile.anonyme });
+    res.status(200).send({ username: req.profile.username, id: req.profile._id, unread: await Message.getUnreadCount(req.profile), type: req.profile.type });
 });
 
 // upload avatar fonctionne
@@ -230,14 +234,13 @@ app.post("/api/profile", rateLimit({
         username = username.toLowerCase().trim();
         password = password.trim();
 
-        if (USERNAMES_NOT_ALLOWED.includes(username)) throw new Error("Nom d'utilisateur non autorisé.");
         if (!/^(((?=.*[a-z])(?=.*[A-Z]))|((?=.*[a-z])(?=.*[0-9]))|((?=.*[A-Z])(?=.*[0-9])))(?=.{6,32}$)/.test(password) || !FIELD_REGEX.test(username)) throw new Error("Requête invalide.");
 
-        const profile = await Profile.create(username, password, undefined, undefined, req.integration?._id);
+        const profile = await Profile.create(username, password, undefined, undefined, req.integration?._id, USERS_TYPE.DEFAULT);
         const ip = getClientIp(req);
         const session = await Session.create(profile._id, req.fingerprint.hash, ip);
         const expires = new Date(24 * 60 * 60 * 1000 + new Date().getTime());
-        res.cookie(req.integration ? req.integration._id.toString() + "-token" : "token", session.token, { expires, sameSite: "none", secure: "true" }).json({ username: profile.username, id: profile._id, unread: await Message.getUnreadCount(profile), anonyme: profile.anonyme });
+        res.cookie("token", session.token, { expires, sameSite: "none", secure: "true" }).json({ username: profile.username, id: profile._id, unread: await Message.getUnreadCount(profile), type: profile.type });
     }
     catch (error) {
         console.error(error);
@@ -249,7 +252,7 @@ app.post("/api/profile", rateLimit({
 app.delete("/api/profile", SessionMiddleware.auth, IntegrationMiddleware.parseIntegration, async (req, res) => {
     try {
         await Session.disable(req.session);
-        res.clearCookie(req.integration ? req.integration._id.toString() + "-token" : "token", { sameSite: "none", secure: "true" }).sendStatus(200);
+        res.clearCookie((req.integration && req.profile.type !== USERS_TYPE.DEFAULT) ? req.integration._id.toString() + "-token" : "token", { sameSite: "none", secure: "true" }).sendStatus(200);
     } catch (error) {
         console.error(error);
         res.status(400).send(error.message || "Erreur inattendue");
@@ -257,7 +260,12 @@ app.delete("/api/profile", SessionMiddleware.auth, IntegrationMiddleware.parseIn
 });
 
 // connexion
-app.post("/api/login", SessionMiddleware.isAuthed, IntegrationMiddleware.parseIntegration, async (req, res) => {
+app.post("/api/login", rateLimit({
+    windowMs: 1000 * 60,
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false
+}), SessionMiddleware.isAuthed, IntegrationMiddleware.parseIntegration, async (req, res) => {
     try {
         if (req.isAuthed) throw new Error("Vous êtes déjà authentifié.");
         if (!req.body || !req.body.username || !req.body.password || typeof req.body.username != "string") throw new Error("Requête invalide.");
@@ -265,7 +273,7 @@ app.post("/api/login", SessionMiddleware.isAuthed, IntegrationMiddleware.parseIn
         const { username, password } = req.body;
 
         const profile = await Profile.check(username, password);
-        if (!profile || ((profile.integrationId || req.integration) ? !profile.integrationId?.equals(req.integration?._id) : false)) throw new Error("Identifants incorrects.");
+        if (!profile || (((profile && (req.integration || profile.integrationId)) && profile.type !== USERS_TYPE.DEFAULT) ? !profile.integrationId?.equals(req.integration?._id) : false)) throw new Error("Identifants incorrects.");
 
         let session = await Session.getSessionByProfileId(profile._id);
         const ip = getClientIp(req);
@@ -279,7 +287,7 @@ app.post("/api/login", SessionMiddleware.isAuthed, IntegrationMiddleware.parseIn
         }
 
         const expires = new Date(24 * 60 * 60 * 1000 + new Date().getTime());
-        res.cookie(req.integration ? req.integration._id.toString() + "-token" : "token", session.token, { expires, sameSite: "none", secure: "true" }).json({ username: profile.username, id: profile._id, unread: await Message.getUnreadCount(profile), anonyme: profile.anonyme });
+        res.cookie((req.integration && profile.type !== USERS_TYPE.DEFAULT) ? req.integration._id.toString() + "-token" : "token", session.token, { expires, sameSite: "none", secure: "true" }).json({ username: profile.username, id: profile._id, unread: await Message.getUnreadCount(profile), type: profile.type });
     } catch (error) {
         console.error(error);
         res.status(400).send(error.message || "Erreur inattendue");
@@ -370,7 +378,7 @@ app.delete("/api/message/:id", SessionMiddleware.auth, IntegrationMiddleware.par
     try {
         const id = req.params.id;
         const message = await Message.getById(new ObjectId(id));
-        if (!message.author._id.equals(req.profile._id)) return res.sendStatus(403);
+        if (!message.author || !message.author._id.equals(req.profile._id)) return res.sendStatus(403);
 
         message.deleted = true;
         await message.save();

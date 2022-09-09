@@ -1,6 +1,12 @@
 import { api } from ".";
 import { getCookie } from "../utils/cookie";
 
+export const USERS_TYPE = {
+    DEFAULT: 0,
+    ANONYME: 1,
+    OAUTHED: 2
+};
+
 export function loginUser(username, password) {
     return api("/login", "post", { username, password });
 }

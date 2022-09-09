@@ -69,9 +69,10 @@ async function oauthProfile_(id, token, setError, setUpdate) {
     try {
         const profile = await oauthProfile(id, token);
 
-        sessionStorage.setItem("chatblast-id", profile.id);
-        sessionStorage.setItem("chatblast-username", profile.username);
-        sessionStorage.setItem("chatblast-anonyme", profile.anonyme || false);
+        sessionStorage.setItem("id", profile.id);
+        sessionStorage.setItem("username", profile.username);
+        sessionStorage.setItem("type", profile.type);
+        
         setUpdate(true);
     } catch (error) {
         setError(error.message || error);

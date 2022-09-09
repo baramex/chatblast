@@ -19,8 +19,6 @@ export default function App() {
                 <Route path="/" element={<Home />} />
 
                 <Route path="/integrations/:id" element={<Integration />} />
-                <Route path="/integrations/:id/login" element={<Login />} />
-                <Route path="/integrations/:id/register" element={<Register />} />
 
                 <Route path="*" element={<Error404 />} />
             </Routes>

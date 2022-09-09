@@ -1,7 +1,7 @@
 const { Schema, model, default: mongoose } = require("mongoose");
 const token = require("random-web-token");
 const { io } = require("../server");
-const { Profile } = require("./profile.model");
+const { Profile, USERS_TYPE } = require("./profile.model");
 const { ObjectId } = mongoose.Types;
 
 const session = new Schema({
@@ -135,12 +135,13 @@ class SessionMiddleware {
             if (!req.cookies) return res.sendStatus(401);
 
             const id = req.headers.referer?.split("/").pop();
-            const cookieName = ObjectId.isValid(id) ? id + "-token" : "token";
+            const cookieName = (ObjectId.isValid(id) && req.cookies[id + "-token"]) ? id + "-token" : "token";
 
             const session = await Session.getSession(req.cookies[cookieName], req.fingerprint.hash);
             if (!session) return res.clearCookie(cookieName, { sameSite: "none", secure: "true" }).sendStatus(401);
 
             const profile = await Profile.getProfileById(session.profileId);
+            if (ObjectId.isValid(id) && cookieName === "token" && profile.type !== USERS_TYPE.DEFAULT) return res.sendStatus(401);
             if (!profile) return res.clearCookie(cookieName, { sameSite: "none", secure: "true" }).sendStatus(401);
 
             req.session = session;
@@ -155,13 +156,13 @@ class SessionMiddleware {
         try {
             if (req.cookies) {
                 const id = req.headers.referer?.split("/").pop();
-                const cookieName = ObjectId.isValid(id) ? id + "-token" : "token";
+                const cookieName = (ObjectId.isValid(id) && req.cookies[id + "-token"]) ? id + "-token" : "token";
 
                 const session = await Session.getSession(req.cookies[cookieName], req.fingerprint.hash);
                 if (!session) throw new Error();
 
                 const profile = await Profile.getProfileById(session.profileId);
-                if (!profile) throw new Error();
+                if (!profile || (ObjectId.isValid(id) && cookieName === "token" && profile.type !== USERS_TYPE.DEFAULT)) throw new Error();
             }
 
             req.isAuthed = true;

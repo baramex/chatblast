@@ -1,5 +1,6 @@
 const { ObjectId } = require("mongodb");
 const { Schema, model, Types } = require("mongoose");
+const { USERS_TYPE } = require("./profile.model");
 
 const TOKEN_PLACES_TYPE = {
     AUTHORIZATION: 0,
@@ -17,7 +18,7 @@ const INTEGRATIONS_TYPE = {
 };
 
 const integrationSchema = new Schema({
-    owner: { type: Types.ObjectId, required: true },
+    owner: { type: Types.ObjectId, ref: "Profile", required: true },
     name: { type: String, validate: /^[a-z-0-9]{1,32}$/, default: () => "apps-" + String(Math.floor((Math.random() * 1000))).padStart(3, "0"), required: true },
     options: {
         type: {
@@ -92,8 +93,8 @@ class IntegrationMiddleware {
 
             req.integration = await Integration.getById(new ObjectId(id));
 
-            if (req.profile && req.integration) {
-                if (!req.profile.integrationId?.equals(req.integration._id)) return res.status(403).send("Non autorisé.");
+            if ((req.profile && (req.integration || req.profile.integrationId)) && req.profile.type !== USERS_TYPE.DEFAULT) {
+                if (!req.profile.integrationId?.equals(req.integration?._id) || (req.integration?.type === INTEGRATIONS_TYPE.ANONYMOUS_AUTH && req.profile.type === USERS_TYPE.OAUTHED) || (req.integration?.type === INTEGRATIONS_TYPE.CUSTOM_AUTH && req.profile.type === USERS_TYPE.ANONYME)) return res.clearCookie((req.profile.type === USERS_TYPE.DEFAULT || !req.integration) ? "token" : req.integration._id.toString() + "-token", { sameSite: "none", secure: "true" }).status(403).send("Non autorisé.");
             }
 
             return next();
