@@ -17,7 +17,7 @@ const cookie = require("cookie");
 mongoose.connect(process.env.DB, { dbName: process.env.DB_NAME });
 
 // TEST: cookies through avatar redirection
-// BUG: login (ano)
+// BUG: once logged as default: take token (not id-token) -> synchronise profile bug
 
 let typing = [];
 let disconnected = [];
@@ -413,13 +413,14 @@ app.put("/api/typing", Middleware.requiresValidAuthExpress, (req, res) => {
     }
 });
 
-app.get("/integrations/:id", Middleware.parseIntegration, async (req, res, next) => {
+app.get("/integrations/:id", Middleware.parseIntegrationExpress, async (req, res, next) => {
     try {
         const id = req.params.id;
         if (!ObjectId.isValid(id)) throw new Error();
 
         if (!req.integration) throw new Error();
 
+        // BUG: redirect
         cors((req, callback) => {
             if (!req.headers.referer) return callback("Not allowed by CORS.");
             if (req.headers.referer.endsWith("/")) req.headers.referer = req.headers.referer.slice(0, -1);
