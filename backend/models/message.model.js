@@ -61,10 +61,10 @@ class Message {
      * @param {Number} from 
      * @param {Number} number 
      */
-    static async getMessages(profile, from, number) {
+    static async getMessages(profile, integrationId, from, number) {
         if (!from || isNaN(from) || from < 0) throw new Error("La valeur de départ doit être supérieure à 0.");
         if (number > 50) throw new Error("Le nombre de message ne peut pas excéder 50.");
-        return Message.getMessagesFields(profile, await messageModel.find({ integrationId: profile.integrationId }, {}, { populate: { path: "author", select: "username" } }).sort({ date: -1 }).where("deleted", false).skip(from).limit(number));
+        return Message.getMessagesFields(profile, await messageModel.find({ integrationId }, {}, { populate: { path: "author", select: "username" } }).sort({ date: -1 }).where("deleted", false).skip(from).limit(number));
     }
 
     /**

@@ -5,14 +5,15 @@ const rateLimit = require("express-rate-limit");
 const mongoose = require("mongoose");
 const { ObjectId } = mongoose.Types;
 const path = require("path");
-const { Profile, USERS_TYPE, FIELD_REGEX } = require("./models/profile.model");
-const { Session, SessionMiddleware } = require("./models/session.model");
+const { Profile, USERS_TYPE, FIELD_REGEX, } = require("./models/profile.model");
+const { Session, Middleware } = require("./models/session.model");
 const fs = require("fs");
 const { Message } = require("./models/message.model");
 const { app, io, upload } = require("./server");
 const { getClientIp } = require("request-ip");
-const { Integration, INTEGRATIONS_TYPE, TOKEN_PLACES_TYPE, IntegrationMiddleware } = require("./models/integration.model");
+const { Integration, INTEGRATIONS_TYPE, TOKEN_PLACES_TYPE } = require("./models/integration.model");
 const { default: axios } = require("axios");
+const cookie = require("cookie");
 mongoose.connect(process.env.DB, { dbName: process.env.DB_NAME });
 
 // TEST: cookies through avatar redirection
@@ -22,30 +23,24 @@ let typing = [];
 let disconnected = [];
 
 io.on("connection", async (socket) => {
-    const id = socket.handshake.headers.referer?.split("/").pop();
-    const cookieName = (ObjectId.isValid(id) && socket.handshake.headers.cookie?.includes(id + "-token=")) ? id + "-token" : "token";
-    const token = socket.handshake.headers.cookie?.split("; ")?.find(a => a.startsWith(cookieName + "="))?.replace(cookieName + "=", "");
-    if (token) {
-        const session = await Session.getSessionByToken(token).catch(console.error);
-        if (session) {
-            const profile = await Profile.getProfileById(session.profileId).catch(console.error);
-            const integration = await Integration.getById(id);
-            if (profile && !(ObjectId.isValid(id) && cookieName === "token" && profile.type !== USERS_TYPE.DEFAULT) && (integration ? integration.type === INTEGRATIONS_TYPE.ANONYMOUS_AUTH ? profile.type !== USERS_TYPE.OAUTHED : profile.type !== USERS_TYPE.ANONYME : profile.type === USERS_TYPE.DEFAULT)) {
-                socket.profileId = session.profileId;
-                socket.integrationId = profile.integrationId;
+    Middleware.checkValidAuth(cookie.parse(socket.handshake.headers.cookie), socket.handshake.headers.referer).then(result => {
+        socket.profileId = result.session.profileId;
+        socket.integrationId = result.integration?._id;
 
-                socket.join(["authenticated", "profileid:" + session.profileId.toString(), "integrationid:" + profile.integrationId?.toString()]);
+        socket.join(["authenticated", "profileid:" + result.session.profileId.toString(), "integrationid:" + result.integration?._id.toString()]);
 
-                const d = disconnected.findIndex(a => a.id.equals(profile._id));
-                if (d != -1) disconnected.splice(d, 1);
-                else {
-                    await Session.connectMessage(profile).catch(console.error);
-                }
-            }
+        const d = disconnected.findIndex(a => a.id.equals(result.profile._id) && (a.integrationId || result.integration) ? a.integrationId?.equals(result.integration?._id) : true);
+        if (d != -1) disconnected.splice(d, 1);
+        else if (!Array.from(io.sockets.sockets.values()).find(a => a.profileId?.equals(result.profile._id) && (a.integrationId || result.integration) ? a.integrationId?.equals(result.integration?._id) : true)) {
+            Session.connectMessage(result.profile, result.integration?._id).catch(console.error);
         }
-    }
 
-    if (!socket.rooms.has("authenticated")) return socket.disconnect(true);
+        socket.emit("connected");
+    }).catch(e => {
+        console.error(e);
+        socket.disconnect(true)
+    });
+
 
     socket.on("disconnecting", async () => {
         const rooms = socket.rooms;
@@ -53,7 +48,7 @@ io.on("connection", async (socket) => {
         if (!profileId || !rooms.has("authenticated")) return;
 
         const i = disconnected.findIndex(a => a.id.equals(profileId));
-        if (i === -1) disconnected.push({ id: profileId, date: new Date().getTime() });
+        if (i === -1) disconnected.push({ id: profileId, intid: socket.integrationId, date: new Date().getTime() });
         else disconnected[i].date = new Date().getTime();
 
         const profile = await Profile.getProfileById(profileId);
@@ -63,17 +58,17 @@ io.on("connection", async (socket) => {
 
 // disconnect
 setInterval(() => {
-    disconnected.filter(a => a.date <= new Date().getTime() - 1000 * 10).forEach(async ({ id }) => {
-        if (Array.from(io.sockets.sockets.values()).find(a => a.profileId?.equals(id))) return;
+    disconnected.filter(a => a.date <= new Date().getTime() - 1000 * 10).forEach(async ({ id, intid }) => {
+        if (Array.from(io.sockets.sockets.values()).find(a => a.profileId?.equals(id) && (a.integrationId || intid) ? a.integrationId?.equals(intid) : true)) return;
         const i = typing.findIndex(a => a.id.equals(id));
         if (i != -1) typing.splice(i, 1);
-        await Session.disconnectMessage(await Profile.getProfileById(id).catch(console.error)).catch(console.error);
+        await Session.disconnectMessage(await Profile.getProfileById(id).catch(console.error), intid).catch(console.error);
     });
     disconnected = disconnected.filter(a => a.date > new Date().getTime() - 1000 * 10);
 }, 1000 * 10);
 
 // récupérer avatar
-app.get("/profile/:id/avatar", SessionMiddleware.auth, IntegrationMiddleware.parseIntegration, async (req, res) => {
+app.get("/profile/:id/avatar", Middleware.requiresValidAuthExpress, async (req, res) => {
     try {
         const id = req.params.id;
         if (!id || (!ObjectId.isValid(id) && id != "@me" && id != "deleted")) throw new Error("Requête invalide.");
@@ -102,7 +97,7 @@ app.get("/api/integration/:id", async (req, res) => {
         const integration = await Integration.getById(new ObjectId(id));
         if (!integration) throw new Error("Intégration introuvable.");
 
-        res.json({ state: integration.state, type: integration.type, cookieName: integration.options.cookieName });
+        res.json({ id: integration._id, state: integration.state, type: integration.type, cookieName: integration.options.cookieName });
     } catch (error) {
         console.error(error);
         res.status(400).send(error.message || "Erreur inattendue");
@@ -114,7 +109,7 @@ app.post("/api/integration/:int_id/profile/oauth", rateLimit({
     max: 5,
     standardHeaders: true,
     legacyHeaders: false
-}), SessionMiddleware.isAuthed, IntegrationMiddleware.parseIntegration, async (req, res) => {
+}), Middleware.isValidAuthExpress, Middleware.parseIntegrationExpress, async (req, res) => {
     try {
         if (req.isAuthed) throw new Error("Vous êtes déjà authentifié.");
 
@@ -177,9 +172,9 @@ app.get("/api/user/@me", (req, res) => {
 });
 
 // utilisateurs en ligne
-app.get("/api/profiles/online", SessionMiddleware.auth, IntegrationMiddleware.parseIntegration, async (req, res) => {
+app.get("/api/profiles/online", Middleware.requiresValidAuthExpress, async (req, res) => {
     try {
-        const online = (await io.to("integrationid:" + req.integration?._id.toString()).fetchSockets()).map(a => a.profileId).concat(disconnected.map(a => a.id));
+        const online = (await io.to("integrationid:" + req.integration?._id.toString()).fetchSockets()).map(a => a.profileId).concat(disconnected.filter(a => (a.intid || req.integration) ? a.intid?.equals(req.integration?._id) : true).map(a => a.id));
         res.status(200).send((await Profile.getUsernamesByIds(online)).map(a => ({ id: a._id, username: a.username })));
     } catch (error) {
         console.error(error);
@@ -188,17 +183,17 @@ app.get("/api/profiles/online", SessionMiddleware.auth, IntegrationMiddleware.pa
 });
 
 // récupérer profil
-app.get("/api/profile/@me", SessionMiddleware.auth, IntegrationMiddleware.parseIntegration, async (req, res) => {
+app.get("/api/profile/@me", Middleware.requiresValidAuthExpress, async (req, res) => {
     res.status(200).send({ username: req.profile.username, id: req.profile._id, unread: await Message.getUnreadCount(req.profile), type: req.profile.type });
 });
 
-// upload avatar fonctionne
+// upload avatar
 app.put("/api/profile/@me/avatar", rateLimit({
     windowMs: 1000 * 60 * 10,
     max: 5,
     standardHeaders: true,
     legacyHeaders: false
-}), SessionMiddleware.auth, IntegrationMiddleware.parseIntegration, upload.single("avatar"), async (req, res) => {
+}), Middleware.requiresValidAuthExpress, upload.single("avatar"), async (req, res) => {
     try {
         if (!req.file) throw new Error("Requête invalide.");
 
@@ -225,7 +220,7 @@ app.post("/api/profile", rateLimit({
     max: 5,
     standardHeaders: true,
     legacyHeaders: false
-}), SessionMiddleware.isAuthed, IntegrationMiddleware.parseIntegration, async (req, res) => {
+}), Middleware.isValidAuthExpress, async (req, res) => {
     try {
         if (req.isAuthed) throw new Error("Vous êtes déjà authentifié.");
         if (!req.body || !req.body.username || !req.body.password || typeof req.body.username != "string" || typeof req.body.password != "string") throw new Error("Requête invalide.");
@@ -236,7 +231,7 @@ app.post("/api/profile", rateLimit({
 
         if (!/^(((?=.*[a-z])(?=.*[A-Z]))|((?=.*[a-z])(?=.*[0-9]))|((?=.*[A-Z])(?=.*[0-9])))(?=.{6,32}$)/.test(password) || !FIELD_REGEX.test(username)) throw new Error("Requête invalide.");
 
-        const profile = await Profile.create(username, password, undefined, undefined, req.integration?._id, USERS_TYPE.DEFAULT);
+        const profile = await Profile.create(username, password, undefined, undefined, undefined, USERS_TYPE.DEFAULT);
         const ip = getClientIp(req);
         const session = await Session.create(profile._id, req.fingerprint.hash, ip);
         const expires = new Date(24 * 60 * 60 * 1000 + new Date().getTime());
@@ -249,7 +244,7 @@ app.post("/api/profile", rateLimit({
 });
 
 // supprimer la session
-app.delete("/api/profile", SessionMiddleware.auth, IntegrationMiddleware.parseIntegration, async (req, res) => {
+app.delete("/api/profile", Middleware.requiresValidAuthExpress, async (req, res) => {
     try {
         await Session.disable(req.session);
         res.clearCookie((req.integration && req.profile.type !== USERS_TYPE.DEFAULT) ? req.integration._id.toString() + "-token" : "token", { sameSite: "none", secure: "true" }).sendStatus(200);
@@ -265,7 +260,7 @@ app.post("/api/login", rateLimit({
     max: 5,
     standardHeaders: true,
     legacyHeaders: false
-}), SessionMiddleware.isAuthed, IntegrationMiddleware.parseIntegration, async (req, res) => {
+}), Middleware.isValidAuthExpress, Middleware.parseIntegrationExpress, async (req, res) => {
     try {
         if (req.isAuthed) throw new Error("Vous êtes déjà authentifié.");
         if (!req.body || !req.body.username || !req.body.password || typeof req.body.username != "string") throw new Error("Requête invalide.");
@@ -273,7 +268,7 @@ app.post("/api/login", rateLimit({
         const { username, password } = req.body;
 
         const profile = await Profile.check(username, password);
-        if (!profile || (((profile && (req.integration || profile.integrationId)) && profile.type !== USERS_TYPE.DEFAULT) ? !profile.integrationId?.equals(req.integration?._id) : false)) throw new Error("Identifants incorrects.");
+        if (!profile) throw new Error("Identifants incorrects.");
 
         let session = await Session.getSessionByProfileId(profile._id);
         const ip = getClientIp(req);
@@ -305,7 +300,7 @@ app.put("/api/message", rateLimit({
     max: 20,
     standardHeaders: true,
     legacyHeaders: false
-}), SessionMiddleware.auth, IntegrationMiddleware.parseIntegration, async (req, res) => {
+}), Middleware.requiresValidAuthExpress, async (req, res) => {
     try {
         if (!req.body || !req.body.content || typeof req.body.content != "string") throw new Error("Requête invalide.");
 
@@ -323,12 +318,12 @@ app.put("/api/message", rateLimit({
 });
 
 // récupérer des messages
-app.get("/api/messages", SessionMiddleware.auth, IntegrationMiddleware.parseIntegration, async (req, res) => {
+app.get("/api/messages", Middleware.requiresValidAuthExpress, async (req, res) => {
     try {
         if (!req.query || !req.query.from) throw new Error("Requête invalide.");
 
         const from = req.query.from;
-        const mes = await Message.getMessages(req.profile, from, 20);
+        const mes = await Message.getMessages(req.profile, req.integration?._id, from, 20);
         res.status(200).json(mes);
     } catch (error) {
         console.error(error);
@@ -337,7 +332,7 @@ app.get("/api/messages", SessionMiddleware.auth, IntegrationMiddleware.parseInte
 });
 
 // voir des messages
-app.put("/api/messages/view", SessionMiddleware.auth, IntegrationMiddleware.parseIntegration, async (req, res) => {
+app.put("/api/messages/view", Middleware.requiresValidAuthExpress, async (req, res) => {
     try {
         if (!req.body || !req.body.ids) throw new Error("Requête invalide.");
 
@@ -357,7 +352,7 @@ app.put("/api/messages/view", SessionMiddleware.auth, IntegrationMiddleware.pars
     }
 });
 
-app.put("/api/messages/view/all", SessionMiddleware.auth, IntegrationMiddleware.parseIntegration, async (req, res) => {
+app.put("/api/messages/view/all", Middleware.requiresValidAuthExpress, async (req, res) => {
     try {
         const unreadMessages = await Message.getUnread(req.profile);
 
@@ -374,7 +369,7 @@ app.put("/api/messages/view/all", SessionMiddleware.auth, IntegrationMiddleware.
 });
 
 // supprimer un message
-app.delete("/api/message/:id", SessionMiddleware.auth, IntegrationMiddleware.parseIntegration, async (req, res) => {
+app.delete("/api/message/:id", Middleware.requiresValidAuthExpress, async (req, res) => {
     try {
         const id = req.params.id;
         const message = await Message.getById(new ObjectId(id));
@@ -391,7 +386,7 @@ app.delete("/api/message/:id", SessionMiddleware.auth, IntegrationMiddleware.par
 });
 
 // récupérer ceux qui évrivent
-app.get("/api/profiles/typing", SessionMiddleware.auth, IntegrationMiddleware.parseIntegration, async (req, res) => {
+app.get("/api/profiles/typing", Middleware.requiresValidAuthExpress, async (req, res) => {
     try {
         res.status(200).json(typing.filter(a => a.integrationId?.equals(req.integration?._id)));
     } catch (error) {
@@ -401,15 +396,15 @@ app.get("/api/profiles/typing", SessionMiddleware.auth, IntegrationMiddleware.pa
 });
 
 // écrire
-app.put("/api/typing", SessionMiddleware.auth, IntegrationMiddleware.parseIntegration, (req, res) => {
+app.put("/api/typing", Middleware.requiresValidAuthExpress, (req, res) => {
     try {
         const isTyping = req.body.isTyping ? true : false;
 
         const i = typing.findIndex(a => a.id.equals(req.profile._id));
         if ((i == -1 && !isTyping) || (i != -1 && isTyping)) return res.sendStatus(200);
 
-        if (isTyping) addTyping(req.profile);
-        else removeTyping(req.profile);
+        if (isTyping) addTyping(req.profile, req.integration?._id);
+        else removeTyping(req.profile, req.integration?._id);
 
         res.sendStatus(201);
     } catch (error) {
@@ -418,7 +413,7 @@ app.put("/api/typing", SessionMiddleware.auth, IntegrationMiddleware.parseIntegr
     }
 });
 
-app.get("/integrations/:id", IntegrationMiddleware.parseIntegration, async (req, res, next) => {
+app.get("/integrations/:id", Middleware.parseIntegration, async (req, res, next) => {
     try {
         const id = req.params.id;
         if (!ObjectId.isValid(id)) throw new Error();
@@ -451,17 +446,17 @@ function generateID(length) {
     return b.join("");
 }
 
-function addTyping(profile) {
+function addTyping(profile, integrationId) {
     if (!typing.some(a => a.id.equals(profile._id))) {
-        typing.push({ id: profile._id, username: profile.username, integrationId: profile.integrationId });
-        io.to("integrationid:" + profile.integrationId?.toString()).emit("message.typing", { isTyping: true, id: profile._id, username: profile.username });
+        typing.push({ id: profile._id, username: profile.username, integrationId });
+        io.to("integrationid:" + integrationId?.toString()).emit("message.typing", { isTyping: true, id: profile._id, username: profile.username });
     }
 }
 
-function removeTyping(profile) {
+function removeTyping(profile, integrationId) {
     const i = typing.findIndex(a => a.id.equals(profile._id));
     if (i != -1) {
         typing.splice(i, 1);
-        io.to("integrationid:" + profile.integrationId?.toString()).emit("message.typing", { isTyping: false, id: profile._id, username: profile.username });
+        io.to("integrationid:" + integrationId?.toString()).emit("message.typing", { isTyping: false, id: profile._id, username: profile.username });
     }
 }

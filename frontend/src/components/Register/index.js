@@ -12,12 +12,13 @@ export default function Register() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        if (isLogged()) navigate(window.location.pathname + "/../");
+        if (isLogged()) navigate(new URLSearchParams(window.location.search).get("to") || "/");
         document.title = "ChatBlast | inscription";
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     if (isLogged()) return null;
+
     return (<>
         {requestTerms && <ConfirmPopup type="terms" onConfirm={() => { localStorage.setItem("terms", true); setRequestTerms(false); requestTerms.callback(); }} onClose={() => setRequestTerms(false)} />}
         {error && <ErrorPopup message={error} onClose={() => setError("")}></ErrorPopup>}
@@ -42,7 +43,7 @@ export default function Register() {
                                 name="password" autoComplete="off" maxLength="32" required />
                             <input type="password" className="form-control fs-4 mt-4 mb-2" id="password_"
                                 placeholder="Confirmez votre mot de passe" autoComplete="off" maxLength="32" required />
-                            <Link to="/login" className="fs-6 align-top">Vous avez déjà un compte ?</Link>
+                            <Link to={"/login" + window.location.search} className="fs-6 align-top">Vous avez déjà un compte ?</Link>
                         </div>
                     </div>
                 </div>
@@ -92,7 +93,7 @@ async function handleRegister(event, setError, setRequestTerms, navigate) {
         sessionStorage.setItem("id", user.id);
         sessionStorage.setItem("type", user.type);
 
-        navigate(window.location.pathname + "/../");
+        navigate(new URLSearchParams(window.location.search).get("to") || "/");
     } catch (error) {
         setError(error.message || error);
         event.target.querySelectorAll("input").forEach(a => a.disabled = false);

@@ -1,6 +1,4 @@
-const { ObjectId } = require("mongodb");
 const { Schema, model, Types } = require("mongoose");
-const { USERS_TYPE } = require("./profile.model");
 
 const TOKEN_PLACES_TYPE = {
     AUTHORIZATION: 0,
@@ -85,24 +83,4 @@ class Integration {
     }
 }
 
-class IntegrationMiddleware {
-    static async parseIntegration(req, res, next) {
-        try {
-            const id = req.headers.referer.includes(process.env.HOST + "/integrations/") ? req.headers.referer?.split("/").pop() : undefined;
-            if (id && !ObjectId.isValid(id)) throw new Error("Requête invalide.");
-
-            req.integration = await Integration.getById(new ObjectId(id));
-
-            if ((req.profile && (req.integration || req.profile.integrationId)) && req.profile.type !== USERS_TYPE.DEFAULT) {
-                if (!req.profile.integrationId?.equals(req.integration?._id) || (req.integration?.type === INTEGRATIONS_TYPE.ANONYMOUS_AUTH && req.profile.type === USERS_TYPE.OAUTHED) || (req.integration?.type === INTEGRATIONS_TYPE.CUSTOM_AUTH && req.profile.type === USERS_TYPE.ANONYME)) return res.clearCookie((req.profile.type === USERS_TYPE.DEFAULT || !req.integration) ? "token" : req.integration._id.toString() + "-token", { sameSite: "none", secure: "true" }).status(403).send("Non autorisé.");
-            }
-
-            return next();
-        } catch (error) {
-            console.error(error);
-            res.status(400).send(error.message || "Erreur inattendue");
-        }
-    }
-}
-
-module.exports = { Integration, IntegrationMiddleware, INTEGRATIONS_TYPE, TOKEN_PLACES_TYPE };
+module.exports = { Integration, INTEGRATIONS_TYPE, TOKEN_PLACES_TYPE };

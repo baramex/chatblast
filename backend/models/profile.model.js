@@ -2,8 +2,6 @@ const { Schema, model, Types } = require("mongoose");
 const bcrypt = require('bcrypt');
 const { default: isURL } = require("validator/lib/isURL");
 const { default: isDataURI } = require("validator/lib/isDataURI");
-const { Session } = require("./session.model");
-const { Integration, INTEGRATIONS_TYPE } = require("./integration.model");
 
 const USERS_TYPE = {
     DEFAULT: 0,
@@ -82,38 +80,4 @@ class Profile {
     }
 }
 
-class ProfileMiddleware {
-    static async checkUserLogin(cookies) {
-        if (!cookies) throw new Error();
-        const cookieName = (ObjectId.isValid(id) && cookies[id + "-token"]) ? id + "-token" : "token";
-
-        const token = cookies[cookieName];
-        if (!token) throw new Error();
-
-        const session = await Session.getSessionByToken(token);
-        if (!session) throw new Error({ cookieName });
-
-        const profile = await Profile.getProfileById(session.profileId);
-        if (!profile) throw new Error({ cookieName });
-        if (cookieName === "token" && profile.type !== USERS_TYPE.DEFAULT) throw new Error();
-
-        const integration = await Integration.getById(id);
-        if (!integration && cookieName.endsWith("-token")) throw new Error({ cookieName });
-        if (integration && profile.type !== USERS_TYPE.OAUTHED && !integration._id.equals(profile.integrationId)) throw new Error({ cookieName });
-        if (integration && integration.type === INTEGRATIONS_TYPE.ANONYMOUS_AUTH && profile.type === USERS_TYPE.OAUTHED) throw new Error({ cookieName });
-        if (integration && integration.type === INTEGRATIONS_TYPE.CUSTOM_AUTH && profile.type === USERS_TYPE.ANONYME) throw new Error({ cookieName });
-        if (!integration && profile.type !== USERS_TYPE.DEFAULT) throw new Error({ cookieName });
-    }
-
-    static async checkUserLoginExpress(req, res, next) {
-        try {
-            await ProfileMiddleware.checkUserLogin(req.cookies);
-            next();
-        } catch (error) {
-            if (error.cookieName) res.clearCookie(cookieName, { sameSite: "none", secure: "true" });
-            res.sendStatus(401);
-        }
-    }
-}
-
-module.exports = { Profile, USERS_TYPE, FIELD_REGEX, ProfileMiddleware };
+module.exports = { Profile, USERS_TYPE, FIELD_REGEX };

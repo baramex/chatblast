@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { logoutUser, resetSession, USERS_TYPE } from "../../lib/service/authentification";
 import HiddenTab from "../Misc/HiddenTab";
 
-export default function Header({ onlineCount, onlines }) {
+export default function Header({ onlineCount, onlines, integrationId }) {
     const button = useRef();
     const burger = useRef();
     const navigate = useNavigate();
@@ -60,7 +60,7 @@ export default function Header({ onlineCount, onlines }) {
     }, [burger]);
 
     return (<>
-        <header className="text-center position-relative d-flex justify-content-between align-items-center px-3">
+        <header className="text-center position-relative d-flex justify-content-between align-items-center px-3 py-1">
             <div className="w-100">
                 <div className="py-2 px-3 d-flex justify-content-start align-items-center onlines">
                     <div className="online-circle rounded-circle me-3"></div>
@@ -79,7 +79,7 @@ export default function Header({ onlineCount, onlines }) {
                         </li>
                         <li>
                             {
-                                Number(sessionStorage.getItem("type")) === USERS_TYPE.ANONYME ? <Link to="login">connectez-vous</Link> : <button onClick={e => handleLogout(e, navigate)} className="btn btn-danger w-100 py-2 fs-5 rounded-pill mt-3 mb-2">Se déconnecter</button>
+                                Number(sessionStorage.getItem("type")) === USERS_TYPE.ANONYME ? <Link to={"/login" + (integrationId ? "?to=/integrations/" + integrationId : "")}>connectez-vous</Link> : Number(sessionStorage.getItem("type")) === USERS_TYPE.OAUTHED ? null : <button onClick={e => handleLogout(e, integrationId, navigate)} className="btn btn-danger w-100 py-2 fs-5 rounded-pill mt-3 mb-2">Se déconnecter</button>
                             }
                         </li>
                         <li className="mb-3 mt-4"><span className="text-white fs-5">{((onlineCount || onlineCount === 0) ? onlineCount : "--") + " en ligne"}</span></li>
@@ -92,7 +92,7 @@ export default function Header({ onlineCount, onlines }) {
                     </ul>
                 </div>
             </div>
-            <h1 className="title text-light d-inline-block">ChatBlast</h1>
+            <h1 className="title text-light d-inline-block m-0">ChatBlast</h1>
             <div className="position-relative w-100 h-100">
                 <button ref={button} className="toggle-menu px-0 py-1 border-0 rounded-circle position-absolute top-0 end-0 bg-transparent h-100" aria-expanded="false" style={{ zIndex: 2 }}>
                     <img className="rounded-circle bg-light h-100 object-fit-cover" style={{ aspectRatio: "1/1" }} src={`/profile/${sessionStorage.getItem("id")}/avatar`} alt="account-menu" />
@@ -100,7 +100,7 @@ export default function Header({ onlineCount, onlines }) {
                 <div className="shadow-lg position-fixed top-0 end-0 me-3 mt-1 d-flex flex-column bg-light-theme menu" style={{ zIndex: 1 }}>
                     <p className="fw-bold fs-4 mt-2" style={{ color: "#737373", marginRight: 60, marginLeft: 60 }}>{sessionStorage.getItem("username")}</p>
                     <ul className="p-0 m-0" style={{ listStyle: "none" }}>
-                        <li><button onClick={e => handleLogout(e, navigate)} className="border-0 bg-transparent pb-3 px-5"><img width="25" className="me-2 align-bottom" src="/images/logout.png" alt="logout" />Se déconnecter</button></li>
+                        <li><button onClick={e => handleLogout(e, integrationId, navigate)} className="border-0 bg-transparent pb-3 px-5"><img width="25" className="me-2 align-bottom" src="/images/logout.png" alt="logout" />Se déconnecter</button></li>
                     </ul>
                 </div>
             </div>
@@ -109,12 +109,12 @@ export default function Header({ onlineCount, onlines }) {
     </>);
 }
 
-async function handleLogout(event, navigate) {
+async function handleLogout(event, integrationId, navigate) {
     event.target.disabled = true;
     try {
         await logoutUser();
         resetSession();
-        navigate("login");
+        navigate("/login" + (integrationId ? "?to=/integrations/" + integrationId : ""));
     } catch (error) {
         event.target.disabled = false;
         console.error(error);

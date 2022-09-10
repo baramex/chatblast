@@ -1,5 +1,10 @@
 const { api } = require(".");
 
+export const INTEGRATIONS_TYPE = {
+    CUSTOM_AUTH: 0,
+    ANONYMOUS_AUTH: 1,
+};
+
 export function fetchIntegration(id) {
     return api("/integration/" + id, "GET");
 }

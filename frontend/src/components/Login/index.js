@@ -11,12 +11,13 @@ export default function Login() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        if (isLogged()) navigate(window.location.pathname + "/../");
+        if (isLogged()) navigate(new URLSearchParams(window.location.search).get("to") || "/");
         document.title = "ChatBlast | connexion";
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     if (isLogged()) return null;
+
     return (<>
         {requestTerms && <ConfirmPopup type="terms" onConfirm={() => { localStorage.setItem("terms", true); setRequestTerms(false); requestTerms.callback(); }} onClose={() => setRequestTerms(false)} />}
         {error && <ErrorPopup message={error} onClose={() => setError("")}></ErrorPopup>}
@@ -28,7 +29,7 @@ export default function Login() {
                 <input type="password" className="form-control fs-4 mt-4" id="password" placeholder="Mot de passe"
                     name="password" autoComplete="off" maxLength="32" required />
             </div>
-            <Link to={window.location.pathname + "/../register"}>Vous n'avez pas de compte ?</Link>
+            <Link to={"/register" + window.location.search}>Vous n'avez pas de compte ?</Link>
             <div className="text-center mt-4">
                 <input type="submit" name="submit" className="btn btn-outline-dark btn-lg fs-5 px-5" value="Continuer" />
             </div>
@@ -55,7 +56,7 @@ async function handleLogin(event, setError, setRequestTerms, navigate) {
         sessionStorage.setItem("id", response.id);
         sessionStorage.setItem("type", response.type);
 
-        navigate(window.location.pathname + "/../");
+        navigate(new URLSearchParams(window.location.search).get("to") || "/");
     } catch (error) {
         setError(error.message || error);
         event.target.querySelectorAll("input").forEach(a => a.disabled = false);

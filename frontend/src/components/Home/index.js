@@ -16,7 +16,7 @@ let isInPage = true;
 
 const notification = new Audio("/sounds/notification.wav");
 
-export default function Home({ integration = null }) {
+export default function Home({ integrationId = undefined, logged = false }) {
     const [error, setError] = useState(undefined);
     const [success, setSuccess] = useState(undefined);
     const [wantToDelete, setWantToDelete] = useState(undefined);
@@ -31,13 +31,16 @@ export default function Home({ integration = null }) {
     const navigate = useNavigate();
 
     useEffect(() => {
-        if (!isLogged(integration)) return navigate("login");
+        if (!isLogged() && !logged) return navigate("/login" + (integrationId ? "?to=/integrations/" + integrationId : ""));
 
         if (online && online.some(a => a.id === sessionStorage.getItem("id"))) setMessageTyping(false);
 
         if (!socket) {
             socket = io({ closeOnBeforeunload: true })
-                .on("connect", () => {
+                .on("connected", () => {
+                    getOnline(setOnline, setError);
+                    getTyping(setTyping, setError);
+
                     socket.on("message.delete", id => {
                         setMessages(prev => {
                             if (!prev) return;
@@ -147,10 +150,11 @@ export default function Home({ integration = null }) {
                         });
                     });
                 });
+        } else {
+            getOnline(setOnline, setError);
+            getTyping(setTyping, setError);
         }
 
-        getOnline(setOnline, setError);
-        getTyping(setTyping, setError);
         getUser(setUnread, setError);
         getMessages(fetchedAll, messages, setMessages, setFetchedAll, setError);
 
@@ -163,13 +167,14 @@ export default function Home({ integration = null }) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    if (!isLogged(integration)) return null;
+    if (!isLogged() && !logged) return null;
+
     return (<div onMouseEnter={() => handleMouseEnter(messages, setUnread, setMessages)} onMouseLeave={handleMouseLeave} className="d-flex flex-column" style={{ height: "100vh" }}>
         {error && <ErrorPopup message={error} onClose={() => setError("")} />}
         {success && <SuccessPopup message={success} onClose={() => setSuccess("")} />}
         {wantToDelete && <ConfirmPopup message="Êtes-vous sûr de vouloir supprimer ce message ?" onConfirm={() => { confirmDeleteMessage(wantToDelete, setError, setMessages, setSuccess); setWantToDelete(undefined); }} onClose={() => setWantToDelete(undefined)} />}
 
-        <Header onlineCount={online?.length} onlines={online} />
+        <Header integrationId={integrationId} onlineCount={online?.length} onlines={online} />
 
         <div className="d-flex h-100">
             <OnlineContaier online={online} />
