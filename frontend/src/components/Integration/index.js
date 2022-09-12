@@ -29,11 +29,13 @@ export default function Integration() {
         const callback = (message) => {
             const data = message.data;
             if (data?.name === "token") {
+                console.log("message received");
                 setToken(data.value);
             }
         }
 
         window.addEventListener("message", callback);
+        console.log("send message");
         window.parent.postMessage("chatblast:token", "*");
 
         return () => {

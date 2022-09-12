@@ -28,6 +28,10 @@ export function sendMarkAsRead() {
     return api("/messages/view/all", "put");
 }
 
+export function fetchMemberMessagesCount(id) {
+    return api("/messages/" + id + "/count", "get");
+}
+
 let viewToSend = [];
 export function addToViewToSend(id) {
     viewToSend.push(id);

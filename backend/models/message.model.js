@@ -91,6 +91,10 @@ class Message {
         return messageModel.find({ views: { $not: { $all: [profile._id] } }, date: { $gt: profile.date }, integrationId: profile.integrationId, deleted: false });
     }
 
+    static getMemberMessagesCount(id) {
+        return messageModel.count({ author: id, deleted: false });
+    }
+
     /**
      * 
      * @param {ObjectId[]} ids

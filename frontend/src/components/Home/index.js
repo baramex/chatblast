@@ -10,6 +10,7 @@ import SuccessPopup from "../Misc/SuccessPopup";
 import MessageContainer from "./MessageContainer";
 import ObjectID from "bson-objectid";
 import OnlineContaier from "./OnlineContainer";
+import ProfileViewer from "../Misc/ProfilViewer";
 const { io } = require("socket.io-client");
 let socket;
 let isInPage = true;
@@ -173,6 +174,8 @@ export default function Home({ integrationId = undefined, logged = false }) {
         {error && <ErrorPopup message={error} onClose={() => setError("")} />}
         {success && <SuccessPopup message={success} onClose={() => setSuccess("")} />}
         {wantToDelete && <ConfirmPopup message="Êtes-vous sûr de vouloir supprimer ce message ?" onConfirm={() => { confirmDeleteMessage(wantToDelete, setError, setMessages, setSuccess); setWantToDelete(undefined); }} onClose={() => setWantToDelete(undefined)} />}
+
+        <ProfileViewer profile={{ _id: sessionStorage.getItem("id"), username: sessionStorage.getItem("username"), online: online.find(a => a.id === sessionStorage.getItem("id")), date: new Date("2022-05-05") }} />
 
         <Header integrationId={integrationId} onlineCount={online?.length} onlines={online} />
 

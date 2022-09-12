@@ -61,7 +61,7 @@ function Message(props) {
     }, []);
 
     return (
-        <div ref={message} id={"m-" + props._id} className={`p${isMy ? "s" : "e"}-4 pb-3 my-4 m${isMy ? "s" : "e"}-4 message ${!props.isViewed ? "unread" : ""} rounded-pill rounded-${isMy ? "end" : "start"} ${isMy ? "my" : ""}`}>
+        <div ref={message} id={"m-" + props._id} className={`p${isMy ? "s" : "e"}-4 pb-3 my-4 m${isMy ? "s" : "e"}-4 message ${!props.isViewed ? "unread" : ""} rounded-6 rounded-${isMy ? "end" : "start"}-0 ${isMy ? "my" : ""}`}>
             <div className="d-flex justify-content-between p-2">
                 <div className="ms-2 d-flex align-items-baseline">
                     <p className="fs-4 m-0 text-black">{props.author?.username || "Deleted user"}</p>
@@ -90,9 +90,9 @@ function Message(props) {
                 </div>
             </div>
 
-            <div className="d-flex">
-                <img className="ms-3 rounded-circle object-fit-cover" width="50" height="50" alt="message-avatar" src={isSystem ? "/images/system.png" : `/profile/${props.author?._id || "deleted"}/avatar`} />
-                <p className="mx-2  mt-2 fs-6 text-break text" style={{ flexGrow: 1 }} dangerouslySetInnerHTML={isSystem ? { __html: content } : null}>
+            <div className="ms-3 me-4 d-grid" style={{gridTemplateColumns: "50px 1fr"}}>
+                <img className="rounded-circle object-fit-cover" width="50" height="50" alt="message-avatar" src={isSystem ? "/images/system.png" : `/profile/${props.author?._id || "deleted"}/avatar`} />
+                <p className="ms-3 fs-6 m-0 text-break align-self-center" dangerouslySetInnerHTML={isSystem ? { __html: content } : null}>
                     {!isSystem ? content : null}
                 </p>
             </div>

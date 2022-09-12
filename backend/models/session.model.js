@@ -152,11 +152,16 @@ class Middleware {
         else if (integration && integration.type === INTEGRATIONS_TYPE.CUSTOM_AUTH && profile.type !== USERS_TYPE.OAUTHED) throw new Error({ cookieName });
         if (!integration && profile.type !== USERS_TYPE.DEFAULT) throw new Error({ cookieName });
 
+        if(integration && !profile.integrations.includes(integration._id)) {
+            profile.integrations.push(integration._id);
+            profile.save();
+        }
+
         return { profile, session, integration };
     }
 
     static async parseIntegration(referer) {
-        const id = referer.includes(process.env.HOST + "/integrations/") ? referer?.split("/").pop() : undefined;
+        const id = referer?.includes(process.env.HOST + "/integrations/") ? referer?.split("/").pop() : undefined;
         if (!ObjectId.isValid(id)) return;
         const integration = await Integration.getById(new ObjectId(id));
         return integration;

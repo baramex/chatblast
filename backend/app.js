@@ -17,7 +17,6 @@ const cookie = require("cookie");
 mongoose.connect(process.env.DB, { dbName: process.env.DB_NAME });
 
 // TEST: cookies through avatar redirection
-// BUG: once logged as default: take token (not id-token) -> synchronise profile bug
 
 let typing = [];
 let disconnected = [];
@@ -331,6 +330,18 @@ app.get("/api/messages", Middleware.requiresValidAuthExpress, async (req, res) =
     }
 });
 
+app.get("/api/messages/:id/count", Middleware.requiresValidAuthExpress, async (req, res) => {
+    try {
+        if (!req.params.id || !ObjectId.isValid(req.params.id)) throw new Error("Requête invalide.");
+
+        const mes = await Message.getMemberMessagesCount(req.params.id);
+        res.status(200).json(mes);
+    } catch (error) {
+        console.error(error);
+        res.status(400).send(error.message || "Erreur inattendue");
+    }
+});
+
 // voir des messages
 app.put("/api/messages/view", Middleware.requiresValidAuthExpress, async (req, res) => {
     try {
@@ -413,23 +424,23 @@ app.put("/api/typing", Middleware.requiresValidAuthExpress, (req, res) => {
     }
 });
 
-app.get("/integrations/:id", Middleware.parseIntegrationExpress, async (req, res, next) => {
+app.get("/integrations/:id", async (req, res, next) => {
     try {
         const id = req.params.id;
         if (!ObjectId.isValid(id)) throw new Error();
 
-        if (!req.integration) throw new Error();
+        const integration = await Integration.getById(id);
+        if (!integration) throw new Error();
 
-        // BUG: redirect
         cors((req, callback) => {
             if (!req.headers.referer) return callback("Not allowed by CORS.");
             if (req.headers.referer.endsWith("/")) req.headers.referer = req.headers.referer.slice(0, -1);
-            if (req.headers.referer !== req.integration.options.domain) return callback("Not allowed by CORS.");
+            if (req.headers.referer !== integration.options.domain) return callback("Not allowed by CORS.");
             callback(null, { origin: true });
         })(req, res, next);
     } catch (error) {
-        console.error(error);
-        res.redirect("/");
+        console.error("integration cors", error);
+        res.status(403).send("Not allowed by CORS.");
     }
 });
 

@@ -11,6 +11,10 @@ body {
     scroll-behavior: smooth;
 }
 
+.text-gray {
+    color: #303030;
+}
+
 header {
     background-color: #1C9D6F;
 }
@@ -40,6 +44,10 @@ header {
 .form-inset:hover,
 .form-inset:focus {
     box-shadow: inset 0 0 6px 2px rgba(0, 0, 0, .1);
+}
+
+.profile-avatar-change:hover>div {
+    transform: translate(-50%, 0) !important;
 }
 
 .menu {
@@ -181,6 +189,30 @@ footer {
 
 a {
     color: #00170c;
+}
+
+.rounded-6 {
+    border-radius: 70px;
+}
+
+.rounded-start-0 {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+.rounded-end-0 {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.rounded-top-0 {
+    border-top-left-radius: 0 !important;
+    border-top-right-radius: 0 !important;
+}
+
+.rounded-bottom-0 {
+    border-bottom-right-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
 }
 
 footer a {
