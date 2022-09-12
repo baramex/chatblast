@@ -182,8 +182,18 @@ app.get("/api/profiles/online", Middleware.requiresValidAuthExpress, async (req,
 });
 
 // récupérer profil
-app.get("/api/profile/@me", Middleware.requiresValidAuthExpress, async (req, res) => {
-    res.status(200).send({ username: req.profile.username, id: req.profile._id, unread: await Message.getUnreadCount(req.profile), type: req.profile.type });
+app.get("/api/profile/:id", Middleware.requiresValidAuthExpress, async (req, res) => {
+    try {
+        const id = req.params.id;
+        if (!id || (!ObjectId.isValid(id) && id != "@me")) throw new Error("Requête invalide.");
+
+        const profile = id === "@me" ? req.profile : await Profile.getProfileById(id);
+
+        res.status(200).send({ username: profile.username, id: profile._id, unread: id === "@me" ? await Message.getUnreadCount(req.profile) : undefined, type: req.profile.type, date: profile.date });
+    } catch (error) {
+        console.error(error);
+        res.status(400).send(error.message || "Erreur inattendue");
+    }
 });
 
 // upload avatar

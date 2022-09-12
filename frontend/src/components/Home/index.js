@@ -29,6 +29,7 @@ export default function Home({ integrationId = undefined, logged = false }) {
     const [typing, setTyping] = useState(undefined);
     const [online, setOnline] = useState(undefined);
     const [fetching, setFetching] = useState(false);
+    const [currentProfileView, setCurrentProfileView] = useState(undefined);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -158,6 +159,7 @@ export default function Home({ integrationId = undefined, logged = false }) {
 
         getUser(setUnread, setError);
         getMessages(fetchedAll, messages, setMessages, setFetchedAll, setError);
+        setCurrentProfileView("631ccaa6563e94f1887326f3");
 
         return () => {
             if (socket) {
@@ -174,8 +176,7 @@ export default function Home({ integrationId = undefined, logged = false }) {
         {error && <ErrorPopup message={error} onClose={() => setError("")} />}
         {success && <SuccessPopup message={success} onClose={() => setSuccess("")} />}
         {wantToDelete && <ConfirmPopup message="Êtes-vous sûr de vouloir supprimer ce message ?" onConfirm={() => { confirmDeleteMessage(wantToDelete, setError, setMessages, setSuccess); setWantToDelete(undefined); }} onClose={() => setWantToDelete(undefined)} />}
-
-        <ProfileViewer profile={{ _id: sessionStorage.getItem("id"), username: sessionStorage.getItem("username"), online: online.find(a => a.id === sessionStorage.getItem("id")), date: new Date("2022-05-05") }} />
+        {currentProfileView && <ProfileViewer onClose={() => setCurrentProfileView(null)} integrationId={integrationId} profileId={currentProfileView} onlines={online} />}
 
         <Header integrationId={integrationId} onlineCount={online?.length} onlines={online} />
 

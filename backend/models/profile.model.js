@@ -35,7 +35,7 @@ const profileModel = model("Profile", profileSchema, "profiles");
 class Profile {
     static create(username, password, id, avatar, integrationId, type) {
         return new Promise(async (res, rej) => {
-            new profileModel({ username, password: password ? await bcrypt.hash(password, 10) : undefined, userId: id, avatar: avatar ? { url: avatar } : undefined, integrationId, integrations: integrationId ? [integrationId] || undefined, type }).save().then(res).catch((error) => {
+            new profileModel({ username, password: password ? await bcrypt.hash(password, 10) : undefined, userId: id, avatar: avatar ? { url: avatar } : undefined, integrationId, integrations: integrationId ? [integrationId] : undefined, type }).save().then(res).catch((error) => {
                 if (error.code == 11000 && error.keyPattern.username) rej(new Error("Un compte est déjà asssocié à ce nom d'utilisateur."));
                 else rej(error);
             });

@@ -167,6 +167,10 @@ header {
     cursor: pointer;
 }
 
+.cursor-default {
+    cursor: default !important;
+}
+
 .online-circle {
     background: #fff;
     height: 15px;
