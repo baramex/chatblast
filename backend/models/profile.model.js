@@ -2,6 +2,7 @@ const { Schema, model, Types } = require("mongoose");
 const bcrypt = require('bcrypt');
 const { default: isURL } = require("validator/lib/isURL");
 const { default: isDataURI } = require("validator/lib/isDataURI");
+const { Integration } = require("./integration.model");
 
 const USERS_TYPE = {
     DEFAULT: 0,
@@ -78,6 +79,16 @@ class Profile {
         }
         if (i === 10) throw new Error();
         return username;
+    }
+
+    static async getBadges(profile, integration) {
+        const badges = [];
+
+        if (integration && integration.owner.equals(profile._id)) badges.push({ name: "owner", src: "/images/badges/owner.png", description: "Créateur de l'intégration" });
+        if ((await Integration.getByOwner(profile._id)).length > 0) badges.push({ name: "customer", src: "/images/badges/customer.png", description: "Client de chatblast" });
+        if (profile.email) badges.push({ name: "registred", src: "/images/badges/registred.png", description: "Possède un compte" });
+
+        return badges;
     }
 }
 

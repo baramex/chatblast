@@ -79,7 +79,7 @@ class Integration {
      * @returns 
      */
     static getByOwner(ownerId) {
-        return Integration.find({ owner: ownerId });
+        return IntegrationModel.find({ owner: ownerId });
     }
 }
 

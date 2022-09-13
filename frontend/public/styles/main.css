@@ -341,6 +341,42 @@ footer a:hover {
     transform: none;
 }
 
+.tooltip-container {
+    position: relative;
+}
+
+.tooltip {
+    visibility: hidden;
+    width: 130px;
+    background-color: #117a55;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px 5px;
+    position: absolute;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -65px;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.tooltip::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #117a55 transparent transparent transparent;
+}
+
+.tooltip-container:hover .tooltip:not(:hover) {
+    visibility: visible;
+    opacity: 1;
+}
+
 @keyframes fadeIn {
     from {
         opacity: 0;

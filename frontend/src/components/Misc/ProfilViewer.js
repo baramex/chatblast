@@ -2,14 +2,16 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { logoutUser, resetSession, USERS_TYPE } from "../../lib/service/authentification";
 import { fetchMemberMessagesCount } from "../../lib/service/message";
-import { fetchProfile } from "../../lib/service/profile";
+import { fetchBadges, fetchProfile } from "../../lib/service/profile";
 import { formatDuration } from "../../lib/utils/date";
 import HiddenTab from "./HiddenTab";
 import Loading from "./Loading";
+import Tooltip from "./Tooltip";
 
 export default function ProfileViewer({ profileId, integrationId, onClose, onlines }) {
     const [messages, setMessages] = useState(undefined);
     const [profile, setProfile] = useState(undefined);
+    const [badges, setBadges] = useState(undefined);
     const [closing, setClosing] = useState(false);
     const [closed, setClosed] = useState(false);
     const navigate = useNavigate();
@@ -17,6 +19,7 @@ export default function ProfileViewer({ profileId, integrationId, onClose, onlin
     useState(() => {
         getProfile(profileId, setProfile);
         getMemberMessagesCount(profileId, setMessages);
+        getBadges(profileId, setBadges);
     }, []);
 
     const isMe = profileId === sessionStorage.getItem("id");
@@ -40,13 +43,21 @@ export default function ProfileViewer({ profileId, integrationId, onClose, onlin
                             </button>
                         </div>
                         <div>
-                            <p className="fs-2 fw-bold d-inline me-2">{profile.username}</p>{(isMe && profile.type === USERS_TYPE.DEFAULT) ? <button className="bg-transparent border-0 align-text-bottom"><img className="align-text-bottom" src="/images/edit.png" width="20" alt="edit" /></button> : null}
+                            <p className="fs-2 fw-bold d-inline">{profile.username}</p>{(isMe && profile.type === USERS_TYPE.DEFAULT) ? <button className="ms-2 bg-transparent border-0 align-text-bottom"><img className="align-text-bottom" src="/images/edit.png" width="20" alt="edit" /></button> : null}
                         </div>
                     </div>
                 </>}
             </div>
             <div className="flex-grow-1 rounded-4 rounded-top-0 w-100 d-flex align-items-center position-relative" style={{ backgroundColor: "#D7F5EA" }}>
                 {!profile ? <div className="position-absolute start-50 top-50 translate-middle"><Loading size="lg" /></div> : <>
+                    <div className="position-absolute top-0 end-0 m-2 d-flex gap-1">
+                        {
+                            badges && badges.map(a =>
+                                <Tooltip key={a.name} text={a.description}>
+                                    <img src={a.src} alt={a.name} width="24" />
+                                </Tooltip>)
+                        }
+                    </div>
                     <div className="d-flex w-100 text-center align-items-center px-2">
                         <div className="w-100">
                             <p className="fw-bold fs-3 m-0">{messages}</p>
@@ -90,4 +101,11 @@ async function handleLogout(event, integrationId, navigate) {
         event.target.disabled = false;
         console.error(error);
     };
+}
+
+async function getBadges(id, setBadges) {
+    try {
+        const badges = await fetchBadges(id);
+        setBadges(badges);
+    } catch (error) { }
 }
