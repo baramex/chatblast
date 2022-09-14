@@ -18,7 +18,7 @@ const profileSchema = new Schema({
     password: { type: String },
     integrationId: { type: Types.ObjectId },
     integrations: { type: [Types.ObjectId], default: [] },
-    avatar: { type: { flag: String, extention: String, url: { type: String, validate: (e) => isURL(e) || isDataURI(e) }, _id: false }, default: { flag: "", extention: "", url: "" } },
+    avatar: { type: { flag: String, extention: String, url: { type: String, validate: (e) => !e || isURL(e) || isDataURI(e) }, _id: false }, default: { flag: "", extention: "", url: "" } },
     type: { type: Number, default: USERS_TYPE.DEFAULT, min: 0, max: Object.values(USERS_TYPE).length - 1 },
     date: { type: Date, default: Date.now }
 });

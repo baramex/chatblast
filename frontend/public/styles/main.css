@@ -11,6 +11,14 @@ body {
     scroll-behavior: smooth;
 }
 
+.text-btn:hover {
+    text-decoration: underline;
+}
+
+.li-btn:hover {
+    background-color: rgba(255, 255, 255, .3);
+}
+
 .text-gray {
     color: #303030;
 }
@@ -111,6 +119,7 @@ header {
 
 .popup-closing {
     animation: scaleIn reverse cubic-bezier(0.6, 0.2, 0.2, 1.2) .3s;
+    transform: scale(0);
 }
 
 .hidden-tab {

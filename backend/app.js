@@ -17,6 +17,7 @@ const cookie = require("cookie");
 mongoose.connect(process.env.DB, { dbName: process.env.DB_NAME });
 
 // TEST: cookies through avatar redirection
+// BUG: profile join/leave events are not sent to the client
 
 let typing = [];
 let disconnected = [];

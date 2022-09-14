@@ -1,16 +1,16 @@
 import axios from 'axios';
 import { resetSession } from './authentification';
 
-let pending_request = false;
+//let pending_request = false;
 export function api(endpoint, method, data = undefined, customHeader = undefined) {
     return new Promise((res, rej) => {
-        if (pending_request) return setTimeout(() => api(endpoint, method, data, customHeader).then(res).catch(rej), 10);
+        //if (pending_request) return setTimeout(() => api(endpoint, method, data, customHeader).then(res).catch(rej), 10);
 
         // -> axios clear data
         const copyData = data ? { ...data } : undefined;
         const copyHeader = customHeader ? { ...customHeader } : undefined;
 
-        pending_request = true;
+        //pending_request = true;
         axios({
             method,
             url: "/api" + endpoint,
@@ -37,7 +37,7 @@ export function api(endpoint, method, data = undefined, customHeader = undefined
                 rej(message);
             }
         }).finally(() => {
-            pending_request = false;
+            //pending_request = false;
         });
     });
 }

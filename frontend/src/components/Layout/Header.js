@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { logoutUser, resetSession, USERS_TYPE } from "../../lib/service/authentification";
 import HiddenTab from "../Misc/HiddenTab";
 
-export default function Header({ onlineCount, onlines, integrationId }) {
+export default function Header({ onlineCount, onlines, openProfileViewer, integrationId }) {
     const button = useRef();
     const burger = useRef();
     const navigate = useNavigate();
@@ -72,20 +72,21 @@ export default function Header({ onlineCount, onlines, integrationId }) {
                         <span></span>
                     </button>
 
-                    <ul className="menu position-absolute top-0 start-0 pt-5 px-3 rounded-0 text-start">
-                        <li className="d-flex align-items-center mt-4">
+                    <ul className="menu position-absolute top-0 start-0 pt-5 px-0 rounded-0 text-start">
+                        <li className="d-flex align-items-center mt-4 px-3">
                             <img width="55" height="55" className="rounded-circle bg-light object-fit-cover" src={`/profile/${sessionStorage.getItem("id")}/avatar`} alt="account-menu" />
-                            <p className="fw-bold fs-4 ms-3 text-white m-0">{sessionStorage.getItem("username")}</p>
+                            <p className="fw-bold fs-4 ms-3 text-white m-0 flex-grow-1">{sessionStorage.getItem("username")}</p>
+                            <button className="bg-transparent border-0" onClick={() => openProfileViewer(sessionStorage.getItem("id"))}><img width="25" src="/images/settings.svg" alt="settings" /></button>
                         </li>
-                        <li>
+                        <li className="px-3">
                             {
                                 Number(sessionStorage.getItem("type")) === USERS_TYPE.ANONYME ? <Link to={"/login" + (integrationId ? "?to=/integrations/" + integrationId : "")}>connectez-vous</Link> : Number(sessionStorage.getItem("type")) === USERS_TYPE.OAUTHED ? null : <button onClick={e => handleLogout(e, integrationId, navigate)} className="btn btn-danger w-100 py-2 fs-5 rounded-pill mt-3 mb-2">Se déconnecter</button>
                             }
                         </li>
-                        <li className="mb-3 mt-4"><span className="text-white fs-5">{((onlineCount || onlineCount === 0) ? onlineCount : "--") + " en ligne"}</span></li>
+                        <li className="mb-2 mt-4 px-3"><span className="text-white fs-5">{((onlineCount || onlineCount === 0) ? onlineCount : "--") + " en ligne"}</span></li>
                         {
-                            onlines && onlines.map(online => <li className="online d-flex align-items-center ms-1 my-2" key={online.id}>
-                                <img width="50" height="55" className="rounded-circle object-fit-cover" src={`/profile/${online.id}/avatar`} alt="avatar" />
+                            onlines && onlines.map(online => <li role="button" onClick={() => openProfileViewer(online.id)} className="online d-flex align-items-center py-2 li-btn px-4" key={online.id}>
+                                <img width="50" height="50" className="rounded-circle object-fit-cover" src={`/profile/${online.id}/avatar`} alt="avatar" />
                                 <p className="mb-0 ms-2 text-white">{online.username}</p>
                             </li>)
                         }

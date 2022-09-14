@@ -27,7 +27,7 @@ function Message(props) {
 
     useEffect(() => {
         if (isVisible) {
-            props.viewed(props._id);
+            props.intersect(props._id, props.ephemeral, props.setUnread, props.setMessages);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isVisible]);
@@ -64,7 +64,7 @@ function Message(props) {
         <div ref={message} id={"m-" + props._id} className={`p${isMy ? "s" : "e"}-4 pb-3 my-4 m${isMy ? "s" : "e"}-4 message ${!props.isViewed ? "unread" : ""} rounded-6 rounded-${isMy ? "end" : "start"}-0 ${isMy ? "my" : ""}`}>
             <div className="d-flex justify-content-between p-2">
                 <div className="ms-2 d-flex align-items-baseline">
-                    <p className="fs-4 m-0 text-black">{props.author?.username || "Deleted user"}</p>
+                    <p role="button" onClick={() => props.author?._id && props.openProfileViewer(props.author?._id)} className="text-btn fs-4 m-0 text-dark">{props.author?.username || "Deleted user"}</p>
                     <span className="ms-3">{formattedDate}</span>
                 </div>
                 <div className="d-flex align-items-center">
@@ -81,7 +81,7 @@ function Message(props) {
                                 <button className="border-0 bg-transparent" data-bs-toggle="dropdown"><img width="20" src="/images/dots.png" alt="options" /></button>
                                 <ul className="dropdown-menu">
                                     <li>
-                                        <button onClick={() => props.deleteMessage(props._id)} className="dropdown-item text-center">Supprimer</button>
+                                        <button onClick={() => props.deleteMessage(props._id, props.setWantToDelete)} className="dropdown-item text-center">Supprimer</button>
                                     </li>
                                 </ul>
                             </div>
@@ -90,7 +90,7 @@ function Message(props) {
                 </div>
             </div>
 
-            <div className="ms-3 me-4 d-grid" style={{gridTemplateColumns: "50px 1fr"}}>
+            <div className="ms-3 me-4 d-grid" style={{ gridTemplateColumns: "50px 1fr" }}>
                 <img className="rounded-circle object-fit-cover" width="50" height="50" alt="message-avatar" src={isSystem ? "/images/system.png" : `/profile/${props.author?._id || "deleted"}/avatar`} />
                 <p className="ms-3 fs-6 m-0 text-break align-self-center" dangerouslySetInnerHTML={isSystem ? { __html: content } : null}>
                     {!isSystem ? content : null}

@@ -4,9 +4,9 @@ import { logoutUser, resetSession, USERS_TYPE } from "../../lib/service/authenti
 import { fetchMemberMessagesCount } from "../../lib/service/message";
 import { fetchBadges, fetchProfile } from "../../lib/service/profile";
 import { formatDuration } from "../../lib/utils/date";
-import HiddenTab from "./HiddenTab";
-import Loading from "./Loading";
-import Tooltip from "./Tooltip";
+import HiddenTab from "../Misc/HiddenTab";
+import Loading from "../Misc/Loading";
+import Tooltip from "../Misc/Tooltip";
 
 export default function ProfileViewer({ profileId, integrationId, onClose, onlines }) {
     const [messages, setMessages] = useState(undefined);

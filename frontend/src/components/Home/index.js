@@ -7,10 +7,10 @@ import ConfirmPopup from "../Misc/ConfirmPopup";
 import ErrorPopup from "../Misc/ErrorPopup";
 import Loading from "../Misc/Loading";
 import SuccessPopup from "../Misc/SuccessPopup";
-import MessageContainer from "./MessageContainer";
 import ObjectID from "bson-objectid";
 import OnlineContaier from "./OnlineContainer";
-import ProfileViewer from "../Misc/ProfilViewer";
+import ProfileViewer from "./ProfilViewer";
+import Message from "./Message";
 const { io } = require("socket.io-client");
 let socket;
 let isInPage = true;
@@ -88,7 +88,7 @@ export default function Home({ integrationId = undefined, logged = false }) {
                                 }
                             });
                             setUnread(prev => Math.max((prev || 0) - unread_, 0));
-                            return curr;
+                            return [...curr];
                         });
                     });
                     socket.on("profile.join", profile => {
@@ -105,7 +105,7 @@ export default function Home({ integrationId = undefined, logged = false }) {
                             setUnread(prev => {
                                 return (prev || 0) + 1;
                             });
-                            return prev;
+                            return [...prev];
                         });
                         setOnline(prev => {
                             if (!prev) return;
@@ -130,7 +130,7 @@ export default function Home({ integrationId = undefined, logged = false }) {
                             setUnread(prev => {
                                 return (prev || 0) + 1;
                             });
-                            return prev;
+                            return [...prev];
                         });
                         setTyping(prev => {
                             if (!prev) return;
@@ -159,7 +159,6 @@ export default function Home({ integrationId = undefined, logged = false }) {
 
         getUser(setUnread, setError);
         getMessages(fetchedAll, messages, setMessages, setFetchedAll, setError);
-        setCurrentProfileView("631ccaa6563e94f1887326f3");
 
         return () => {
             if (socket) {
@@ -172,13 +171,13 @@ export default function Home({ integrationId = undefined, logged = false }) {
 
     if (!isLogged() && !logged) return null;
 
-    return (<div onMouseEnter={() => handleMouseEnter(messages, setUnread, setMessages)} onMouseLeave={handleMouseLeave} className="d-flex flex-column" style={{ height: "100vh" }}>
+    return (<div onMouseEnter={() => handleMouseEnter(setUnread, setMessages)} onMouseLeave={handleMouseLeave} className="d-flex flex-column" style={{ height: "100vh" }}>
         {error && <ErrorPopup message={error} onClose={() => setError("")} />}
         {success && <SuccessPopup message={success} onClose={() => setSuccess("")} />}
         {wantToDelete && <ConfirmPopup message="Êtes-vous sûr de vouloir supprimer ce message ?" onConfirm={() => { confirmDeleteMessage(wantToDelete, setError, setMessages, setSuccess); setWantToDelete(undefined); }} onClose={() => setWantToDelete(undefined)} />}
         {currentProfileView && <ProfileViewer onClose={() => setCurrentProfileView(null)} integrationId={integrationId} profileId={currentProfileView} onlines={online} />}
 
-        <Header integrationId={integrationId} onlineCount={online?.length} onlines={online} />
+        <Header openProfileViewer={setCurrentProfileView} integrationId={integrationId} onlineCount={online?.length} onlines={online} />
 
         <div className="d-flex h-100">
             <OnlineContaier online={online} />
@@ -197,7 +196,14 @@ export default function Home({ integrationId = undefined, logged = false }) {
                             !messages ? <Loading size="lg" /> : messages.length === 0 ? <p id="nomes" className="fs-4 text-secondary">Aucun message</p> : null
                         }
                     </div>
-                    <MessageContainer viewed={id => intersect(id, messages, setUnread, setMessages)} fetchedAll={fetchedAll} fetching={fetching} scroll={newMessage} fetchMessage={fetchMessage} deleteMessage={deleteMessage(setWantToDelete)} messages={messages} />
+                    <div id="message-container">
+                        {fetching ?
+                            <div className="text-center"><Loading /></div> : fetchedAll && messages && messages.length > 0 ? <p className="text-center fs-6 text-secondary m-0">Vous êtes arrivé au début de la discussion.</p> : null
+                        }
+                        {messages && messages.map((message, i) => {
+                            return <Message {...message} openProfileViewer={setCurrentProfileView} intersect={intersect} setUnread={setUnread} setMessages={setMessages} deleteMessage={deleteMessage} setWantToDelete={setWantToDelete} scroll={(i === messages.length - 1 && messages.length <= 20) || newMessage || i._id === fetchMessage} behavior={newMessage ? "smooth" : "auto"} key={message._id} />;
+                        })}
+                    </div>
                 </div>
 
                 <div className="position-relative">
@@ -300,10 +306,8 @@ async function getMessages(fetchedAll, mes, setMessages, setFetchedAll, setError
     }
 }
 
-function deleteMessage(setWantToDelete) {
-    return (id) => {
-        setWantToDelete(id);
-    }
+function deleteMessage(id, setWantToDelete) {
+    setWantToDelete(id);
 }
 
 async function confirmDeleteMessage(id, setError, setMessages, setSuccess) {
@@ -326,19 +330,19 @@ function markAsRead(setUnread, setMessages) {
     });
 }
 
-function viewed(id) {
+function viewed(id, ephemeral) {
     if (isInPage) {
-        addToViewToSend(id);
-    } else addToMessageToView(id);
+        addToViewToSend(id, ephemeral);
+    } else addToMessageToView(id, ephemeral);
 }
 
-function intersect(id, messages, setUnread, setMessages) {
-    viewed(id);
-    if (isInPage) sendViews(messages, setUnread, setMessages);
+function intersect(id, ephemeral, setUnread, setMessages) {
+    viewed(id, ephemeral);
+    if (isInPage) sendViews(setUnread, setMessages);
 }
 
-function handleMouseEnter(messages, setUnread, setMessages) {
-    sendViews(messages, setUnread, setMessages);
+function handleMouseEnter(setUnread, setMessages) {
+    sendViews(setUnread, setMessages);
 
     isInPage = true;
 }

@@ -33,24 +33,24 @@ export function fetchMemberMessagesCount(id) {
 }
 
 let viewToSend = [];
-export function addToViewToSend(id) {
-    viewToSend.push(id);
+export function addToViewToSend(id, ephemeral) {
+    viewToSend.push({ id, ephemeral });
 }
 
 let messageToView = [];
-export function addToMessageToView(id) {
-    messageToView.push(id);
+export function addToMessageToView(id, ephemeral) {
+    messageToView.push({ id, ephemeral });
 }
 
 let lastUpdateViewMessage = 0;
-export async function sendViews(messages, setUnread, setMessages) {
-    if (new Date().getTime() - lastUpdateViewMessage < 1000) return setTimeout(() => sendViews(messages, setUnread, setMessages), new Date().getTime() - lastUpdateViewMessage);
+export async function sendViews(setUnread, setMessages) {
+    if (new Date().getTime() - lastUpdateViewMessage < 1000) return setTimeout(() => sendViews(setUnread, setMessages), new Date().getTime() - lastUpdateViewMessage);
 
     try {
         let curr = [...viewToSend, ...messageToView];
         if (!curr || curr.length === 0) return;
-
-        const ephemerals = curr.filter(a => !messages || messages.find(b => b._id === a)?.ephemeral);
+        
+        const ephemerals = curr.filter(a => a.ephemeral);
         if (ephemerals.length > 0) {
             setUnread(prev => Math.max((prev || 0) - ephemerals.length, 0));
             setMessages(prev => {
@@ -62,11 +62,11 @@ export async function sendViews(messages, setUnread, setMessages) {
             });
             viewToSend = viewToSend.filter(a => !ephemerals.includes(a));
             messageToView = messageToView.filter(a => !ephemerals.includes(a));
-            curr = curr.filter(a => !ephemerals.includes(a));
+            curr = curr.filter(a => !a.ephemeral);
             if (curr.length === 0) return;
         }
 
-        await setViewed(curr);
+        await setViewed(curr.map(a => a.id));
 
         viewToSend = viewToSend.filter(a => !curr.includes(a));
         messageToView = messageToView.filter(a => !curr.includes(a));
