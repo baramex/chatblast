@@ -21,20 +21,63 @@ export default function Login() {
     return (<>
         {requestTerms && <ConfirmPopup type="terms" onConfirm={() => { localStorage.setItem("terms", true); setRequestTerms(false); requestTerms.callback(); }} onClose={() => setRequestTerms(false)} />}
         {error && <ErrorPopup message={error} onClose={() => setError("")}></ErrorPopup>}
-        <form id="login-form" className="position-absolute top-50 start-50 translate-middle container" onSubmit={e => handleLogin(e, setError, setRequestTerms, navigate)} style={{ width: "35%" }}>
-            <div className="text-center mb-2">
-                <h1 className="mb-4 fw-normal form-label">Bienvenue sur <strong>ChatBlast</strong></h1>
-                <input type="text" className="form-control fs-4" id="username" placeholder="Nom d'utilisateur" name="username"
-                    autoComplete="off" maxLength="32" required />
-                <input type="password" className="form-control fs-4 mt-4" id="password" placeholder="Mot de passe"
-                    name="password" autoComplete="off" maxLength="32" required />
+
+        <div className="flex items-center h-[100vh] justify-between flex-col gap-10">
+            <div className="invisible"></div>
+            <div className="lg:w-[35%] md:w-3/4 sm:w-4/5">
+                <div className="text-center">
+                    <img
+                        className="inline h-16"
+                        src="/images/logo-white.png"
+                        alt="chatblast"
+                    />
+                    <h1 className="inline text-3xl font-bold tracking-tight text-gray-900 font-normal ml-2 align-sub">
+                        Bienvenue sur <strong>ChatBlast</strong>
+                    </h1>
+                </div>
+                <form className="mt-6" onSubmit={e => handleLogin(e, setError, setRequestTerms, navigate)}>
+                    <div className="mb-2">
+                        <div className="-space-y-px rounded-md text-lg">
+                            <div>
+                                <label htmlFor="username" className="sr-only">
+                                    Nom d'utilisateur
+                                </label>
+                                <input
+                                    id="username"
+                                    name="username"
+                                    type="text"
+                                    autoComplete="username"
+                                    className="relative block w-full appearance-none rounded-none rounded-t-md border border-emerald-600 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-emerald-900 focus:outline-none"
+                                    placeholder="Nom d'utilisateur"
+                                    maxLength="32"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor="password" className="sr-only">
+                                    Mot de passe
+                                </label>
+                                <input
+                                    id="password"
+                                    name="password"
+                                    type="password"
+                                    autoComplete="current-password"
+                                    required
+                                    className="relative block w-full appearance-none rounded-none rounded-b-md border border-emerald-600 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-emerald-900 focus:outline-none"
+                                    placeholder="Mot de passe"
+                                    maxLength="32"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    <Link className="text-gray-900 hover:underline underline-offset-2" to={"/register" + window.location.search}>Vous n'avez pas de compte ?</Link>
+                    <div className="text-center mt-4">
+                        <input type="submit" name="submit" className="transition-colors cursor-pointer mt-3 rounded-md border border-transparent bg-emerald-700 py-2 px-10 text-md font-medium text-white hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2" value="Continuer" />
+                    </div>
+                </form>
             </div>
-            <Link to={"/register" + window.location.search}>Vous n'avez pas de compte ?</Link>
-            <div className="text-center mt-4">
-                <input type="submit" name="submit" className="btn btn-outline-dark btn-lg fs-5 px-5" value="Continuer" />
-            </div>
-        </form>
-        <Footer />
+            <Footer />
+        </div>
     </>);
 }
 

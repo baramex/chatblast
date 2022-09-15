@@ -1,4 +1,12 @@
-* {
+body {
+    background-color: #44b996;
+    width: 100vw;
+    min-height: 100vh;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+}
+
+/** {
     outline: none;
     color: #181818;
 }
@@ -500,4 +508,4 @@ footer a:hover {
         margin-bottom: 2rem;
         margin-top: 0 !important;
     }
-}
+}*/
