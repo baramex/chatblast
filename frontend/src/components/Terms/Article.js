@@ -1,8 +1,8 @@
 export default function Article({ index, content }) {
     return (
         <li>
-            <h1 className="mb-3 mt-5">Article {index}</h1>
-            <p className="fs-5">{content}</p>
+            <h2 className="mb-3 mt-5 text-3xl font-medium">Article {index}</h2>
+            <p className="text-lg">{content}</p>
         </li>
     );
 }

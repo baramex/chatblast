@@ -47,7 +47,7 @@ export default function Login() {
                                     name="username"
                                     type="text"
                                     autoComplete="username"
-                                    className="relative block w-full appearance-none rounded-none rounded-t-md border border-emerald-600 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-emerald-900 focus:outline-none"
+                                    className="mb-2 relative block w-full appearance-none rounded-none rounded-t-md border border-emerald-600 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-emerald-900 focus:outline-none"
                                     placeholder="Nom d'utilisateur"
                                     maxLength="32"
                                     required

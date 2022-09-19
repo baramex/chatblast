@@ -46,7 +46,7 @@ export default function Register() {
                                 <img className={"rounded-full w-full h-full object-cover" + (avatar ? "" : " hidden")} src={avatar} alt="avatar" />
                                 <img className="absolute top-0 right-0 ml-2 mt-1" width="25%" src="/images/add-picture.png" alt="add-avatar" hidden={avatar ? true : false} />
                             </label>
-                            <div className="grow w-full sm:w-auto text-left">
+                            <div className="grow w-full sm:w-auto text-left -space-y-px">
                                 <div>
                                     <label htmlFor="username" className="sr-only">
                                         Nom d'utilisateur
@@ -56,7 +56,7 @@ export default function Register() {
                                         name="username"
                                         type="text"
                                         autoComplete="off"
-                                        className="relative block w-full appearance-none rounded-none rounded-t-md border border-emerald-600 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-emerald-900 focus:outline-none"
+                                        className="mb-2 relative block w-full appearance-none rounded-none rounded-t-md border border-emerald-600 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-emerald-900 focus:outline-none"
                                         placeholder="Nom d'utilisateur"
                                         maxLength="32"
                                         required
@@ -72,7 +72,7 @@ export default function Register() {
                                         type="password"
                                         autoComplete="off"
                                         required
-                                        className="relative block w-full appearance-none border border-emerald-600 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-emerald-900 focus:outline-none"
+                                        className="mb-2 relative block w-full appearance-none border border-emerald-600 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-emerald-900 focus:outline-none"
                                         placeholder="Mot de passe"
                                         maxLength="32"
                                     />
