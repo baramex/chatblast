@@ -19,7 +19,7 @@ export default function Login() {
     if (isLogged()) return null;
 
     return (<>
-        {requestTerms && <ConfirmPopup type="terms" onConfirm={() => { localStorage.setItem("terms", true); setRequestTerms(false); requestTerms.callback(); }} onClose={() => setRequestTerms(false)} />}
+        {requestTerms && <ConfirmPopup title={"Conditions d'utilisation"} message={"Pour continuer, il vous faut accepter les conditions d'utilisation"} onConfirm={() => { localStorage.setItem("terms", true); setRequestTerms(false); requestTerms.callback(); }} onClose={() => setRequestTerms(false)} />}
         {error && <ErrorPopup message={error} onClose={() => setError("")}></ErrorPopup>}
 
         <div className="flex items-center h-[100vh] justify-between flex-col gap-10">
