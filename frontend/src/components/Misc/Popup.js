@@ -3,11 +3,12 @@ import { Dialog, Transition } from '@headlessui/react';
 
 // BUG: tailwindcss not charge button style
 
-export default function Popup({ Icon, title, message, buttons, iconColor, bgColor, onClose }) {
-    const [closed, setClosed] = useState(false);
+export default function Popup({ Icon, title, show, message: _message, buttons, iconColor, bgColor, onClose }) {
+    const [message, setMessage] = useState(_message);
+    if (_message && (!message || message !== _message)) setMessage(_message);
 
-    return (<Transition.Root show={!closed} as={Fragment}>
-        <Dialog as="div" className="relative z-10" onClose={() => { setClosed(true); onClose(); }}>
+    return (<Transition.Root show={show} as={Fragment}>
+        <Dialog as="div" className="relative z-10" onClose={() => { onClose(); }}>
             <Transition.Child
                 as={Fragment}
                 enter="ease-out duration-300"
@@ -52,7 +53,7 @@ export default function Popup({ Icon, title, message, buttons, iconColor, bgColo
                             <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
                                 {
                                     buttons.map((button, index) =>
-                                        <button key={index} onClick={() => { (button.onClick || onClose)(); setClosed(true); }} className={`mt-3 inline-flex w-full justify-center rounded-md border ${button.borderColor || "border-gray-300"} ${button.bgColor || "bg-white"} px-4 py-2 text-base font-medium ${button.textColor || "text-gray-700"} shadow-sm hover:${button.bgHover || "bg-gray-50"} focus:outline-none focus:ring-2 focus:${button.ringColor || "ring-gray-400"} focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm sm:mt-0`}>
+                                        <button key={index} onClick={() => { (button.onClick || onClose)(); }} className={`mt-3 inline-flex w-full justify-center rounded-md border ${button.borderColor || "border-gray-300"} ${button.bgColor || "bg-white"} px-4 py-2 text-base font-medium ${button.textColor || "text-gray-700"} shadow-sm hover:${button.bgHover || "bg-gray-50"} focus:outline-none focus:ring-2 focus:${button.ringColor || "ring-gray-400"} focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm sm:mt-0`}>
                                             {button.name}
                                         </button>
                                     )

@@ -20,8 +20,8 @@ export default function Register() {
     if (isLogged()) return null;
 
     return (<>
-        {requestTerms && <ConfirmPopup title="Conditions d'utilisation" message={"Pour continuer, il vous faut accepter les conditions d'utilisation"} onConfirm={() => { localStorage.setItem("terms", true); setRequestTerms(false); requestTerms.callback(); }} onClose={() => setRequestTerms(false)} />}
-        {error && <ErrorPopup title="Erreur d'inscription" message={error} onClose={() => setError("")}></ErrorPopup>}
+        <ConfirmPopup title="Conditions d'utilisation" show={!!requestTerms} message={"Pour continuer, il vous faut accepter les conditions d'utilisation"} onConfirm={() => { localStorage.setItem("terms", true); setRequestTerms(false); requestTerms.callback(); }} onClose={() => setRequestTerms(false)} />
+        <ErrorPopup title="Erreur d'inscription" message={error} onClose={() => setError("")} />
 
         <div className="flex items-center h-[100vh] justify-between flex-col gap-10">
             <div className="invisible"></div>
@@ -74,6 +74,7 @@ export default function Register() {
                                         required
                                         className="mb-2 relative block w-full appearance-none border border-emerald-600 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-emerald-900 focus:outline-none"
                                         placeholder="Mot de passe"
+                                        minLength="6"
                                         maxLength="32"
                                     />
                                 </div>
@@ -89,6 +90,7 @@ export default function Register() {
                                         required
                                         className="relative block w-full appearance-none rounded-none rounded-b-md border border-emerald-600 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-emerald-900 focus:outline-none"
                                         placeholder="Confirmer le mot de passe"
+                                        minLength="6"
                                         maxLength="32"
                                     />
                                 </div>
@@ -110,7 +112,7 @@ function handleAvatar(event, setAvatar, setError) {
     if (event.target.files && event.target.files[0]) {
         if (event.target.files[0].size >= 500_000) {
             event.preventDefault();
-            return setError("Votre photo de profil est trop lourde.");
+            return setError("Votre photo de profil est trop lourde, 500 Mo max.");
         }
         if (event.target.files.length > 1 || !["png", "jpeg", "jpg"].map(a => "image/" + a).includes(event.target.files[0].type)) {
             event.preventDefault();
@@ -134,12 +136,12 @@ async function handleRegister(event, setError, setRequestTerms, navigate) {
         const password_ = event.target.password_.value.trim();
         const avatar = event.target.avatar.files[0];
 
-        const usernameRegex = /^[a-z]{1,32}$/;
+        const usernameRegex = /^[a-z0-9]{1,32}$/;
         const passwordRegex = /^(((?=.*[a-z])(?=.*[A-Z]))|((?=.*[a-z])(?=.*[0-9]))|((?=.*[A-Z])(?=.*[0-9])))(?=.{6,32}$)/;
 
-        if (!usernameRegex.test(username)) throw new Error("Nom d'utilisateur invalide, il ne doit contenir que des lettres");
+        if (!usernameRegex.test(username)) throw new Error("Nom d'utilisateur invalide, il ne peut contenir que des lettres minuscules et des chiffres.");
         if (password !== password_) throw new Error("Les mots de passe ne correspondent pas.");
-        if (!passwordRegex.test(password)) throw new Error("Mot de passe non conforme.")
+        if (!passwordRegex.test(password)) throw new Error("Mot de passe non conforme, il doit contenir au moins deux des caractères: chiffre, lettre minuscule, lettre majuscule.")
 
         const user = await registerUser(username, password, avatar);
 
