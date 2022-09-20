@@ -98,7 +98,7 @@ export default function Register() {
                             </div>
                         </div>
                         <div className="text-center mt-4">
-                            <input type="submit" className="transition-colors cursor-pointer mt-3 rounded-md border border-transparent bg-emerald-700 py-2 px-10 text-md font-medium text-white hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2" value="S'inscrire" />
+                            <input type="submit" className="transition-colors cursor-pointer mt-3 rounded-md border border-transparent bg-emerald-700 py-2 px-10 text-md font-medium text-white hover:bg-emerald-800 focus:outline-none" value="S'inscrire" />
                         </div>
                     </div>
                 </form>

@@ -53,7 +53,7 @@ export default function Popup({ Icon, title, show, message: _message, buttons, i
                             <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
                                 {
                                     buttons.map((button, index) =>
-                                        <button key={index} onClick={() => { (button.onClick || onClose)(); }} className={`mt-3 inline-flex w-full justify-center rounded-md border ${button.borderColor || "border-gray-300"} ${button.bgColor || "bg-white"} px-4 py-2 text-base font-medium ${button.textColor || "text-gray-700"} shadow-sm hover:${button.bgHover || "bg-gray-50"} focus:outline-none focus:ring-2 focus:${button.ringColor || "ring-gray-400"} focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm sm:mt-0`}>
+                                        <button key={index} onClick={() => { (button.onClick || onClose)(); }} className={`transition-colors mt-3 inline-flex w-full justify-center rounded-md border ${button.borderColor || "border-gray-300"} ${button.bgColor || "bg-white"} px-4 py-2 text-base font-medium ${button.textColor || "text-gray-700"} shadow-sm ${button.bgHover || "bg-gray-50"} focus:outline-none focus:ring-2 ${button.ringColor || "ring-gray-400"} focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm sm:mt-0`}>
                                             {button.name}
                                         </button>
                                     )

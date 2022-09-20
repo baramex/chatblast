@@ -72,7 +72,7 @@ export default function Login() {
                     </div>
                     <Link className="text-gray-900 hover:underline underline-offset-2" to={"/register" + window.location.search}>Vous n'avez pas de compte ?</Link>
                     <div className="text-center mt-4">
-                        <input type="submit" name="submit" className="transition-colors cursor-pointer mt-3 rounded-md border border-transparent bg-emerald-700 py-2 px-10 text-md font-medium text-white hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2" value="Continuer" />
+                        <input type="submit" name="submit" className="transition-colors cursor-pointer mt-3 rounded-md border border-transparent bg-emerald-700 py-2 px-10 text-md font-medium text-white hover:bg-emerald-800 focus:outline-none" value="Continuer" />
                     </div>
                 </form>
             </div>
