@@ -20,8 +20,8 @@ export default function Register() {
     if (isLogged()) return null;
 
     return (<>
-        {requestTerms && <ConfirmPopup type="terms" onConfirm={() => { localStorage.setItem("terms", true); setRequestTerms(false); requestTerms.callback(); }} onClose={() => setRequestTerms(false)} />}
-        {error && <ErrorPopup message={error} onClose={() => setError("")}></ErrorPopup>}
+        {requestTerms && <ConfirmPopup title="Conditions d'utilisation" message={"Pour continuer, il vous faut accepter les conditions d'utilisation"} onConfirm={() => { localStorage.setItem("terms", true); setRequestTerms(false); requestTerms.callback(); }} onClose={() => setRequestTerms(false)} />}
+        {error && <ErrorPopup title="Erreur d'inscription" message={error} onClose={() => setError("")}></ErrorPopup>}
 
         <div className="flex items-center h-[100vh] justify-between flex-col gap-10">
             <div className="invisible"></div>
@@ -42,7 +42,7 @@ export default function Register() {
                             <label htmlFor="avatar-input"
                                 className="rounded-full cursor-pointer relative flex justify-center items-center p-1 w-36 h-36 bg-emerald-700 border-emerald-900 border-2 border-dashed" id="avatar-container">
                                 <p className="text-lg text-white m-0" hidden={avatar ? true : false}>Photo de <br />profil</p>
-                                <input type="file" accept="image/*" name="avatar" id="avatar-input" onInput={e => handleAvatar(e, setAvatar, setError)} hidden />
+                                <input type="file" accept=".png,.jpg,.jpeg" name="avatar" id="avatar-input" onInput={e => handleAvatar(e, setAvatar, setError)} hidden />
                                 <img className={"rounded-full w-full h-full object-cover" + (avatar ? "" : " hidden")} src={avatar} alt="avatar" />
                                 <img className="absolute top-0 right-0 ml-2 mt-1" width="25%" src="/images/add-picture.png" alt="add-avatar" hidden={avatar ? true : false} />
                             </label>
@@ -106,21 +106,15 @@ export default function Register() {
     </>);
 }
 
-/*
-<div className="d-flex justify-content-center align-items-center" style={{ height: "100vh", marginBottom: 60 }}>
-            <form id="register-form"
-                style={{ maxWidth: 800, minWidth: "40%" }} onSubmit={e => handleRegister(e, setError, setRequestTerms, navigate)}>
-
-
-            </form>
-        </div>
-*/
-
 function handleAvatar(event, setAvatar, setError) {
     if (event.target.files && event.target.files[0]) {
         if (event.target.files[0].size >= 500_000) {
             event.preventDefault();
             return setError("Votre photo de profil est trop lourde.");
+        }
+        if (event.target.files.length > 1 || !["png", "jpeg", "jpg"].map(a => "image/" + a).includes(event.target.files[0].type)) {
+            event.preventDefault();
+            return setError("L'image doit être au format PNG, JPEG ou JPG.");
         }
         setAvatar(URL.createObjectURL(event.target.files[0]));
     }

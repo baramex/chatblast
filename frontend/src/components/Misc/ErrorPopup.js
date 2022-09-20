@@ -1,5 +1,6 @@
 import Popup from "./Popup";
+import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 
-export default function ErrorPopup({ message, onClose = undefined }) {
-    return <Popup message={message} onClose={onClose} buttons={[{ name: "Ok", borderColor: "transparent", bgColor: "red-600", textColor: "white", bgHover: "red-700", ringColor: "red-500" }]} />;
+export default function ErrorPopup({ message, title, onClose = undefined }) {
+    return <Popup Icon={ExclamationTriangleIcon} title={title} message={message} onClose={onClose} buttons={[{ name: "Ok", borderColor: "border-transparent", bgColor: "bg-red-600", textColor: "text-white", bgHover: "bg-red-700" }]} />;
 }

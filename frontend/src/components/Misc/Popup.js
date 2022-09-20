@@ -3,7 +3,7 @@ import { Dialog, Transition } from '@headlessui/react';
 
 // BUG: tailwindcss not charge button style
 
-export default function Popup({ Icon, title, message, buttons, onClose }) {
+export default function Popup({ Icon, title, message, buttons, iconColor, bgColor, onClose }) {
     const [closed, setClosed] = useState(false);
 
     return (<Transition.Root show={!closed} as={Fragment}>
@@ -34,8 +34,8 @@ export default function Popup({ Icon, title, message, buttons, onClose }) {
                         <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
                             <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                                 <div className="sm:flex sm:items-start">
-                                    <div className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                                        <Icon className="h-6 w-6 text-red-600" aria-hidden="true" />
+                                    <div className={`mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full ${bgColor || "bg-red-100"} sm:mx-0 sm:h-10 sm:w-10`}>
+                                        <Icon className={"h-6 w-6 " + (iconColor || "text-red-600")} aria-hidden="true" />
                                     </div>
                                     <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
                                         <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900">
@@ -52,7 +52,7 @@ export default function Popup({ Icon, title, message, buttons, onClose }) {
                             <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
                                 {
                                     buttons.map((button, index) =>
-                                        <button key={index} onClick={() => { (button.onClick || onClose)(); setClosed(true); }} className={`mt-3 inline-flex w-full justify-center rounded-md border border-${button.borderColor || "gray-300"} bg-${button.bgColor || "white"} px-4 py-2 text-base font-medium text-${button.textColor || "gray-700"} shadow-sm hover:bg-${button.bgHover || "gray-50"} focus:outline-none focus:ring-2 focus:ring-${button.ringColor || "gray-400"} focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm sm:mt-0`}>
+                                        <button key={index} onClick={() => { (button.onClick || onClose)(); setClosed(true); }} className={`mt-3 inline-flex w-full justify-center rounded-md border ${button.borderColor || "border-gray-300"} ${button.bgColor || "bg-white"} px-4 py-2 text-base font-medium ${button.textColor || "text-gray-700"} shadow-sm hover:${button.bgHover || "bg-gray-50"} focus:outline-none focus:ring-2 focus:${button.ringColor || "ring-gray-400"} focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm sm:mt-0`}>
                                             {button.name}
                                         </button>
                                     )
