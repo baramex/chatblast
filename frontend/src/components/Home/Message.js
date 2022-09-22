@@ -91,7 +91,7 @@ function Message(props) {
             </div>
 
             <div className="ms-3 me-4 d-grid" style={{ gridTemplateColumns: "50px 1fr" }}>
-                <img className="rounded-circle object-fit-cover" width="50" height="50" alt="message-avatar" src={isSystem ? "/images/system.png" : `/profile/${props.author?._id || "deleted"}/avatar`} />
+                <img className="rounded-circle object-cover" width="50" height="50" alt="message-avatar" src={isSystem ? "/images/system.png" : `/profile/${props.author?._id || "deleted"}/avatar`} />
                 <p className="ms-3 fs-6 m-0 text-break align-self-center" dangerouslySetInnerHTML={isSystem ? { __html: content } : null}>
                     {!isSystem ? content : null}
                 </p>

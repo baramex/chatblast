@@ -145,7 +145,7 @@ header {
 #avatar-container #avatar-input {
     display: none;
 }
-
+*/
 .online-menu.active .online {
     gap: .5rem;
 }
@@ -167,16 +167,16 @@ header {
     margin-right: 1.25rem;
 }
 
-.toggle-online-menu img {
+.toggle-online-menu svg {
     transition: transform .3s ease-in-out;
-    transform: rotate(0deg);
+    transform: rotate(90deg);
 }
 
-.online-menu.active>.toggle-online-menu img {
-    transform: rotate(180deg);
+.online-menu.active>.toggle-online-menu svg {
+    transform: rotate(270deg);
 }
-
-.object-fit-cover {
+/*
+.object-cover {
     object-fit: cover;
 }
 
@@ -288,7 +288,7 @@ footer a:hover {
 #burger-tab {
     z-index: 2;
 }
-
+*/
 .burger {
     width: 40px;
     height: 45px;
@@ -357,7 +357,7 @@ footer a:hover {
 .burger.active .menu {
     transform: none;
 }
-
+/*
 .tooltip-container {
     position: relative;
 }

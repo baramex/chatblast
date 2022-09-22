@@ -1,3 +1,4 @@
+import { ArrowSmallDownIcon } from "@heroicons/react/24/outline";
 import { useEffect, useRef } from "react";
 
 export default function OnlineContaier({ online }) {
@@ -21,14 +22,14 @@ export default function OnlineContaier({ online }) {
 
     return (
         <div className="p-2 online-menu" style={{ backgroundColor: "#13875E" }}>
-            <button ref={button} className="toggle-online-menu bg-transparent border-0">
-                <img width="40" src="/images/arrow.png" alt="arrow-extend-reduce" />
+            <button ref={button} className="toggle-online-menu bg-transparent border-0 hidden md:block">
+                <ArrowSmallDownIcon className="text-white" width="40" />
             </button>
-            <div className="d-flex flex-column gap-2 mt-3">
+            <div className="flex flex-col gap-2 mt-3">
                 {
                     online && online.map((item) =>
-                        <div className="online d-flex align-items-center" key={item.id}>
-                            <img width="50" height="50" className="rounded-circle object-fit-cover" style={{ border: "#2DBF8F solid 1px", aspectRatio: "1/1" }} src={`/profile/${item.id}/avatar`} alt="avatar" />
+                        <div className="online flex items-center" key={item.id}>
+                            <img width="50" height="50" className="rounded-full object-cover" style={{ border: "#2DBF8F solid 1px", aspectRatio: "1/1" }} src={`/profile/${item.id}/avatar`} alt="avatar" />
                             <p className="mb-0 text-white">{item.username}</p>
                         </div>
                     )

@@ -8,7 +8,7 @@ import HiddenTab from "../Misc/HiddenTab";
 import Loading from "../Misc/Loading";
 import Tooltip from "../Misc/Tooltip";
 
-export default function ProfileViewer({ profileId, integrationId, onClose, onlines }) {
+export default function ProfileViewer({ profileId, integrationId, onClose, onlines, show }) {
     const [messages, setMessages] = useState(undefined);
     const [profile, setProfile] = useState(undefined);
     const [badges, setBadges] = useState(undefined);
@@ -25,7 +25,7 @@ export default function ProfileViewer({ profileId, integrationId, onClose, onlin
     const isMe = profileId === sessionStorage.getItem("id");
     const online = onlines?.find(a => a.id === profileId);
 
-    if (closed) return null;
+    if (closed || !show) return null;
 
     return (<>
         <HiddenTab />
@@ -36,7 +36,7 @@ export default function ProfileViewer({ profileId, integrationId, onClose, onlin
                     <div className="position-absolute start-50 translate-middle-x mt-3 text-center" style={{ zIndex: 5 }}>
                         <div className="rounded-circle p-2" style={{ backgroundColor: "#138F63", width: "120px", height: "120px" }}>
                             <button className={"border-0 w-100 h-100 p-0 position-relative overflow-hidden bg-transparent rounded-circle" + ((isMe && profile.type === USERS_TYPE.DEFAULT) ? " profile-avatar-change" : " cursor-default")}>
-                                <img src={"/profile/" + profile.id + "/avatar"} className="object-fit-cover w-100 h-100" style={{ aspectRatio: "1/1" }} alt="avatar" />
+                                <img src={"/profile/" + profile.id + "/avatar"} className="object-cover w-100 h-100" style={{ aspectRatio: "1/1" }} alt="avatar" />
                                 {(isMe && profile.type === USERS_TYPE.DEFAULT) ? <div style={{ backgroundColor: "rgba(30, 30, 30, .7)", transform: "translate(-50%, 100%)", transition: "transform .3s ease-in-out" }} className="position-absolute bottom-0 start-50 w-100 py-1 pb-2 d-flex align-items-center justify-content-center">
                                     <img style={{ opacity: ".8" }} src="/images/camera.png" height="20" alt="camera" />
                                 </div> : null}

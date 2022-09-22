@@ -171,34 +171,34 @@ export default function Home({ integrationId = undefined, logged = false }) {
 
     if (!isLogged() && !logged) return null;
 
-    return (<div onMouseEnter={() => handleMouseEnter(setUnread, setMessages)} onMouseLeave={handleMouseLeave} className="d-flex flex-column" style={{ height: "100vh" }}>
-        {error && <ErrorPopup message={error} onClose={() => setError("")} />}
-        {success && <SuccessPopup message={success} onClose={() => setSuccess("")} />}
-        {wantToDelete && <ConfirmPopup message="Êtes-vous sûr de vouloir supprimer ce message ?" onConfirm={() => { confirmDeleteMessage(wantToDelete, setError, setMessages, setSuccess); setWantToDelete(undefined); }} onClose={() => setWantToDelete(undefined)} />}
-        {currentProfileView && <ProfileViewer onClose={() => setCurrentProfileView(null)} integrationId={integrationId} profileId={currentProfileView} onlines={online} />}
+    return (<div onMouseEnter={() => handleMouseEnter(setUnread, setMessages)} onMouseLeave={handleMouseLeave} className="flex flex-col h-[100vh]">
+        <ErrorPopup message={error} onClose={() => setError("")} />
+        <SuccessPopup message={success} onClose={() => setSuccess("")} />
+        <ConfirmPopup show={!!wantToDelete} message="Êtes-vous sûr de vouloir supprimer ce message ?" onConfirm={() => { confirmDeleteMessage(wantToDelete, setError, setMessages, setSuccess); setWantToDelete(undefined); }} onClose={() => setWantToDelete(undefined)} />
+        <ProfileViewer onClose={() => setCurrentProfileView(null)} show={!!currentProfileView} integrationId={integrationId} profileId={currentProfileView} onlines={online} />
 
         <Header openProfileViewer={setCurrentProfileView} integrationId={integrationId} onlineCount={online?.length} onlines={online} />
 
-        <div className="d-flex h-100">
+        <div className="flex h-full">
             <OnlineContaier online={online} />
 
-            <div className="w-100 h-100 d-flex flex-column" style={{ backgroundColor: "#D7F5EA" }}>
-                <div className="position-absolute d-flex align-items-center unread-container" style={{ marginTop: "-.25rem", marginLeft: "-.5rem" }}>
+            <div className="w-full h-full flex flex-col bg-emerald-100">
+                <div className="absolute flex items-center unread-container" style={{ marginTop: "-.25rem", marginLeft: "-.5rem" }}>
                     <span id="unread" className={"badge rounded-pill fs-5 " + (unread > 0 ? "warning bg-danger" : "bg-primary")} style={{ zIndex: 2, cursor: "default" }}>
-                        {(!unread && unread !== 0) ? <Loading color="text-light" type="grow" size="sm" /> : unread}
+                        {(!unread && unread !== 0) ? <Loading color="text-white" type="grow" size="sm" /> : unread}
                     </span>
-                    <button onClick={() => markAsRead(setUnread, setMessages)} className="btn-unread text-white border-0 text-start">marquer comme lu</button>
+                    <button onClick={() => markAsRead(setUnread, setMessages)} className="btn-unread text-white border-0 text-left">marquer comme lu</button>
                 </div>
 
                 <div onScroll={fetchedAll ? null : fetching ? e => e.target.scrollTop === 0 ? e.target.scrollTop = 1 : null : e => handleChatScrolling(e, fetchedAll, messages, setMessages, setFetchedAll, setFetching, setFetchMessage, setError)} className="pt-3 overflow-auto h-100 position-relative" style={{ flex: "1 0px" }}>
-                    <div className="position-absolute top-50 start-50 translate-middle text-center">
+                    <div className="absolute top-1/2 start-1/2 translate-x-1/2 translate-y-1/2 text-center">
                         {
-                            !messages ? <Loading size="lg" /> : messages.length === 0 ? <p id="nomes" className="fs-4 text-secondary">Aucun message</p> : null
+                            !messages ? <Loading size="lg" /> : messages.length === 0 ? <p className="fs-4 text-neutral-500">Aucun message</p> : null
                         }
                     </div>
                     <div id="message-container">
                         {fetching ?
-                            <div className="text-center"><Loading /></div> : fetchedAll && messages && messages.length > 0 ? <p className="text-center fs-6 text-secondary m-0">Vous êtes arrivé au début de la discussion.</p> : null
+                            <div className="text-center"><Loading /></div> : fetchedAll && messages && messages.length > 0 ? <p className="text-center text-neutral-500 m-0">Vous êtes arrivé au début de la discussion.</p> : null
                         }
                         {messages && messages.map((message, i) => {
                             return <Message {...message} openProfileViewer={setCurrentProfileView} intersect={intersect} setUnread={setUnread} setMessages={setMessages} deleteMessage={deleteMessage} setWantToDelete={setWantToDelete} scroll={(i === messages.length - 1 && messages.length <= 20) || newMessage || i._id === fetchMessage} behavior={newMessage ? "smooth" : "auto"} key={message._id} />;
@@ -206,11 +206,11 @@ export default function Home({ integrationId = undefined, logged = false }) {
                     </div>
                 </div>
 
-                <div className="position-relative">
-                    <span className="position-absolute left-0 ms-2 text-secondary" style={{ top: "-24px" }}>
+                <div className="relative">
+                    <span className="absolute left-0 ml-2 text-neutral-500 -top-6">
                         {typing?.filter(a => a.id !== sessionStorage.getItem("id")).length > 0 && (typing?.filter(a => a.id !== sessionStorage.getItem("id")).map(a => a.username).join(", ") + " " + (typing?.filter(a => a.id !== sessionStorage.getItem("id")).length === 1 ? "est" : "sont") + " en train d'écrire...")}
                     </span>
-                    <form onSubmit={e => handleSendMessage(e, setError)} className="d-flex position-relative shadow-lg">
+                    <form onSubmit={e => handleSendMessage(e, setError)} className="flex relative drop-shadow-lg">
                         <input type="text" onInput={e => handleInput(e, typing)} autoComplete="off" placeholder="Tapez votre message..." className="form-control form-inset fs-5 rounded-0 border-0 py-2" name="message" aria-label="Message" minLength="1" maxLength="512" disabled={messages ? false : true} required />
                         <input type="submit" disabled={messages ? false : true} className="px-4 border-0 bg-light" style={{ backgroundImage: "url('/images/send.png')", backgroundSize: 40, backgroundRepeat: "no-repeat", backgroundPosition: "50% 50%" }} value="" />
                     </form>
