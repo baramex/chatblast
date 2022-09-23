@@ -17,6 +17,7 @@ let isInPage = true;
 
 const notification = new Audio("/sounds/notification.wav");
 
+// TODO: modals title
 export default function Home({ integrationId = undefined, logged = false }) {
     const [error, setError] = useState(undefined);
     const [success, setSuccess] = useState(undefined);
@@ -191,7 +192,7 @@ export default function Home({ integrationId = undefined, logged = false }) {
                 </div>
 
                 <div onScroll={fetchedAll ? null : fetching ? e => e.target.scrollTop === 0 ? e.target.scrollTop = 1 : null : e => handleChatScrolling(e, fetchedAll, messages, setMessages, setFetchedAll, setFetching, setFetchMessage, setError)} className="pt-3 overflow-auto h-100 position-relative" style={{ flex: "1 0px" }}>
-                    <div className="absolute top-1/2 start-1/2 translate-x-1/2 translate-y-1/2 text-center">
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
                         {
                             !messages ? <Loading size="lg" /> : messages.length === 0 ? <p className="fs-4 text-neutral-500">Aucun message</p> : null
                         }
@@ -210,9 +211,25 @@ export default function Home({ integrationId = undefined, logged = false }) {
                     <span className="absolute left-0 ml-2 text-neutral-500 -top-6">
                         {typing?.filter(a => a.id !== sessionStorage.getItem("id")).length > 0 && (typing?.filter(a => a.id !== sessionStorage.getItem("id")).map(a => a.username).join(", ") + " " + (typing?.filter(a => a.id !== sessionStorage.getItem("id")).length === 1 ? "est" : "sont") + " en train d'écrire...")}
                     </span>
-                    <form onSubmit={e => handleSendMessage(e, setError)} className="flex relative drop-shadow-lg">
-                        <input type="text" onInput={e => handleInput(e, typing)} autoComplete="off" placeholder="Tapez votre message..." className="form-control form-inset fs-5 rounded-0 border-0 py-2" name="message" aria-label="Message" minLength="1" maxLength="512" disabled={messages ? false : true} required />
-                        <input type="submit" disabled={messages ? false : true} className="px-4 border-0 bg-light" style={{ backgroundImage: "url('/images/send.png')", backgroundSize: 40, backgroundRepeat: "no-repeat", backgroundPosition: "50% 50%" }} value="" />
+                    <form onSubmit={e => handleSendMessage(e, setError)} className="flex relative">
+                        <div className="relative w-full">
+                            <input
+                                type="text"
+                                name="message"
+                                aria-label="Message"
+                                minLength="1"
+                                maxLength="512"
+                                className="transition-shadow block w-full pl-3.5 pr-14 py-1.5 outline-none text-lg focus:shadow-inner"
+                                autoComplete="off"
+                                placeholder="Tapez votre message..."
+                                onInput={(e) => handleInput(e, typing)}
+                                disabled={messages ? false : true}
+                                required
+                            />
+                            <div className="absolute inset-y-0 right-0 flex items-center">
+                                <input type="submit" disabled={messages ? false : true} className="drop-shadow-[0_0_5px_rgba(52,211,153,.4)] transition-colors mr-1.5 cursor-pointer border-0 bg-emerald-300 rounded-full hover:bg-emerald-400 w-11 h-7 bg-[length:25px] bg-no-repeat bg-center" style={{ backgroundImage: "url('/images/send.svg')" }} value="" />
+                            </div>
+                        </div>
                     </form>
                 </div>
             </div>

@@ -38,7 +38,7 @@ export default function Header({ onlineCount, onlines, openProfileViewer, integr
         <header className="text-center relative flex justify-between items-center px-3 bg-emerald-600">
             <div className="w-full">
                 <div className="py-2 px-3 justify-start items-center hidden md:flex">
-                    <span className="flex relative h-3 w-3 mr-2">
+                    <span className="flex relative h-3 w-3 mr-3">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white/75"></span>
                         <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
                     </span>

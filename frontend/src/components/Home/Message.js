@@ -1,5 +1,7 @@
+import { EllipsisVerticalIcon, EyeIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { createRef, memo, useEffect } from "react";
 import useElementOnScreen from "../../lib/hooks/useElementOnScreen";
+import Dropmenu from "../Misc/Dropmenu";
 
 function Message(props) {
     const date = new Date(props.date);
@@ -61,38 +63,33 @@ function Message(props) {
     }, []);
 
     return (
-        <div ref={message} id={"m-" + props._id} className={`p${isMy ? "s" : "e"}-4 pb-3 my-4 m${isMy ? "s" : "e"}-4 message ${!props.isViewed ? "unread" : ""} rounded-6 rounded-${isMy ? "end" : "start"}-0 ${isMy ? "my" : ""}`}>
-            <div className="d-flex justify-content-between p-2">
-                <div className="ms-2 d-flex align-items-baseline">
-                    <p role="button" onClick={() => props.author?._id && props.openProfileViewer(props.author?._id)} className="text-btn fs-4 m-0 text-dark">{props.author?.username || "Deleted user"}</p>
-                    <span className="ms-3">{formattedDate}</span>
+        <div ref={message} id={"m-" + props._id} className={`pb-4 my-6 text-neutral-900 ${isMy ? "pl-5 ml-6 rounded-l-[70px] bg-emerald-200" : "pr-5 mr-6 rounded-r-[70px] bg-[rgb(206,200,200)]"} ${!props.isViewed ? "bg-[#e3c2c2]" : ""}`}>
+            <div className="flex justify-between p-2">
+                <div className="ml-2 flex items-baseline">
+                    <p role="button" onClick={() => props.author?._id && props.openProfileViewer(props.author?._id)} className="hover:underline text-xl m-0">{props.author?.username || "Deleted user"}</p>
+                    <span className="ml-3">{formattedDate}</span>
                 </div>
-                <div className="d-flex align-items-center">
+                <div className="flex items-center gap-2">
                     {
                         props.views || props.views === 0 ?
                             <div>
-                                <span className="views">{props.views}</span>
-                                <img className="ms-1" style={{ verticalAlign: "sub" }} width="20" src="/images/eye.png" alt="message-views" />
+                                <span>{props.views}</span>
+                                <EyeIcon className="ml-1 inline align-sub" width="20" />
                             </div> : null
                     }
                     {
                         isMy ?
-                            <div className="dropdown">
-                                <button className="border-0 bg-transparent" data-bs-toggle="dropdown"><img width="20" src="/images/dots.png" alt="options" /></button>
-                                <ul className="dropdown-menu">
-                                    <li>
-                                        <button onClick={() => props.deleteMessage(props._id, props.setWantToDelete)} className="dropdown-item text-center">Supprimer</button>
-                                    </li>
-                                </ul>
-                            </div>
+                            <Dropmenu className="h-[20px]" items={[{ text: "supprimer", textColor: "text-red-500", hoverTextColor: "hover:text-red-600", Icon: TrashIcon, onClick: () => props.deleteMessage(props._id, props.setWantToDelete) }]}>
+                                <EllipsisVerticalIcon width="20" />
+                            </Dropmenu>
                             : null
                     }
                 </div>
             </div>
 
-            <div className="ms-3 me-4 d-grid" style={{ gridTemplateColumns: "50px 1fr" }}>
-                <img className="rounded-circle object-cover" width="50" height="50" alt="message-avatar" src={isSystem ? "/images/system.png" : `/profile/${props.author?._id || "deleted"}/avatar`} />
-                <p className="ms-3 fs-6 m-0 text-break align-self-center" dangerouslySetInnerHTML={isSystem ? { __html: content } : null}>
+            <div className="ml-3 mr-4 grid grid-cols-[50px_1fr]">
+                <img className="rounded-full object-cover" width="50" height="50" alt="message-avatar" src={isSystem ? "/images/system.png" : `/profile/${props.author?._id || "deleted"}/avatar`} />
+                <p className="ml-3 m-0 break-words self-center" dangerouslySetInnerHTML={isSystem ? { __html: content } : null}>
                     {!isSystem ? content : null}
                 </p>
             </div>

@@ -21,8 +21,8 @@ export default function OnlineContaier({ online }) {
     }, [button]);
 
     return (
-        <div className="p-2 online-menu" style={{ backgroundColor: "#13875E" }}>
-            <button ref={button} className="toggle-online-menu bg-transparent border-0 hidden md:block">
+        <div className="p-2 online-menu bg-emerald-700">
+            <button ref={button} className="toggle-online-menu bg-transparent border-0 hidden px-1.5 md:block">
                 <ArrowSmallDownIcon className="text-white" width="40" />
             </button>
             <div className="flex flex-col gap-2 mt-3">
