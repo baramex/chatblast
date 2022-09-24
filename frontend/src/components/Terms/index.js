@@ -7,7 +7,7 @@ export default function Terms() {
 
     return (<>
         <div className="flex flex-col h-[100vh] gap-10 items-center">
-            <div className="container text-center pt-8 px-0 flex-grow">
+            <div className="container text-center pt-8 px-0 grow">
                 <h1 className="mb-8"><Link to="/" className="text-decoration-none text-4xl font-bold text-emerald-900">ChartBlast</Link></h1>
                 <ol className="ps-0 text-neutral-900">
                     <Article index="1" content="Une fois connecté, votre adresse IP, le pseudo choisi ainsi que votre fingerprint sont

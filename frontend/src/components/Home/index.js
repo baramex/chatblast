@@ -17,7 +17,6 @@ let isInPage = true;
 
 const notification = new Audio("/sounds/notification.wav");
 
-// TODO: modals title
 export default function Home({ integrationId = undefined, logged = false }) {
     const [error, setError] = useState(undefined);
     const [success, setSuccess] = useState(undefined);
@@ -173,9 +172,9 @@ export default function Home({ integrationId = undefined, logged = false }) {
     if (!isLogged() && !logged) return null;
 
     return (<div onMouseEnter={() => handleMouseEnter(setUnread, setMessages)} onMouseLeave={handleMouseLeave} className="flex flex-col h-[100vh]">
-        <ErrorPopup message={error} onClose={() => setError("")} />
-        <SuccessPopup message={success} onClose={() => setSuccess("")} />
-        <ConfirmPopup show={!!wantToDelete} message="Êtes-vous sûr de vouloir supprimer ce message ?" onConfirm={() => { confirmDeleteMessage(wantToDelete, setError, setMessages, setSuccess); setWantToDelete(undefined); }} onClose={() => setWantToDelete(undefined)} />
+        <ErrorPopup title={error?.title} message={error?.message} onClose={() => setError(undefined)} />
+        <SuccessPopup title={success?.title} message={success?.message} onClose={() => setSuccess(undefined)} />
+        <ConfirmPopup show={!!wantToDelete} title="Suppression message" message="Êtes-vous sûr de vouloir supprimer ce message ?" onConfirm={() => { confirmDeleteMessage(wantToDelete, setError, setMessages, setSuccess); setWantToDelete(undefined); }} onClose={() => setWantToDelete(undefined)} />
         <ProfileViewer onClose={() => setCurrentProfileView(null)} show={!!currentProfileView} integrationId={integrationId} profileId={currentProfileView} onlines={online} />
 
         <Header openProfileViewer={setCurrentProfileView} integrationId={integrationId} onlineCount={online?.length} onlines={online} />
@@ -184,22 +183,22 @@ export default function Home({ integrationId = undefined, logged = false }) {
             <OnlineContaier online={online} />
 
             <div className="w-full h-full flex flex-col bg-emerald-100">
-                <div className="absolute flex items-center unread-container" style={{ marginTop: "-.25rem", marginLeft: "-.5rem" }}>
-                    <span id="unread" className={"badge rounded-pill fs-5 " + (unread > 0 ? "warning bg-danger" : "bg-primary")} style={{ zIndex: 2, cursor: "default" }}>
-                        {(!unread && unread !== 0) ? <Loading color="text-white" type="grow" size="sm" /> : unread}
+                <div className={"group absolute flex items-center animate-bounce -ml-1 -mt-1 " + (!unread ? "hidden" : "")}>
+                    <span className="rounded-3xl text-lg px-3 text-white bg-red-600 z-10">
+                        {unread}
                     </span>
-                    <button onClick={() => markAsRead(setUnread, setMessages)} className="btn-unread text-white border-0 text-left">marquer comme lu</button>
+                    <button onClick={() => markAsRead(setUnread, setMessages)} className="transition-all bg-red-700 opacity-0 text-clip text-white border-0 overflow-hidden w-[0px] -ml-2.5 max-h-5 text-sm rounded-r-3xl group-hover:w-[165px] group-hover:opacity-100">marquer comme lu</button>
                 </div>
 
                 <div onScroll={fetchedAll ? null : fetching ? e => e.target.scrollTop === 0 ? e.target.scrollTop = 1 : null : e => handleChatScrolling(e, fetchedAll, messages, setMessages, setFetchedAll, setFetching, setFetchMessage, setError)} className="pt-3 overflow-auto h-100 position-relative" style={{ flex: "1 0px" }}>
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
                         {
-                            !messages ? <Loading size="lg" /> : messages.length === 0 ? <p className="fs-4 text-neutral-500">Aucun message</p> : null
+                            !messages ? <Loading width="w-14" height="h-14" /> : messages.length === 0 ? <p className="fs-4 text-neutral-500">Aucun message</p> : null
                         }
                     </div>
                     <div id="message-container">
                         {fetching ?
-                            <div className="text-center"><Loading /></div> : fetchedAll && messages && messages.length > 0 ? <p className="text-center text-neutral-500 m-0">Vous êtes arrivé au début de la discussion.</p> : null
+                            <div className="flex justify-center"><Loading /></div> : fetchedAll && messages && messages.length > 0 ? <p className="text-center text-neutral-500 m-0">Vous êtes arrivé au début de la discussion.</p> : null
                         }
                         {messages && messages.map((message, i) => {
                             return <Message {...message} openProfileViewer={setCurrentProfileView} intersect={intersect} setUnread={setUnread} setMessages={setMessages} deleteMessage={deleteMessage} setWantToDelete={setWantToDelete} scroll={(i === messages.length - 1 && messages.length <= 20) || newMessage || i._id === fetchMessage} behavior={newMessage ? "smooth" : "auto"} key={message._id} />;
@@ -270,7 +269,7 @@ async function handleSendMessage(event, setError) {
 
         event.target.message.value = "";
     } catch (error) {
-        setError(error.message || error);
+        setError({ title: "Erreur d'envoie de message", message: error.message || error });
     }
     event.target.querySelectorAll("input").forEach(a => a.disabled = false);
     event.target.message.focus();
@@ -284,7 +283,7 @@ async function getUser(setUnread, setError) {
         sessionStorage.setItem("username", user.username);
         sessionStorage.setItem("type", user.type);
     } catch (error) {
-        setError(error.message || error);
+        setError({ title: "Erreur de récupération utilisateur", message: error.message || error });
     }
 }
 
@@ -293,7 +292,7 @@ async function getTyping(setTyping, setError) {
         const typing = await fetchTyping();
         setTyping(typing);
     } catch (error) {
-        setError(error.message || error);
+        setError({ title: "Erreur de récupération", message: error.message || error });
     }
 }
 
@@ -302,7 +301,7 @@ async function getOnline(setOnline, setError) {
         const online = await fetchOnline();
         setOnline(online);
     } catch (error) {
-        setError(error.message || error);
+        setError({ title: "Erreur de récupération", message: error.message || error });
     }
 }
 
@@ -319,7 +318,7 @@ async function getMessages(fetchedAll, mes, setMessages, setFetchedAll, setError
         setFetchedAll(messages.length < 20);
         return messages.length;
     } catch (error) {
-        setError(error.message || error);
+        setError({ title: "Erreur de récupération des messages", message: error.message || error });
     }
 }
 
@@ -331,9 +330,9 @@ async function confirmDeleteMessage(id, setError, setMessages, setSuccess) {
     try {
         await deleteMessageById(id);
         setMessages(prev => prev.filter(message => message._id !== id));
-        setSuccess("Message supprimé !");
+        setSuccess({ title: "Suppression message", message: "Message supprimé !" });
     } catch (error) {
-        setError(error.message || error);
+        setError({ title: "Erreur de suppression", message: error.message || error });
     }
 }
 

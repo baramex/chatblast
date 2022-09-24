@@ -48,8 +48,8 @@ export default function ProfileViewer({ profileId, integrationId, onClose, onlin
                     </div>
                 </>}
             </div>
-            <div className="flex-grow-1 rounded-4 rounded-top-0 w-100 d-flex align-items-center position-relative" style={{ backgroundColor: "#D7F5EA" }}>
-                {!profile ? <div className="position-absolute start-50 top-50 translate-middle"><Loading size="lg" /></div> : <>
+            <div className="grow rounded-4 rounded-top-0 w-100 d-flex align-items-center position-relative" style={{ backgroundColor: "#D7F5EA" }}>
+                {!profile ? <div className="position-absolute start-50 top-50 translate-middle"><Loading width="w-14" height="h-14" /></div> : <>
                     <div className="position-absolute top-0 end-0 m-2 d-flex gap-1">
                         {
                             badges && badges.map(a =>

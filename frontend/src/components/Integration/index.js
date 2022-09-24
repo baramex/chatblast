@@ -58,7 +58,7 @@ export default function Integration() {
 
     return (<>
         {
-            error ? <ErrorPopup message={error} canClose={false} /> : requestTerms ? <ConfirmPopup type="terms" onConfirm={() => { localStorage.setItem("terms", true); setRequestTerms(false); }} onClose={() => setRequestTerms(false)} /> : integration && logged === true ? <Home integrationId={id} logged={true} /> : <div className="position-absolute top-50 start-50 translate-middle"><Loading color="text-white" size="lg" /></div>
+            error ? <ErrorPopup message={error} canClose={false} /> : requestTerms ? <ConfirmPopup type="terms" onConfirm={() => { localStorage.setItem("terms", true); setRequestTerms(false); }} onClose={() => setRequestTerms(false)} /> : integration && logged === true ? <Home integrationId={id} logged={true} /> : <div className="position-absolute top-50 start-50 translate-middle"><Loading color="text-white" width="w-14" height="h-14" /></div>
         }
     </>);
 }

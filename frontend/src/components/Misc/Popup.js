@@ -3,9 +3,11 @@ import { Dialog, Transition } from '@headlessui/react';
 
 // BUG: tailwindcss not charge button style
 
-export default function Popup({ Icon, title, show, message: _message, buttons, iconColor, bgColor, onClose }) {
+export default function Popup({ Icon, title: _title, show, message: _message, buttons, iconColor, bgColor, onClose }) {
+    const [title, setTitle] = useState(_title);
     const [message, setMessage] = useState(_message);
     if (_message && (!message || message !== _message)) setMessage(_message);
+    if (_title && (!title || title !== _title)) setTitle(_title);
 
     return (<Transition.Root show={show} as={Fragment}>
         <Dialog as="div" className="relative z-10" onClose={() => { onClose(); }}>
