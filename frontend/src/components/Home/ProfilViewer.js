@@ -18,12 +18,12 @@ function ProfileViewer({ profileId: _profileId, integrationId, onClose, onlines,
 
     useEffect(() => {
         (async () => {
-            if (!profiles.find(a => a.profile.id === profileId) && profileId) {
+            if (new Date().getTime() - (profiles.find(a => a.profile.id === profileId)?.date || new Date().getTime()) <= 1000 * 60 && profileId) {
                 const p = await getProfile(profileId);
                 const messages = await getMemberMessagesCount(profileId);
                 const badges = await getBadges(profileId);
                 if (p === undefined || messages === undefined || badges === undefined) return;
-                setProfiles(prev => [...prev, { profile: p, messages, badges }]);
+                setProfiles(prev => [...prev, { profile: p, messages, badges, date: new Date().getTime() }]);
             }
         })();
         // eslint-disable-next-line react-hooks/exhaustive-deps

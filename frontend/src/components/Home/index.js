@@ -180,7 +180,7 @@ export default function Home({ integrationId = undefined, logged = false }) {
         <Header openProfileViewer={setCurrentProfileView} integrationId={integrationId} onlineCount={online?.length} onlines={online} />
 
         <div className="flex h-full">
-            <OnlineContaier online={online} />
+            <OnlineContaier openProfileViewer={setCurrentProfileView} online={online} />
 
             <div className="w-full h-full flex flex-col bg-emerald-100">
                 <div className={"group absolute flex items-center animate-bounce -ml-1 -mt-1 " + (!unread ? "hidden" : "")}>
