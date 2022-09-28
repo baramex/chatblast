@@ -10,7 +10,7 @@ export default function Popup({ Icon, title: _title, show, message: _message, bu
     if (_title && (!title || title !== _title)) setTitle(_title);
 
     return (<Transition.Root show={show} as={Fragment}>
-        <Dialog as="div" className="relative z-10" onClose={() => { onClose(); }}>
+        <Dialog as="div" className="relative z-10" onClose={onClose}>
             <Transition.Child
                 as={Fragment}
                 enter="ease-out duration-300"

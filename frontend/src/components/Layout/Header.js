@@ -58,7 +58,7 @@ export default function Header({ onlineCount, onlines, openProfileViewer, integr
                         </li>
                         <li className="px-3">
                             {
-                                Number(sessionStorage.getItem("type")) === USERS_TYPE.ANONYME ? <Link to={"/login" + (integrationId ? "?to=/integrations/" + integrationId : "")}>connectez-vous</Link> : Number(sessionStorage.getItem("type")) === USERS_TYPE.OAUTHED ? null : <button onClick={e => handleLogout(e, integrationId, navigate)} className="btn btn-danger w-100 py-2 fs-5 rounded-pill mt-3 mb-2">Se déconnecter</button>
+                                Number(sessionStorage.getItem("type")) === USERS_TYPE.ANONYME ? <Link to={"/login" + (integrationId ? "?to=/integrations/" + integrationId : "")}>connectez-vous</Link> : Number(sessionStorage.getItem("type")) === USERS_TYPE.OAUTHED ? null : <button onClick={e => handleLogout(e, integrationId, navigate)} className="transition-colors bg-red-600 text-white rounded-3xl w-full hover:bg-red-700 py-2 mt-3 mb-2 hover:bg-red-700">Se déconnecter</button>
                             }
                         </li>
                         <li className="mb-2 mt-4 px-3"><span className="text-white text-lg">{((onlineCount || onlineCount === 0) ? onlineCount : "--") + " en ligne"}</span></li>
