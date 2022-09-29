@@ -1,6 +1,6 @@
 {
   "name": "chatblast",
-  "version": "2.2.4",
+  "version": "3.0.0",
   "description": "",
   "main": "app.js",
   "scripts": {
@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/baramex/chatbox#readme",
   "dependencies": {
+    "axios": "^0.27.2",
     "bcrypt": "^5.0.1",
     "body-parser": "^1.20.0",
     "cookie-parser": "^1.4.6",
@@ -24,11 +25,12 @@
     "dotenv": "^16.0.1",
     "express": "^4.18.1",
     "express-fingerprint": "^1.2.2",
-    "express-rate-limit": "^6.4.0",
+    "express-rate-limit": "^6.6.0",
     "mongoose": "^6.4.0",
     "multer": "^1.4.5-lts.1",
     "random-web-token": "^1.6.0",
     "request-ip": "^2.2.0",
-    "socket.io": "^4.5.1"
+    "socket.io": "^4.5.1",
+    "validator": "^13.7.0"
   }
 }

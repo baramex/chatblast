@@ -1,36 +1,64 @@
 const { Schema, model, Types } = require("mongoose");
 const bcrypt = require('bcrypt');
+const { default: isURL } = require("validator/lib/isURL");
+const { default: isDataURI } = require("validator/lib/isDataURI");
+const { Integration } = require("./integration.model");
+
+const USERS_TYPE = {
+    DEFAULT: 0,
+    ANONYME: 1,
+    OAUTHED: 2
+};
+const USERNAMES_NOT_ALLOWED = ["system"];
+const FIELD_REGEX = /^[a-z0-9]{1,32}$/;
 
 const profileSchema = new Schema({
-    username: { type: String, required: true, validate: /^[a-z]{1,32}$/, unique: true },
-    password: { type: String, required: true },
-    avatar: { type: { flag: String, extention: String, _id: false }, default: { flag: "", extention: "" } },
-    permissions: { type: [String], default: [] },
+    userId: { type: String },
+    username: { type: String, required: true, validate: FIELD_REGEX },
+    password: { type: String },
+    integrationId: { type: Types.ObjectId },
+    integrations: { type: [Types.ObjectId], default: [] },
+    avatarUrl: { type: String, validate: (e) => !e || isURL(e) || isDataURI(e) },
+    type: { type: Number, default: USERS_TYPE.DEFAULT, min: 0, max: Object.values(USERS_TYPE).length - 1 },
     date: { type: Date, default: Date.now }
+});
+
+profileSchema.path("username").validate(async function (v) {
+    return (this.isNew ? !(await Profile.usernameExists(this.type, v, this.integrationId)) : true) && !USERNAMES_NOT_ALLOWED.includes(v);
+});
+
+profileSchema.path("userId").validate(async function (v) {
+    return (v && this.isNew) ? !await profileModel.exists({ userId: v }) : true;
 });
 
 const profileModel = model("Profile", profileSchema, "profiles");
 
 class Profile {
-    static create(username, password) {
-        return new Promise((res, rej) => {
-            bcrypt.hash(password, 10, function (err, hash) {
-                if (err) rej(err);
-                new profileModel({ username, password: hash }).save().then(res).catch((error) => {
-                    if (error.code == 11000 && error.keyPattern.username) rej(new Error("Un compte est déjà asssocié à ce nom d'utilisateur."));
-                    else rej(error);
-                });
+    static create(username, password, id, avatarUrl, integrationId, type) {
+        return new Promise(async (res, rej) => {
+            new profileModel({ username, password: password ? await bcrypt.hash(password, 10) : undefined, userId: id, avatarUrl, integrationId, integrations: integrationId ? [integrationId] : undefined, type }).save().then(res).catch((error) => {
+                if (error.code == 11000 && error.keyPattern.username) rej(new Error("Un compte est déjà asssocié à ce nom d'utilisateur."));
+                else rej(error);
             });
         });
+    }
+
+    static usernameExists(type, username, integrationId) {
+        return type === USERS_TYPE.DEFAULT ? profileModel.exists({ username }) : profileModel.findOne({ username, integrationId });
     }
 
     static getProfileById(id) {
         return profileModel.findById(id);
     }
 
+    static getProfileByUserId(id) {
+        return profileModel.findOne({ userId: id });
+    }
+
     static async check(username, password) {
         var profile = await profileModel.findOne({ username });
         if (!profile) return false;
+        if (!profile.password) return false;
         if (await bcrypt.compare(password, profile.password)) return profile;
         return false;
     }
@@ -42,6 +70,26 @@ class Profile {
     static getUsernamesByIds(ids) {
         return profileModel.find({ _id: { $in: ids } }, { username: true });
     }
+
+    static async generateUnsedUsername(type, username, integrationId) {
+        let i = 0;
+        while (await Profile.usernameExists(type, username, integrationId) && i < 10) {
+            username += Math.floor(Math.random() * 10);
+            i++;
+        }
+        if (i === 10) throw new Error();
+        return username;
+    }
+
+    static async getBadges(profile, integration) {
+        const badges = [];
+
+        if (integration && integration.owner.equals(profile._id)) badges.push({ name: "owner", src: "/images/badges/owner.png", description: "Créateur de l'intégration" });
+        if ((await Integration.getByOwner(profile._id)).length > 0) badges.push({ name: "customer", src: "/images/badges/customer.png", description: "Client de chatblast" });
+        if (profile.email) badges.push({ name: "registred", src: "/images/badges/registred.png", description: "Possède un compte" });
+
+        return badges;
+    }
 }
 
-module.exports = { Profile };
+module.exports = { Profile, USERS_TYPE, FIELD_REGEX };

@@ -7,16 +7,17 @@ import ConfirmPopup from "../Misc/ConfirmPopup";
 import ErrorPopup from "../Misc/ErrorPopup";
 import Loading from "../Misc/Loading";
 import SuccessPopup from "../Misc/SuccessPopup";
-import MessageContainer from "./MessageContainer";
 import ObjectID from "bson-objectid";
 import OnlineContaier from "./OnlineContainer";
+import ProfileViewer from "./ProfilViewer";
+import Message from "./Message";
 const { io } = require("socket.io-client");
 let socket;
 let isInPage = true;
 
 const notification = new Audio("/sounds/notification.wav");
 
-export default function Home() {
+export default function Home({ integrationId = undefined, logged = false }) {
     const [error, setError] = useState(undefined);
     const [success, setSuccess] = useState(undefined);
     const [wantToDelete, setWantToDelete] = useState(undefined);
@@ -28,137 +29,141 @@ export default function Home() {
     const [typing, setTyping] = useState(undefined);
     const [online, setOnline] = useState(undefined);
     const [fetching, setFetching] = useState(false);
+    const [currentProfileView, setCurrentProfileView] = useState(undefined);
+    const [avatar, setAvatar] = useState(undefined);
     const navigate = useNavigate();
 
     useEffect(() => {
-        if (!isLogged()) return navigate("/login");
+        if (!isLogged() && !logged) return navigate("/login" + (integrationId ? "?to=/integrations/" + integrationId : ""));
 
         if (online && online.some(a => a.id === sessionStorage.getItem("id"))) setMessageTyping(false);
 
-        if (!socket) socket = io().on("connect", () => {
-            socket.on("message.delete", id => {
-                setMessages(prev => {
-                    if (!prev) return;
-                    if (prev.some(a => a._id === id)) {
-                        if (!prev.find(a => a._id === id).isViewed) setUnread(prev => {
-                            if (!prev && prev !== 0) return;
-                            return Math.max(0, prev - 1);
+        if (!socket) {
+            socket = io({ closeOnBeforeunload: true })
+                .on("connected", () => {
+                    getOnline(setOnline, setError);
+                    getTyping(setTyping, setError);
+
+                    socket.on("message.delete", id => {
+                        setMessages(prev => {
+                            if (!prev) return;
+                            if (prev.some(a => a._id === id)) {
+                                if (!prev.find(a => a._id === id).isViewed) setUnread(prev => {
+                                    if (!prev && prev !== 0) return;
+                                    return Math.max(0, prev - 1);
+                                });
+                                return prev.filter(message => message._id !== id);
+                            }
                         });
-                        return prev.filter(message => message._id !== id);
-                    }
-                });
-            });
-            socket.on("message.send", message => {
-                setMessages(prev => {
-                    if (!prev) return;
-
-                    setUnread(prev => {
-                        return (prev || 0) + 1;
                     });
-                    setTyping(prev => {
-                        if (!prev) return;
-                        return prev.filter(a => a.id !== message.author._id);
-                    });
-                    setNewMessage(true);
+                    socket.on("message.send", message => {
+                        setMessages(prev => {
+                            if (!prev) return;
 
-                    prev.push(message);
+                            setUnread(prev => {
+                                return (prev || 0) + 1;
+                            });
+                            setTyping(prev => {
+                                if (!prev) return;
+                                return prev.filter(a => a.id !== message.author._id);
+                            });
+                            setNewMessage(true);
 
-                    return prev;
-                });
+                            prev.push(message);
 
-                if (!isInPage) notification.play().catch(() => { });
-            });
-            socket.on("messages.view", views => {
-                setMessages(curr => {
-                    if (!curr) return;
-                    var unread_ = 0;
-                    views.forEach(view => {
-                        const index = curr.findIndex(a => a._id === view.id);
-                        if (index !== -1) {
-                            curr[index].views = view.views;
-                            if (!curr[index].isViewed && view.isViewed) unread_++;
-                            curr[index].isViewed = view.isViewed;
-                        }
-                    });
-                    setUnread(prev => Math.max((prev || 0) - unread_, 0));
-                    return curr;
-                });
-            });
-            socket.on("profile.join", profile => {
-                setMessages(prev => {
-                    if (!prev) return prev;
-                    prev.push({
-                        _id: ObjectID().toHexString(),
-                        author: { username: "SYSTEM" },
-                        mentions: [{ id: profile.id, username: profile.username }],
-                        content: `{mention[0]} a rejoint la conversation.`,
-                        ephemeral: true,
-                        date: new Date().toISOString()
-                    });
-                    setUnread(prev => {
-                        return (prev || 0) + 1;
-                    });
-                    return prev;
-                });
-                setOnline(prev => {
-                    if (!prev) return;
-                    if (prev.find(a => a.id === profile.id)) return prev;
-                    prev.push(profile);
-                    return prev;
-                });
+                            return prev;
+                        });
 
-                notification.play().catch(() => { });
-            });
-            socket.on("profile.leave", profile => {
-                setMessages(prev => {
-                    if (!prev) return;
-                    prev.push({
-                        _id: ObjectID().toHexString(),
-                        author: { username: "SYSTEM" },
-                        mentions: [{ id: profile.id, username: profile.username }],
-                        content: `{mention[0]} a quitté la conversation.`,
-                        ephemeral: true,
-                        date: new Date().toISOString()
+                        if (!isInPage) notification.play().catch(() => { });
                     });
-                    setUnread(prev => {
-                        return (prev || 0) + 1;
+                    socket.on("messages.view", views => {
+                        setMessages(curr => {
+                            if (!curr) return;
+                            var unread_ = 0;
+                            views.forEach(view => {
+                                const index = curr.findIndex(a => a._id === view.id);
+                                if (index !== -1) {
+                                    curr[index].views = view.views;
+                                    if (!curr[index].isViewed && view.isViewed) unread_++;
+                                    curr[index].isViewed = view.isViewed;
+                                }
+                            });
+                            setUnread(prev => Math.max((prev || 0) - unread_, 0));
+                            return [...curr];
+                        });
                     });
-                    return prev;
-                });
-                setTyping(prev => {
-                    if (!prev) return;
-                    return prev.filter(a => a.id !== profile.id);
-                });
-                setOnline(prev => {
-                    if (!prev) return;
-                    return prev.filter(a => a.id !== profile.id);
-                });
+                    socket.on("profile.join", profile => {
+                        setMessages(prev => {
+                            if (!prev) return prev;
+                            prev.push({
+                                _id: ObjectID().toHexString(),
+                                author: { username: "SYSTEM" },
+                                mentions: [{ id: profile.id, username: profile.username }],
+                                content: `{mention[0]} a rejoint la conversation.`,
+                                ephemeral: true,
+                                date: new Date().toISOString()
+                            });
+                            setUnread(prev => {
+                                return (prev || 0) + 1;
+                            });
+                            return [...prev];
+                        });
+                        setOnline(prev => {
+                            if (!prev) return;
+                            if (prev.find(a => a.id === profile.id)) return prev;
+                            prev.push(profile);
+                            return prev;
+                        });
 
-                notification.play().catch(() => { });
-            });
-            socket.on("message.typing", _typing => {
-                setTyping(prev => {
-                    if (!prev) return;
-                    if (_typing.isTyping && !prev.some(a => a.id === _typing.id)) return [...prev, { id: _typing.id, username: _typing.username }];
-                    else if (!_typing.isTyping && prev.some(a => a.id === _typing.id)) return prev.filter(a => a.id !== _typing.id);
-                    return prev;
-                });
-            });
-        });
+                        notification.play().catch(() => { });
+                    });
+                    socket.on("profile.leave", profile => {
+                        setMessages(prev => {
+                            if (!prev) return;
+                            prev.push({
+                                _id: ObjectID().toHexString(),
+                                author: { username: "SYSTEM" },
+                                mentions: [{ id: profile.id, username: profile.username }],
+                                content: `{mention[0]} a quitté la conversation.`,
+                                ephemeral: true,
+                                date: new Date().toISOString()
+                            });
+                            setUnread(prev => {
+                                return (prev || 0) + 1;
+                            });
+                            return [...prev];
+                        });
+                        setTyping(prev => {
+                            if (!prev) return;
+                            return prev.filter(a => a.id !== profile.id);
+                        });
+                        setOnline(prev => {
+                            if (!prev) return;
+                            return prev.filter(a => a.id !== profile.id);
+                        });
 
-        getOnline(setOnline, setError);
-        getTyping(setTyping, setError);
+                        notification.play().catch(() => { });
+                    });
+                    socket.on("message.typing", _typing => {
+                        setTyping(prev => {
+                            if (!prev) return;
+                            if (_typing.isTyping && !prev.some(a => a.id === _typing.id)) return [...prev, { id: _typing.id, username: _typing.username }];
+                            else if (!_typing.isTyping && prev.some(a => a.id === _typing.id)) return prev.filter(a => a.id !== _typing.id);
+                            return prev;
+                        });
+                    });
+                });
+        } else {
+            getOnline(setOnline, setError);
+            getTyping(setTyping, setError);
+        }
+
         getUser(setUnread, setError);
         getMessages(fetchedAll, messages, setMessages, setFetchedAll, setError);
+        getAvatar(setAvatar, setError);
 
         return () => {
             if (socket) {
-                socket.off('message.delete');
-                socket.off('message.send');
-                socket.off('messages.view');
-                socket.off('profile.join');
-                socket.off('profile.leave');
-                socket.off('message.typing');
                 socket.disconnect();
                 socket = undefined;
             }
@@ -166,41 +171,66 @@ export default function Home() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    if (!isLogged()) return null;
-    return (<div onMouseEnter={() => handleMouseEnter(messages, setUnread, setMessages)} onMouseLeave={handleMouseLeave} className="d-flex flex-column" style={{ height: "100vh" }}>
-        {error && <ErrorPopup message={error} onClose={() => setError("")} />}
-        {success && <SuccessPopup message={success} onClose={() => setSuccess("")} />}
-        {wantToDelete && <ConfirmPopup message="Êtes-vous sûr de vouloir supprimer ce message ?" onConfirm={() => { confirmDeleteMessage(wantToDelete, setError, setMessages, setSuccess); setWantToDelete(undefined); }} onClose={() => setWantToDelete(undefined)} />}
+    if (!isLogged() && !logged) return null;
 
-        <Header onlineCount={online?.length} onlines={online} />
+    return (<div onMouseEnter={() => handleMouseEnter(setUnread, setMessages)} onMouseLeave={handleMouseLeave} className="flex flex-col h-[100vh]">
+        <ErrorPopup title={error?.title} message={error?.message} onClose={() => setError(undefined)} />
+        <SuccessPopup title={success?.title} message={success?.message} onClose={() => setSuccess(undefined)} />
+        <ConfirmPopup show={!!wantToDelete} title="Suppression message" message="Êtes-vous sûr de vouloir supprimer ce message ?" onConfirm={() => { confirmDeleteMessage(wantToDelete, setError, setMessages, setSuccess); setWantToDelete(undefined); }} onClose={() => setWantToDelete(undefined)} />
+        <ProfileViewer avatar={avatar} setAvatar={setAvatar} setError={setError} onClose={() => setCurrentProfileView(null)} show={!!currentProfileView} integrationId={integrationId} profileId={currentProfileView} onlines={online} />
 
-        <div className="d-flex h-100">
-            <OnlineContaier online={online} />
+        <Header avatar={avatar} openProfileViewer={setCurrentProfileView} integrationId={integrationId} onlineCount={online?.length} onlines={online} />
 
-            <div className="w-100 h-100 d-flex flex-column" style={{ backgroundColor: "#D7F5EA" }}>
-                <div className="position-absolute d-flex align-items-center unread-container" style={{ marginTop: "-.25rem", marginLeft: "-.5rem" }}>
-                    <span id="unread" className={"badge rounded-pill fs-5 " + (unread > 0 ? "warning bg-danger" : "bg-primary")} style={{ zIndex: 2, cursor: "default" }}>
-                        {(!unread && unread !== 0) ? <Loading color="text-light" type="grow" size="sm" /> : unread}
+        <div className="flex h-full">
+            <OnlineContaier avatar={avatar} openProfileViewer={setCurrentProfileView} online={online} />
+
+            <div className="w-full h-full flex flex-col bg-emerald-100">
+                <div className={"group absolute flex items-center animate-bounce -ml-1 -mt-1 " + (!unread ? "hidden" : "")}>
+                    <span className="rounded-3xl text-lg px-3 text-white bg-red-600 z-10">
+                        {unread}
                     </span>
-                    <button onClick={() => markAsRead(setUnread, setMessages)} className="btn-unread text-white border-0 text-start">marquer comme lu</button>
+                    <button onClick={() => markAsRead(setUnread, setMessages)} className="transition-all bg-red-700 opacity-0 text-clip text-white border-0 overflow-hidden w-[0px] -ml-2.5 max-h-5 text-sm rounded-r-3xl group-hover:w-[165px] group-hover:opacity-100">marquer comme lu</button>
                 </div>
 
                 <div onScroll={fetchedAll ? null : fetching ? e => e.target.scrollTop === 0 ? e.target.scrollTop = 1 : null : e => handleChatScrolling(e, fetchedAll, messages, setMessages, setFetchedAll, setFetching, setFetchMessage, setError)} className="pt-3 overflow-auto h-100 position-relative" style={{ flex: "1 0px" }}>
-                    <div className="position-absolute top-50 start-50 translate-middle text-center">
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
                         {
-                            !messages ? <Loading size="lg" /> : messages.length === 0 ? <p id="nomes" className="fs-4 text-secondary">Aucun message</p> : null
+                            !messages ? <Loading width="w-14" height="h-14" /> : messages.length === 0 ? <p className="fs-4 text-neutral-500">Aucun message</p> : null
                         }
                     </div>
-                    <MessageContainer viewed={id => intersect(id, messages, setUnread, setMessages)} fetchedAll={fetchedAll} fetching={fetching} scroll={newMessage} fetchMessage={fetchMessage} deleteMessage={deleteMessage(setWantToDelete)} messages={messages} />
+                    <div id="message-container">
+                        {fetching ?
+                            <div className="flex justify-center"><Loading /></div> : fetchedAll && messages && messages.length > 0 ? <p className="text-center text-neutral-500 m-0">Vous êtes arrivé au début de la discussion.</p> : null
+                        }
+                        {messages && messages.map((message, i) => {
+                            return <Message {...message} avatar={avatar} openProfileViewer={setCurrentProfileView} intersect={intersect} setUnread={setUnread} setMessages={setMessages} deleteMessage={deleteMessage} setWantToDelete={setWantToDelete} scroll={(i === messages.length - 1 && messages.length <= 20) || newMessage || i._id === fetchMessage} behavior={newMessage ? "smooth" : "auto"} key={message._id} />;
+                        })}
+                    </div>
                 </div>
 
-                <div className="position-relative">
-                    <span className="position-absolute left-0 ms-2 text-secondary" style={{ top: "-24px" }}>
+                <div className="relative">
+                    <span className="absolute left-0 ml-2 text-neutral-500 -top-6">
                         {typing?.filter(a => a.id !== sessionStorage.getItem("id")).length > 0 && (typing?.filter(a => a.id !== sessionStorage.getItem("id")).map(a => a.username).join(", ") + " " + (typing?.filter(a => a.id !== sessionStorage.getItem("id")).length === 1 ? "est" : "sont") + " en train d'écrire...")}
                     </span>
-                    <form onSubmit={e => handleSendMessage(e, setError)} className="d-flex position-relative shadow-lg">
-                        <input type="text" onInput={e => handleInput(e, typing)} autoComplete="off" placeholder="Tapez votre message..." className="form-control form-inset fs-5 rounded-0 border-0 py-2" name="message" aria-label="Message" minLength="1" maxLength="512" disabled={messages ? false : true} required />
-                        <input type="submit" disabled={messages ? false : true} className="px-4 border-0 bg-light" style={{ backgroundImage: "url('/images/send.png')", backgroundSize: 40, backgroundRepeat: "no-repeat", backgroundPosition: "50% 50%" }} value="" />
+                    <form onSubmit={e => handleSendMessage(e, setError)} className="flex relative">
+                        <div className="relative w-full">
+                            <input
+                                type="text"
+                                name="message"
+                                aria-label="Message"
+                                minLength="1"
+                                maxLength="512"
+                                className="transition-shadow block w-full pl-3.5 pr-14 py-1.5 outline-none text-lg focus:shadow-inner"
+                                autoComplete="off"
+                                placeholder="Tapez votre message..."
+                                onInput={(e) => handleInput(e, typing)}
+                                disabled={messages ? false : true}
+                                required
+                            />
+                            <div className="absolute inset-y-0 right-0 flex items-center">
+                                <input type="submit" disabled={messages ? false : true} className="drop-shadow-[0_0_5px_rgba(52,211,153,.4)] transition-colors mr-1.5 cursor-pointer border-0 bg-emerald-300 rounded-full hover:bg-emerald-400 w-11 h-7 bg-[length:25px] bg-no-repeat bg-center" style={{ backgroundImage: "url('/images/send.svg')" }} value="" />
+                            </div>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -241,7 +271,7 @@ async function handleSendMessage(event, setError) {
 
         event.target.message.value = "";
     } catch (error) {
-        setError(error.message || error);
+        setError({ title: "Erreur d'envoie de message", message: error.message || error });
     }
     event.target.querySelectorAll("input").forEach(a => a.disabled = false);
     event.target.message.focus();
@@ -253,8 +283,9 @@ async function getUser(setUnread, setError) {
         setUnread(prev => (prev || 0) + user.unread);
         sessionStorage.setItem("id", user.id);
         sessionStorage.setItem("username", user.username);
+        sessionStorage.setItem("type", user.type);
     } catch (error) {
-        setError(error.message || error);
+        setError({ title: "Erreur de récupération utilisateur", message: error.message || error });
     }
 }
 
@@ -263,7 +294,7 @@ async function getTyping(setTyping, setError) {
         const typing = await fetchTyping();
         setTyping(typing);
     } catch (error) {
-        setError(error.message || error);
+        setError({ title: "Erreur de récupération", message: error.message || error });
     }
 }
 
@@ -272,7 +303,7 @@ async function getOnline(setOnline, setError) {
         const online = await fetchOnline();
         setOnline(online);
     } catch (error) {
-        setError(error.message || error);
+        setError({ title: "Erreur de récupération", message: error.message || error });
     }
 }
 
@@ -289,23 +320,30 @@ async function getMessages(fetchedAll, mes, setMessages, setFetchedAll, setError
         setFetchedAll(messages.length < 20);
         return messages.length;
     } catch (error) {
-        setError(error.message || error);
+        setError({ title: "Erreur de récupération des messages", message: error.message || error });
     }
 }
 
-function deleteMessage(setWantToDelete) {
-    return (id) => {
-        setWantToDelete(id);
+async function getAvatar(setAvatar, setError) {
+    try {
+        const avatar = await fetch("/profile/@me/avatar").then(a => a.blob());
+        setAvatar(URL.createObjectURL(avatar));
+    } catch (error) {
+        setError({ title: "Erreur de récupération de l'avatar", message: error.message || error });
     }
+}
+
+function deleteMessage(id, setWantToDelete) {
+    setWantToDelete(id);
 }
 
 async function confirmDeleteMessage(id, setError, setMessages, setSuccess) {
     try {
         await deleteMessageById(id);
         setMessages(prev => prev.filter(message => message._id !== id));
-        setSuccess("Message supprimé !");
+        setSuccess({ title: "Suppression message", message: "Message supprimé !" });
     } catch (error) {
-        setError(error.message || error);
+        setError({ title: "Erreur de suppression", message: error.message || error });
     }
 }
 
@@ -319,19 +357,19 @@ function markAsRead(setUnread, setMessages) {
     });
 }
 
-function viewed(id) {
+function viewed(id, ephemeral) {
     if (isInPage) {
-        addToViewToSend(id);
-    } else addToMessageToView(id);
+        addToViewToSend(id, ephemeral);
+    } else addToMessageToView(id, ephemeral);
 }
 
-function intersect(id, messages, setUnread, setMessages) {
-    viewed(id);
-    if (isInPage) sendViews(messages, setUnread, setMessages);
+function intersect(id, ephemeral, setUnread, setMessages) {
+    viewed(id, ephemeral);
+    if (isInPage) sendViews(setUnread, setMessages);
 }
 
-function handleMouseEnter(messages, setUnread, setMessages) {
-    sendViews(messages, setUnread, setMessages);
+function handleMouseEnter(setUnread, setMessages) {
+    sendViews(setUnread, setMessages);
 
     isInPage = true;
 }

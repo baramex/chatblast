@@ -6,15 +6,15 @@ const express = require("express");
 const app = express();
 
 /* middleware */
-var cors = require('cors');
+const cors = require('cors');
 app.use(cors({
     origin: process.env.HOST,
     credentials: true
 }));
 const rateLimit = require('express-rate-limit');
 const baseLimiter = rateLimit({
-    windowMs: 1000 * 5,
-    max: 25,
+    windowMs: 1000 * 2,
+    max: 50,
     standardHeaders: true,
     legacyHeaders: false
 });
@@ -26,7 +26,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 const multer = require("multer");
 const upload = multer({
     dest: "./avatars", limits: "0.5mb", fileFilter: (req, file, callback) => {
-        if (!file.mimetype.startsWith("image/")) {
+        if (!["png", "jpeg", "jpg"].map(a => "image/" + a).includes(file.mimetype)) {
             callback(new Error("Type de fichier invalide."), false);
         }
         else callback(false, true);

@@ -1,36 +1,12 @@
+import { Cog8ToothIcon } from "@heroicons/react/24/outline";
 import { useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
-import { logoutUser, resetSession } from "../../lib/service/authentification";
+import { Link, useNavigate } from "react-router-dom";
+import { logoutUser, resetSession, USERS_TYPE } from "../../lib/service/authentification";
 import HiddenTab from "../Misc/HiddenTab";
 
-export default function Header({ onlineCount, onlines }) {
-    const button = useRef();
+export default function Header({ onlineCount, onlines, openProfileViewer, avatar, integrationId }) {
     const burger = useRef();
     const navigate = useNavigate();
-
-    useEffect(() => {
-        if (!button.current) return;
-
-        const currentButton = button.current;
-
-        const docCallback = () => {
-            currentButton.classList.remove("active");
-        };
-
-        const buttonCallback = (event) => {
-            event.stopPropagation();
-            currentButton.classList.toggle("active");
-        };
-
-        currentButton.addEventListener("click", buttonCallback);
-
-        document.addEventListener("click", docCallback);
-
-        return () => {
-            currentButton.removeEventListener("click", buttonCallback);
-            document.removeEventListener("click", docCallback);
-        };
-    }, [button]);
 
     useEffect(() => {
         if (!burger.current) return;
@@ -60,57 +36,62 @@ export default function Header({ onlineCount, onlines }) {
     }, [burger]);
 
     return (<>
-        <header className="text-center position-relative d-flex justify-content-between align-items-center px-3">
-            <div className="w-100">
-                <div className="py-2 px-3 d-flex justify-content-start align-items-center onlines">
-                    <div className="online-circle rounded-circle me-3"></div>
-                    <span className="text-light fs-5">{((onlineCount || onlineCount === 0) ? onlineCount : "--") + " en ligne"}</span>
+        <header className="text-center relative flex justify-between items-center px-3 bg-emerald-600">
+            <div className="w-full">
+                <div className="py-2 px-3 justify-start items-center hidden md:flex">
+                    <span className="flex relative h-3 w-3 mr-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white/75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+                    </span>
+                    <span className="text-white text-lg">{((onlineCount || onlineCount === 0) ? onlineCount : "--") + " en ligne"}</span>
                 </div>
 
-                <div className="burger" hidden>
-                    <button ref={burger} className="position-relative w-100 h-100 bg-transparent border-0 p-0">
+                <div className="burger md:hidden">
+                    <button ref={burger} className="relative w-full h-full bg-transparent border-0 p-0">
                         <span></span>
                     </button>
 
-                    <ul className="menu position-absolute top-0 start-0 pt-5 px-3 rounded-0 text-start">
-                        <li className="d-flex align-items-center mt-4">
-                            <img width="55" className="rounded-circle bg-light" src={`/profile/${sessionStorage.getItem("id")}/avatar`} alt="account-menu" />
-                            <p className="fw-bold fs-4 ms-3 text-white m-0">{sessionStorage.getItem("username")}</p>
+                    <ul className="menu absolute top-0 left-0 pt-5 px-0 rounded-0 text-left">
+                        <li className="flex items-center mt-12 px-3">
+                            <img width="55" height="55" className="rounded-full bg-emerald-100 object-cover aspect-square" src={avatar || "/images/user.png"} alt="account-menu" />
+                            <p className="font-bold text-lg ml-3 text-white m-0 grow">{sessionStorage.getItem("username")}</p>
+                            <button className="bg-transparent border-0" onClick={() => openProfileViewer(sessionStorage.getItem("id"))}><Cog8ToothIcon width="25" className="text-white"/></button>
                         </li>
-                        <li><button onClick={e => handleLogout(e, navigate)} className="btn btn-danger w-100 py-2 fs-5 rounded-pill mt-3 mb-2">Se déconnecter</button></li>
-                        <li className="mb-3 mt-4"><span className="text-white fs-5">{((onlineCount || onlineCount === 0) ? onlineCount : "--") + " en ligne"}</span></li>
+                        <li className="px-3">
+                            {
+                                Number(sessionStorage.getItem("type")) === USERS_TYPE.ANONYME ? <Link to={"/login" + (integrationId ? "?to=/integrations/" + integrationId : "")}>connectez-vous</Link> : Number(sessionStorage.getItem("type")) === USERS_TYPE.OAUTHED ? null : <button onClick={e => handleLogout(e, integrationId, navigate)} className="transition-colors bg-red-600 text-white rounded-3xl w-full hover:bg-red-700 py-2 mt-3 mb-2 hover:bg-red-700">Se déconnecter</button>
+                            }
+                        </li>
+                        <li className="mb-2 mt-4 px-3"><span className="text-white text-lg">{((onlineCount || onlineCount === 0) ? onlineCount : "--") + " en ligne"}</span></li>
                         {
-                            onlines && onlines.map(online => <li className="online d-flex align-items-center ms-1 my-2" key={online.id}>
-                                <img width="50" className="rounded-circle" src={`/profile/${online.id}/avatar`} alt="avatar" />
-                                <p className="mb-0 ms-2 text-white">{online.username}</p>
+                            onlines && onlines.map(online => <li role="button" onClick={() => openProfileViewer(online.id)} className="online flex items-center py-2 px-4 hover:bg-white/25" key={online.id}>
+                                <img width="50" height="50" className="rounded-full object-cover aspect-square" src={online.id === sessionStorage.getItem("id") ? avatar || "/images/user.png" : `/profile/${online.id}/avatar`} alt="avatar" />
+                                <p className="mb-0 ml-2 text-white">{online.username}</p>
                             </li>)
                         }
                     </ul>
                 </div>
             </div>
-            <h1 className="title text-light d-inline-block">ChatBlast</h1>
-            <div className="position-relative w-100 h-100">
-                <button ref={button} className="toggle-menu px-0 py-1 border-0 rounded-circle position-absolute top-0 end-0 bg-transparent h-100" data-bs-toggle="dropdown" aria-expanded="false" style={{ zIndex: 2 }}>
-                    <img className="rounded-circle bg-light h-100" src={`/profile/${sessionStorage.getItem("id")}/avatar`} alt="account-menu" />
+
+            <h1 className="text-4xl py-1 font-bold text-white mb-1.5 sm:text-5xl">ChatBlast</h1>
+
+            <div className="w-full text-right hidden sm:block">
+                <button onClick={() => openProfileViewer(sessionStorage.getItem("id"))} className="px-0 py-1 rounded-full bg-transparent h-16">
+                    <img className="rounded-full bg-emerald-100 h-full aspect-square object-cover" src={avatar || "/images/user.png"} alt="account-menu" />
                 </button>
-                <div className="shadow-lg position-fixed top-0 end-0 me-3 mt-1 d-flex flex-column bg-light-theme menu" style={{ zIndex: 1 }}>
-                    <p className="fw-bold fs-4 mt-2" style={{ color: "#737373", marginRight: 60, marginLeft: 60 }}>{sessionStorage.getItem("username")}</p>
-                    <ul className="p-0 m-0" style={{ listStyle: "none" }}>
-                        <li><button onClick={e => handleLogout(e, navigate)} className="border-0 bg-transparent pb-3 px-5"><img width="25" className="me-2 align-bottom" src="/images/logout.png" alt="logout" />Se déconnecter</button></li>
-                    </ul>
-                </div>
             </div>
         </header>
-        <HiddenTab id="burger-tab" hidden />
+
+        <HiddenTab id="burger-tab" zIndex={"z-10"} hidden />
     </>);
 }
 
-async function handleLogout(event, navigate) {
+async function handleLogout(event, integrationId, navigate) {
     event.target.disabled = true;
     try {
         await logoutUser();
         resetSession();
-        navigate("/login")
+        navigate("/login" + (integrationId ? "?to=/integrations/" + integrationId : ""));
     } catch (error) {
         event.target.disabled = false;
         console.error(error);

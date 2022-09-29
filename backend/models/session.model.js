@@ -1,11 +1,9 @@
 const { Schema, model, default: mongoose } = require("mongoose");
 const token = require("random-web-token");
 const { io } = require("../server");
-const { Message } = require("./message.model");
-const { Profile } = require("./profile.model");
+const { Integration, INTEGRATIONS_TYPE } = require("./integration.model");
+const { Profile, USERS_TYPE } = require("./profile.model");
 const { ObjectId } = mongoose.Types;
-
-const systemId = new ObjectId(0);
 
 const session = new Schema({
     token: { type: String },
@@ -55,12 +53,14 @@ class Session {
         });
     }
 
-    static async disconnectMessage(profile) {
-        io.to("authenticated").emit("profile.leave", { id: profile.id, username: profile.username });
+    static async disconnectMessage(profile, integrationId) {
+        if (!profile) return;
+        io.to("integrationid:" + integrationId?.toString()).emit("profile.leave", { id: profile.id, username: profile.username });
     }
 
-    static async connectMessage(profile) {
-        io.to("authenticated").emit("profile.join", { id: profile.id, username: profile.username });
+    static async connectMessage(profile, integrationId) {
+        if (!profile) return;
+        io.to("integrationid:" + integrationId?.toString()).emit("profile.join", { id: profile.id, username: profile.username });
     }
 
     static disable(session) {
@@ -93,8 +93,8 @@ class Session {
      * @param {String} token 
      * @param {String} fingerprint
      */
-    static getSession(id, token, fingerprint) {
-        return SessionModel.findOne({ _id: id, token, fingerprints: { $all: [fingerprint] }, active: true });
+    static getSession(token, fingerprint) {
+        return SessionModel.findOne({ token, fingerprints: { $all: [fingerprint] }, active: true });
     }
 
     static getSessionByToken(token) {
@@ -119,50 +119,90 @@ class Session {
 
         io.sockets.sockets.forEach(async socket => {
             if (socket.rooms.has("authenticated")) {
-                var id = socket.profileId;
-                var profile = await Profile.getProfileById(id);
-                if (!profile) return socket.leave("authenticated");
+                const id = socket.profileId;
+                const profile = await Profile.getProfileById(id);
+                if (!profile) return socket.disconnect(true);
 
-                var session = await Session.getSessionByProfileId(id);
-                if (!session || !session.active) socket.leave("authenticated");
+                const session = await Session.getSessionByProfileId(id);
+                if (!session || !session.active) socket.disconnect(true);
             }
         });
     }
 }
 
-class SessionMiddleware {
-    static async auth(req, res, next) {
+class Middleware {
+    static async checkValidAuth(cookies, referer) {
+        if (!cookies) throw new Error();
+
+        const integration = await Middleware.parseIntegration(referer);
+        const cookieName = (integration && (integration.type === INTEGRATIONS_TYPE.CUSTOM_AUTH || !cookies.token)) ? integration._id.toString() + "-token" : "token";
+
+        const token = cookies[cookieName];
+        if (!token) throw new Error();
+
+        const session = await Session.getSessionByToken(token);
+        if (!session) throw new Error({ cookieName });
+
+        const profile = await Profile.getProfileById(session.profileId);
+        if (!profile) throw new Error({ cookieName });
+        if (cookieName === "token" && profile.type !== USERS_TYPE.DEFAULT) throw new Error();
+
+        if (integration && profile.type !== USERS_TYPE.DEFAULT && !integration._id.equals(profile.integrationId)) throw new Error({ cookieName });
+        if (integration && integration.type === INTEGRATIONS_TYPE.ANONYMOUS_AUTH && profile.type === USERS_TYPE.OAUTHED) throw new Error({ cookieName });
+        else if (integration && integration.type === INTEGRATIONS_TYPE.CUSTOM_AUTH && profile.type !== USERS_TYPE.OAUTHED) throw new Error({ cookieName });
+        if (!integration && profile.type !== USERS_TYPE.DEFAULT) throw new Error({ cookieName });
+
+        if(integration && !profile.integrations.includes(integration._id)) {
+            profile.integrations.push(integration._id);
+            profile.save();
+        }
+
+        return { profile, session, integration };
+    }
+
+    static async parseIntegration(referer) {
+        const id = referer?.includes(process.env.HOST + "/integrations/") ? referer?.split("/").pop() : undefined;
+        if (!ObjectId.isValid(id)) return;
+        const integration = await Integration.getById(new ObjectId(id));
+        return integration;
+    }
+
+    static async parseIntegrationExpress(req, res, next) {
         try {
-            var session = await Session.getSession(req.cookies?.id, req.cookies?.token, req.fingerprint.hash);
-            if (!session) return res.sendStatus(401);
+            const integration = await Middleware.parseIntegration(req.headers.referer);
+            req.integration = integration;
+        }
+        catch (e) {
+            console.error(e);
+        }
+        next();
+    }
 
-            var profile = await Profile.getProfileById(session.profileId);
-            if (!profile) return res.sendStatus(401);
+    static async requiresValidAuthExpress(req, res, next) {
+        try {
+            const result = await Middleware.checkValidAuth(req.cookies, req.headers.referer);
+            req.profile = result.profile;
+            req.session = result.session;
+            req.integration = result.integration;
 
-            req.session = session;
-            req.profile = profile;
             next();
         } catch (error) {
-            return res.status(400).send(error.message);
+            console.error(error);
+            if (error.cookieName) res.clearCookie(cookieName, { sameSite: "none", secure: "true" });
+            res.sendStatus(401);
         }
     }
 
-    static async isAuthed(req, res, next) {
+    static async isValidAuthExpress(req, res, next) {
         try {
-            var session = await Session.getSession(req.cookies?.id, req.cookies?.token, req.fingerprint.hash);
-            if (!session) throw new Error();
-
-            var profile = await Profile.getProfileById(session.profileId);
-            if (!profile) throw new Error();
-
+            await Middleware.checkValidAuth(req.cookies, req.headers.referer);
             req.isAuthed = true;
-            next();
         } catch (error) {
             req.isAuthed = false;
-            next();
         }
+        next();
     }
 }
 
 setInterval(Session.update, 1000 * 60 * 30);
-module.exports = { Session, SessionMiddleware };
+module.exports = { Session, Middleware };
