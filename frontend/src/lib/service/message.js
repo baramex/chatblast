@@ -49,14 +49,15 @@ export async function sendViews(setUnread, setMessages) {
     try {
         let curr = [...viewToSend, ...messageToView];
         if (!curr || curr.length === 0) return;
-        
+
         const ephemerals = curr.filter(a => a.ephemeral);
+        console.log(ephemerals)
         if (ephemerals.length > 0) {
             setUnread(prev => Math.max((prev || 0) - ephemerals.length, 0));
             setMessages(prev => {
                 if (!prev) return;
                 return [...prev.map(a => {
-                    if (ephemerals.includes(a._id)) return { ...a, isViewed: true };
+                    if (ephemerals.find(b => b.id === a._id)) return { ...a, isViewed: true };
                     return a;
                 })];
             });

@@ -31,7 +31,7 @@ io.on("connection", async (socket) => {
 
         const d = disconnected.findIndex(a => a.id.equals(result.profile._id) && (a.integrationId || result.integration) ? a.integrationId?.equals(result.integration?._id) : true);
         if (d != -1) disconnected.splice(d, 1);
-        else if (!Array.from(io.sockets.sockets.values()).find(a => a.profileId?.equals(result.profile._id) && (a.integrationId || result.integration) ? a.integrationId?.equals(result.integration?._id) : true)) {
+        else if (!Array.from(io.sockets.sockets.values()).filter(a => a.id !== socket.id).find(a => a.profileId?.equals(result.profile._id) && ((a.integrationId || result.integration) ? a.integrationId?.equals(result.integration?._id) : true))) {
             Session.connectMessage(result.profile, result.integration?._id).catch(console.error);
         }
 
@@ -59,7 +59,7 @@ io.on("connection", async (socket) => {
 // disconnect
 setInterval(() => {
     disconnected.filter(a => a.date <= new Date().getTime() - 1000 * 10).forEach(async ({ id, intid }) => {
-        if (Array.from(io.sockets.sockets.values()).find(a => a.profileId?.equals(id) && (a.integrationId || intid) ? a.integrationId?.equals(intid) : true)) return;
+        if (Array.from(io.sockets.sockets.values()).find(a => a.profileId?.equals(id) && ((a.integrationId || intid) ? a.integrationId?.equals(intid) : true))) return;
         const i = typing.findIndex(a => a.id.equals(id));
         if (i != -1) typing.splice(i, 1);
         await Session.disconnectMessage(await Profile.getProfileById(id).catch(console.error), intid).catch(console.error);
@@ -167,9 +167,9 @@ app.post("/api/integration/:int_id/profile/oauth", rateLimit({
 });
 
 // example route oauth
-app.get("/api/user/@me", (req, res) => {
+/*app.get("/api/user/@me", (req, res) => {
     res.send({ id: "abc123", username: "titout", avatar: "https://cdn.pixabay.com/photo/2015/04/23/22/00/tree-736885__480.jpg" });
-});
+});*/
 
 // utilisateurs en ligne
 app.get("/api/profiles/online", Middleware.requiresValidAuthExpress, async (req, res) => {
