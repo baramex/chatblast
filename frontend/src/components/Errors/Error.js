@@ -1,6 +1,6 @@
 export default function Error({ name, message }) {
-    return (<div className="position-fixed top-50 start-50 translate-middle">
-        <h1 className="text-center fw-bold" style={{fontSize: "8rem"}}>{name}</h1>
-        <p className="fs-5 text-center">{message}</p>
+    return (<div className="fixed text-neutral-900 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+        <h1 className="text-center font-bold text-[8rem]">{name}</h1>
+        <p className="text-2xl text-center">{message}</p>
     </div>);
 }
