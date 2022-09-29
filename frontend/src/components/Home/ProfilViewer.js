@@ -71,7 +71,7 @@ function ProfileViewer({ profileId: _profileId, integrationId, onClose, onlines,
                                                     <CameraIcon className="text-white/80" width="20" />
                                                 </div>
                                             </label>
-                                            : <img src={isMe ? avatar : "/profile/" + profile?.profile.id + "/avatar"} className="object-cover w-full h-full" style={{ aspectRatio: "1/1" }} alt="avatar" />
+                                            : <img src={isMe ? avatar : "/profile/" + profile?.profile.id + "/avatar"} className="object-cover rounded-full w-full h-full" style={{ aspectRatio: "1/1" }} alt="avatar" />
                                     }
                                 </div>
                                 <div>
