@@ -58,7 +58,7 @@ function ProfileViewer({ profileId: _profileId, integrationId, onClose, onlines,
             >
                 <Dialog.Panel className="text-neutral-800 flex min-w-sm max-w-lg max-h-[600px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex-col fixed h-3/4 w-4/5 lg:w-3/5">
                     <div className="rounded-t-3xl relative w-full h-[30%] bg-emerald-500">
-                        <button className="border-0 bg-transparent m-4 text-white outline-none" onClick={onClose}><ArrowLeftIcon width="35" /></button>
+                        <button className="border-0 bg-transparent m-4 outline-none" onClick={onClose}><ArrowLeftIcon className="stroke-white" width="35" /></button>
                         {profile &&
                             <div className="absolute left-1/2 bottom-0 mt-[50%] translate-y-1/2 -translate-x-1/2 text-center z-10">
                                 <div className="rounded-full p-2 bg-emerald-600 w-[120px] h-[120px]">
@@ -100,7 +100,7 @@ function ProfileViewer({ profileId: _profileId, integrationId, onClose, onlines,
                                 </div>
                             </div>
                             {(isMe && profile?.profile.type === USERS_TYPE.DEFAULT) ?
-                                <button onClick={e => handleLogout(e, integrationId, navigate)} className="transition-colors bg-red-600 text-white px-3 py-2 rounded-lg absolute left-1/2 -translate-x-1/2 bottom-0 mb-9 hover:bg-red-700 w-4/5 sm:w-auto"><ArrowLeftOnRectangleIcon width="20" className="align-text-bottom inline mr-1" /> Se déconnecter</button>
+                                <button onClick={e => handleLogout(e, integrationId, navigate)} className="transition-colors bg-red-600 text-white px-3 py-2 rounded-lg absolute left-1/2 -translate-x-1/2 bottom-0 mb-9 hover:bg-red-700 w-4/5 sm:w-auto"><ArrowLeftOnRectangleIcon width="20" className="align-text-bottom inline mr-1 stroke-white" /> Se déconnecter</button>
                                 : null}
                             <p className="absolute bottom-0 text-center text-neutral-500 mb-1 w-full">Membre depuis {formatDuration(profile?.profile.date)}</p>
                         </>}

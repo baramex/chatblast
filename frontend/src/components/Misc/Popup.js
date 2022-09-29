@@ -38,7 +38,7 @@ export default function Popup({ Icon, title: _title, show, message: _message, bu
                             <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                                 <div className="sm:flex sm:items-start">
                                     <div className={`mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full ${bgColor || "bg-red-100"} sm:mx-0 sm:h-10 sm:w-10`}>
-                                        <Icon className={"h-6 w-6 " + (iconColor || "text-red-600")} aria-hidden="true" />
+                                        <Icon className={"h-6 w-6 " + (iconColor || "stroke-red-600")} aria-hidden="true" />
                                     </div>
                                     <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
                                         <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900">

@@ -79,7 +79,7 @@ function Message(props) {
                     }
                     {
                         isMy ?
-                            <Dropmenu className="h-[20px]" items={[{ text: "supprimer", textColor: "text-red-500", hoverTextColor: "hover:text-red-600", Icon: TrashIcon, onClick: () => props.deleteMessage(props._id, props.setWantToDelete) }]}>
+                            <Dropmenu className="h-[20px]" items={[{ text: "supprimer", textColor: "text-red-500", hoverTextColor: "hover:text-red-600", iconStyle: "stroke-red-500 hover:stroke-red-600", Icon: TrashIcon, onClick: () => props.deleteMessage(props._id, props.setWantToDelete) }]}>
                                 <EllipsisVerticalIcon width="20" />
                             </Dropmenu>
                             : null

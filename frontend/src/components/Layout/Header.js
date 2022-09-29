@@ -55,7 +55,7 @@ export default function Header({ onlineCount, onlines, openProfileViewer, avatar
                         <li className="flex items-center mt-12 px-3">
                             <img width="55" height="55" className="rounded-full bg-emerald-100 object-cover aspect-square" src={avatar || "/images/user.png"} alt="account-menu" />
                             <p className="font-bold text-lg ml-3 text-white m-0 grow">{sessionStorage.getItem("username")}</p>
-                            <button className="bg-transparent border-0" onClick={() => openProfileViewer(sessionStorage.getItem("id"))}><Cog8ToothIcon width="25" className="text-white"/></button>
+                            <button className="bg-transparent border-0" onClick={() => openProfileViewer(sessionStorage.getItem("id"))}><Cog8ToothIcon width="25" className="stroke-white"/></button>
                         </li>
                         <li className="px-3">
                             {
