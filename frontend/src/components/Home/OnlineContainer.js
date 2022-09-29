@@ -1,4 +1,4 @@
-import { ArrowSmallDownIcon } from "@heroicons/react/24/outline";
+import { ArrowSmallRightIcon } from "@heroicons/react/24/outline";
 import { useEffect, useRef } from "react";
 
 export default function OnlineContaier({ online, openProfileViewer, avatar }) {
@@ -23,7 +23,7 @@ export default function OnlineContaier({ online, openProfileViewer, avatar }) {
     return (
         <div className="py-2 online-menu bg-emerald-700 hidden md:block">
             <button ref={button} className="mx-2 toggle-online-menu bg-transparent border-0 outline-none px-1.5">
-                <ArrowSmallDownIcon className="stroke-white" width="40" />
+                <ArrowSmallRightIcon className="stroke-white" width="40" />
             </button>
             <table className="gap-1 mt-3 w-full">
                 <tbody>
