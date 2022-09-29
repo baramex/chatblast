@@ -10,7 +10,7 @@ export default function Popup({ Icon, title: _title, show, message: _message, bu
     if (_title && (!title || title !== _title)) setTitle(_title);
 
     return (<Transition.Root show={show} as={Fragment}>
-        <Dialog as="div" className="relative z-10" onClose={onClose}>
+        <Dialog as="div" className="relative z-50" onClose={onClose}>
             <Transition.Child
                 as={Fragment}
                 enter="ease-out duration-300"
@@ -23,7 +23,7 @@ export default function Popup({ Icon, title: _title, show, message: _message, bu
                 <div className="bg-neutral-800/50 fixed top-0 left-0 w-[100vw] h-[100vh] backdrop-blur-sm" />
             </Transition.Child>
 
-            <div className="fixed inset-0 z-10 overflow-y-auto">
+            <div className="fixed inset-0 overflow-y-auto">
                 <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
                     <Transition.Child
                         as={Fragment}

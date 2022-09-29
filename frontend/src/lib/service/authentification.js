@@ -16,13 +16,17 @@ export async function registerUser(username, password, avatar) {
     const res = await api("/profile", "post", { username, password });
 
     if (avatar) {
-        const formData = new FormData();
-
-        formData.append('avatar', avatar);
-        await api("/profile/@me/avatar", "put", formData, { "Content-Type": "multipart/form-data" });
+        await uploadAvatar(avatar);
     }
 
     return res;
+}
+
+export function uploadAvatar(file) {
+    const formData = new FormData();
+
+    formData.append('avatar', file);
+    return api("/profile/@me/avatar", "put", formData, { "Content-Type": "multipart/form-data" });
 }
 
 export function logoutUser() {

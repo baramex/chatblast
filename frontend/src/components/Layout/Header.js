@@ -1,9 +1,10 @@
+import { Cog8ToothIcon } from "@heroicons/react/24/outline";
 import { useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { logoutUser, resetSession, USERS_TYPE } from "../../lib/service/authentification";
 import HiddenTab from "../Misc/HiddenTab";
 
-export default function Header({ onlineCount, onlines, openProfileViewer, integrationId }) {
+export default function Header({ onlineCount, onlines, openProfileViewer, avatar, integrationId }) {
     const burger = useRef();
     const navigate = useNavigate();
 
@@ -52,9 +53,9 @@ export default function Header({ onlineCount, onlines, openProfileViewer, integr
 
                     <ul className="menu absolute top-0 left-0 pt-5 px-0 rounded-0 text-left">
                         <li className="flex items-center mt-12 px-3">
-                            <img width="55" height="55" className="rounded-full bg-neutral-200 object-cover" src={`/profile/${sessionStorage.getItem("id")}/avatar`} alt="account-menu" />
+                            <img width="55" height="55" className="rounded-full bg-emerald-100 object-cover aspect-square" src={avatar || "/images/user.png"} alt="account-menu" />
                             <p className="font-bold text-lg ml-3 text-white m-0 grow">{sessionStorage.getItem("username")}</p>
-                            <button className="bg-transparent border-0" onClick={() => openProfileViewer(sessionStorage.getItem("id"))}><img width="25" src="/images/settings.svg" alt="settings" /></button>
+                            <button className="bg-transparent border-0" onClick={() => openProfileViewer(sessionStorage.getItem("id"))}><Cog8ToothIcon width="25" className="text-white"/></button>
                         </li>
                         <li className="px-3">
                             {
@@ -64,7 +65,7 @@ export default function Header({ onlineCount, onlines, openProfileViewer, integr
                         <li className="mb-2 mt-4 px-3"><span className="text-white text-lg">{((onlineCount || onlineCount === 0) ? onlineCount : "--") + " en ligne"}</span></li>
                         {
                             onlines && onlines.map(online => <li role="button" onClick={() => openProfileViewer(online.id)} className="online flex items-center py-2 px-4 hover:bg-white/25" key={online.id}>
-                                <img width="50" height="50" className="rounded-circle object-cover" src={`/profile/${online.id}/avatar`} alt="avatar" />
+                                <img width="50" height="50" className="rounded-full object-cover aspect-square" src={online.id === sessionStorage.getItem("id") ? avatar || "/images/user.png" : `/profile/${online.id}/avatar`} alt="avatar" />
                                 <p className="mb-0 ml-2 text-white">{online.username}</p>
                             </li>)
                         }
@@ -72,16 +73,16 @@ export default function Header({ onlineCount, onlines, openProfileViewer, integr
                 </div>
             </div>
 
-            <h1 className="text-5xl font-bold text-white mb-1.5">ChatBlast</h1>
+            <h1 className="text-4xl py-1 font-bold text-white mb-1.5 sm:text-5xl">ChatBlast</h1>
 
-            <div className="w-full text-right">
+            <div className="w-full text-right hidden sm:block">
                 <button onClick={() => openProfileViewer(sessionStorage.getItem("id"))} className="px-0 py-1 rounded-full bg-transparent h-16">
-                    <img className="rounded-full bg-neutral-200 h-full aspect-square object-cover" src={`/profile/${sessionStorage.getItem("id")}/avatar`} alt="account-menu" />
+                    <img className="rounded-full bg-emerald-100 h-full aspect-square object-cover" src={avatar || "/images/user.png"} alt="account-menu" />
                 </button>
             </div>
         </header>
 
-        <HiddenTab id="burger-tab" hidden />
+        <HiddenTab id="burger-tab" zIndex={"z-10"} hidden />
     </>);
 }
 

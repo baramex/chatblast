@@ -30,6 +30,7 @@ export default function Home({ integrationId = undefined, logged = false }) {
     const [online, setOnline] = useState(undefined);
     const [fetching, setFetching] = useState(false);
     const [currentProfileView, setCurrentProfileView] = useState(undefined);
+    const [avatar, setAvatar] = useState(undefined);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -159,6 +160,7 @@ export default function Home({ integrationId = undefined, logged = false }) {
 
         getUser(setUnread, setError);
         getMessages(fetchedAll, messages, setMessages, setFetchedAll, setError);
+        getAvatar(setAvatar, setError);
 
         return () => {
             if (socket) {
@@ -175,12 +177,12 @@ export default function Home({ integrationId = undefined, logged = false }) {
         <ErrorPopup title={error?.title} message={error?.message} onClose={() => setError(undefined)} />
         <SuccessPopup title={success?.title} message={success?.message} onClose={() => setSuccess(undefined)} />
         <ConfirmPopup show={!!wantToDelete} title="Suppression message" message="Êtes-vous sûr de vouloir supprimer ce message ?" onConfirm={() => { confirmDeleteMessage(wantToDelete, setError, setMessages, setSuccess); setWantToDelete(undefined); }} onClose={() => setWantToDelete(undefined)} />
-        <ProfileViewer onClose={() => setCurrentProfileView(null)} show={!!currentProfileView} integrationId={integrationId} profileId={currentProfileView} onlines={online} />
+        <ProfileViewer avatar={avatar} setAvatar={setAvatar} setError={setError} onClose={() => setCurrentProfileView(null)} show={!!currentProfileView} integrationId={integrationId} profileId={currentProfileView} onlines={online} />
 
-        <Header openProfileViewer={setCurrentProfileView} integrationId={integrationId} onlineCount={online?.length} onlines={online} />
+        <Header avatar={avatar} openProfileViewer={setCurrentProfileView} integrationId={integrationId} onlineCount={online?.length} onlines={online} />
 
         <div className="flex h-full">
-            <OnlineContaier openProfileViewer={setCurrentProfileView} online={online} />
+            <OnlineContaier avatar={avatar} openProfileViewer={setCurrentProfileView} online={online} />
 
             <div className="w-full h-full flex flex-col bg-emerald-100">
                 <div className={"group absolute flex items-center animate-bounce -ml-1 -mt-1 " + (!unread ? "hidden" : "")}>
@@ -201,7 +203,7 @@ export default function Home({ integrationId = undefined, logged = false }) {
                             <div className="flex justify-center"><Loading /></div> : fetchedAll && messages && messages.length > 0 ? <p className="text-center text-neutral-500 m-0">Vous êtes arrivé au début de la discussion.</p> : null
                         }
                         {messages && messages.map((message, i) => {
-                            return <Message {...message} openProfileViewer={setCurrentProfileView} intersect={intersect} setUnread={setUnread} setMessages={setMessages} deleteMessage={deleteMessage} setWantToDelete={setWantToDelete} scroll={(i === messages.length - 1 && messages.length <= 20) || newMessage || i._id === fetchMessage} behavior={newMessage ? "smooth" : "auto"} key={message._id} />;
+                            return <Message {...message} avatar={avatar} openProfileViewer={setCurrentProfileView} intersect={intersect} setUnread={setUnread} setMessages={setMessages} deleteMessage={deleteMessage} setWantToDelete={setWantToDelete} scroll={(i === messages.length - 1 && messages.length <= 20) || newMessage || i._id === fetchMessage} behavior={newMessage ? "smooth" : "auto"} key={message._id} />;
                         })}
                     </div>
                 </div>
@@ -319,6 +321,15 @@ async function getMessages(fetchedAll, mes, setMessages, setFetchedAll, setError
         return messages.length;
     } catch (error) {
         setError({ title: "Erreur de récupération des messages", message: error.message || error });
+    }
+}
+
+async function getAvatar(setAvatar, setError) {
+    try {
+        const avatar = await fetch("/profile/@me/avatar").then(a => a.blob());
+        setAvatar(URL.createObjectURL(avatar));
+    } catch (error) {
+        setError({ title: "Erreur de récupération de l'avatar", message: error.message || error });
     }
 }
 

@@ -76,9 +76,9 @@ app.get("/profile/:id/avatar", Middleware.requiresValidAuthExpress, async (req, 
 
         const profile = (id == "@me" || id == req.profile._id.toString()) ? req.profile : await Profile.getProfileById(new ObjectId(id));
 
-        if (profile.avatar.url) return res.redirect(profile.avatar.url);
+        if (profile.avatarUrl) return res.redirect(profile.avatarUrl);
 
-        const name = profile.avatar.flag + profile.avatar.extention;
+        const name = profile._id.toString() + ".png";
         if (!name || !fs.existsSync(path.join(__dirname, "avatars", name))) return res.sendFile(path.join(__dirname, "avatars", "user.png"));
         res.sendFile(path.join(__dirname, "avatars", name));
     } catch (err) {
@@ -132,9 +132,9 @@ app.post("/api/integration/:int_id/profile/oauth", rateLimit({
             // get/update or create user
             var profile = await Profile.getProfileByUserId(result.id) ||
                 await Profile.create(await Profile.generateUnsedUsername(USERS_TYPE.OAUTHED, result.username, req.integration._id).catch(() => { throw new Error("Erreur de vérification du token.") }), undefined, result.id, result.avatar, req.integration._id, USERS_TYPE.OAUTHED);
-            if (profile.username != result.username || profile.avatar.url != result.avatar) {
+            if (profile.username != result.username || profile.avatarUrl != result.avatar) {
                 profile.username = result.username === profile.username ? profile.username : await Profile.generateUnsedUsername(USERS_TYPE.OAUTHED, result.username, req.integration._id).catch(() => { throw new Error("Erreur de vérification du token.") });
-                profile.avatar.url = result.avatar;
+                profile.avatarUrl = result.avatar;
 
                 await profile.save({ validateBeforeSave: true });
             }
@@ -219,14 +219,11 @@ app.put("/api/profile/@me/avatar", rateLimit({
     try {
         if (!req.file) throw new Error("Requête invalide.");
 
-        const flag = generateID(15);
         const tempPath = req.file.path;
-        const extention = path.extname(req.file.originalname).toLowerCase()
-        const targetPath = path.join(__dirname, "avatars", flag + extention);
+        const targetPath = path.join(__dirname, "avatars", req.profile._id.toString() + ".png");
 
         fs.renameSync(tempPath, targetPath);
 
-        req.profile.avatar = { flag, extention };
         await req.profile.save();
 
         res.sendStatus(200);

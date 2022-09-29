@@ -295,7 +295,7 @@ footer a:hover {
 }
 
 .burger>button {
-    z-index: 4;
+    z-index: 21;
 }
 
 .burger>button span,
@@ -340,7 +340,7 @@ footer a:hover {
 }
 
 .burger .menu {
-    z-index: 3;
+    z-index: 20;
     min-width: 300px;
     max-width: 500px;
     height: 100vh;

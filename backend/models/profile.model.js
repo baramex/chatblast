@@ -18,7 +18,7 @@ const profileSchema = new Schema({
     password: { type: String },
     integrationId: { type: Types.ObjectId },
     integrations: { type: [Types.ObjectId], default: [] },
-    avatar: { type: { flag: String, extention: String, url: { type: String, validate: (e) => !e || isURL(e) || isDataURI(e) }, _id: false }, default: { flag: "", extention: "", url: "" } },
+    avatarUrl: { type: String, validate: (e) => !e || isURL(e) || isDataURI(e) },
     type: { type: Number, default: USERS_TYPE.DEFAULT, min: 0, max: Object.values(USERS_TYPE).length - 1 },
     date: { type: Date, default: Date.now }
 });
@@ -34,9 +34,9 @@ profileSchema.path("userId").validate(async function (v) {
 const profileModel = model("Profile", profileSchema, "profiles");
 
 class Profile {
-    static create(username, password, id, avatar, integrationId, type) {
+    static create(username, password, id, avatarUrl, integrationId, type) {
         return new Promise(async (res, rej) => {
-            new profileModel({ username, password: password ? await bcrypt.hash(password, 10) : undefined, userId: id, avatar: avatar ? { url: avatar } : undefined, integrationId, integrations: integrationId ? [integrationId] : undefined, type }).save().then(res).catch((error) => {
+            new profileModel({ username, password: password ? await bcrypt.hash(password, 10) : undefined, userId: id, avatarUrl, integrationId, integrations: integrationId ? [integrationId] : undefined, type }).save().then(res).catch((error) => {
                 if (error.code == 11000 && error.keyPattern.username) rej(new Error("Un compte est déjà asssocié à ce nom d'utilisateur."));
                 else rej(error);
             });
