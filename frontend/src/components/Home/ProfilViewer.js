@@ -147,7 +147,7 @@ async function handleAvatar(event, setAvatar, setError) {
     try {
         if (event.target.files && event.target.files[0]) {
             if (event.target.files[0].size >= 500_000) {
-                throw new Error("Votre photo de profil est trop lourde, 500 Mo max.");
+                throw new Error("Votre photo de profil est trop lourde, 0.5 Mo max.");
             }
             if (event.target.files.length > 1 || !["png", "jpeg", "jpg"].map(a => "image/" + a).includes(event.target.files[0].type)) {
                 throw new Error("L'image doit être au format PNG, JPEG ou JPG.");

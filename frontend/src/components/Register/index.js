@@ -112,7 +112,7 @@ function handleAvatar(event, setAvatar, setError) {
     if (event.target.files && event.target.files[0]) {
         if (event.target.files[0].size >= 500_000) {
             event.preventDefault();
-            return setError("Votre photo de profil est trop lourde, 500 Mo max.");
+            return setError("Votre photo de profil est trop lourde, 0.5 Mo max.");
         }
         if (event.target.files.length > 1 || !["png", "jpeg", "jpg"].map(a => "image/" + a).includes(event.target.files[0].type)) {
             event.preventDefault();
