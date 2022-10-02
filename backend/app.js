@@ -5,7 +5,7 @@ const rateLimit = require("express-rate-limit");
 const mongoose = require("mongoose");
 const { ObjectId } = mongoose.Types;
 const path = require("path");
-const { Profile, USERS_TYPE, FIELD_REGEX, } = require("./models/profile.model");
+const { Profile, USERS_TYPE, FIELD_REGEX, AVATAR_MIME_TYPE, } = require("./models/profile.model");
 const { Session, Middleware } = require("./models/session.model");
 const fs = require("fs");
 const { Message } = require("./models/message.model");
@@ -14,6 +14,7 @@ const { getClientIp } = require("request-ip");
 const { Integration, INTEGRATIONS_TYPE, TOKEN_PLACES_TYPE } = require("./models/integration.model");
 const { default: axios } = require("axios");
 const cookie = require("cookie");
+const { Magic, MAGIC_MIME_TYPE } = require("mmmagic");
 mongoose.connect(process.env.DB, { dbName: process.env.DB_NAME });
 
 // TEST: cookies through avatar redirection
@@ -39,7 +40,6 @@ io.on("connection", async (socket) => {
         console.error(e);
         socket.disconnect(true)
     });
-
 
     socket.on("disconnecting", async () => {
         const rooms = socket.rooms;
@@ -74,8 +74,6 @@ app.get("/profile/:id/avatar", Middleware.requiresValidAuthExpress, async (req, 
         if (id == "deleted") return res.sendFile(path.join(__dirname, "avatars", "user.png"));
 
         const profile = (id == "@me" || id == req.profile._id.toString()) ? req.profile : await Profile.getProfileById(new ObjectId(id));
-
-        if (profile.avatarUrl) return res.redirect(profile.avatarUrl);
 
         const name = profile._id.toString() + ".png";
         if (!name || !fs.existsSync(path.join(__dirname, "avatars", name))) return res.sendFile(path.join(__dirname, "avatars", "user.png"));
@@ -130,10 +128,29 @@ app.post("/api/integration/:int_id/profile/oauth", rateLimit({
 
             // get/update or create user
             var profile = await Profile.getProfileByUserId(result.id) ||
-                await Profile.create(await Profile.generateUnsedUsername(USERS_TYPE.OAUTHED, result.username, req.integration._id).catch(() => { throw new Error("Erreur de vérification du token.") }), undefined, result.id, result.avatar, req.integration._id, USERS_TYPE.OAUTHED);
-            if (profile.username != result.username || profile.avatarUrl != result.avatar) {
+                await Profile.create(await Profile.generateUnsedUsername(USERS_TYPE.OAUTHED, result.username, req.integration._id).catch(() => { throw new Error("Erreur de vérification du token.") }), undefined, result.id, req.integration._id, USERS_TYPE.OAUTHED);
+
+            if (result.avatar) {
+                const fileheader = (await axios.head(result.avatar).catch(console.error))?.headers;
+                if (fileheader && fileheader["content-length"] && Number.parseInt(fileheader["content-length"]) < 500_000 && AVATAR_MIME_TYPE.includes(fileheader["content-type"])) {
+                    const image = await axios.get(result.avatar, { responseType: "arraybuffer" }).catch(console.error);
+                    if (image && image.data) {
+
+                        const type = await new Promise((resolve, reject) => {
+                            new Magic(MAGIC_MIME_TYPE).detect(image.data, (err, res) => {
+                                if (err) reject(err);
+                                else resolve(res);
+                            });
+                        });
+                        if (type === fileheader["content-type"]) {
+                            fs.createWriteStream(path.join(__dirname, "avatars", profile._id.toString() + ".png")).write(image.data);
+                        }
+                    }
+                }
+            }
+
+            if (profile.username != result.username) {
                 profile.username = result.username === profile.username ? profile.username : await Profile.generateUnsedUsername(USERS_TYPE.OAUTHED, result.username, req.integration._id).catch(() => { throw new Error("Erreur de vérification du token.") });
-                profile.avatarUrl = result.avatar;
 
                 await profile.save({ validateBeforeSave: true });
             }
@@ -153,7 +170,7 @@ app.post("/api/integration/:int_id/profile/oauth", rateLimit({
         else {
             // anonyme login
             const username = await Profile.generateUnsedUsername(USERS_TYPE.ANONYME, "ano" + Math.floor(Math.random() * 1000).toString().padStart(3, "0"), req.integration._id);
-            var profile = await Profile.create(username, undefined, undefined, undefined, req.integration._id, USERS_TYPE.ANONYME);
+            var profile = await Profile.create(username, undefined, undefined, req.integration._id, USERS_TYPE.ANONYME);
             var session = await Session.create(profile._id, req.fingerprint.hash, getClientIp(req));
         }
 
@@ -249,7 +266,7 @@ app.post("/api/profile", rateLimit({
 
         if (!/^(((?=.*[a-z])(?=.*[A-Z]))|((?=.*[a-z])(?=.*[0-9]))|((?=.*[A-Z])(?=.*[0-9])))(?=.{6,32}$)/.test(password) || !FIELD_REGEX.test(username)) throw new Error("Requête invalide.");
 
-        const profile = await Profile.create(username, password, undefined, undefined, undefined, USERS_TYPE.DEFAULT);
+        const profile = await Profile.create(username, password, undefined, undefined, USERS_TYPE.DEFAULT);
         const ip = getClientIp(req);
         const session = await Session.create(profile._id, req.fingerprint.hash, ip);
         const expires = new Date(24 * 60 * 60 * 1000 + new Date().getTime());

@@ -25,11 +25,20 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 const multer = require("multer");
 const upload = multer({
-    dest: "./avatars", limits: "0.5mb", fileFilter: (req, file, callback) => {
-        if (!["png", "jpeg", "jpg"].map(a => "image/" + a).includes(file.mimetype)) {
+    dest: "./avatars", limits: "0.5mb", fileFilter: async (req, file, callback) => {
+        if (!AVATAR_MIME_TYPE.includes(file.mimetype) || !AVATAR_TYPE.includes(path.extname(file.filename))) {
             callback(new Error("Type de fichier invalide."), false);
         }
-        else callback(false, true);
+        else {
+            const type = await new Promise((resolve, reject) => {
+                new Magic(MAGIC_MIME_TYPE).detect(image.data, (err, res) => {
+                    if (err) reject(err);
+                    else resolve(res);
+                });
+            });
+            if (type !== file.mimetype) return callback(new Error("Type de fichier invalide."), false);
+            callback(false, true);
+        }
     }
 });
 const cookieParser = require('cookie-parser');
@@ -46,6 +55,8 @@ app.use(Fingerprint({
 const http = require('http');
 const server = http.createServer(app);
 const { Server } = require("socket.io");
+const { AVATAR_MIME_TYPE, AVATAR_TYPE } = require("./models/profile.model");
+const path = require("path");
 const io = new Server(server, {
     cors: {
         origin: process.env.HOST

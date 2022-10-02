@@ -140,17 +140,20 @@ class Middleware {
         const token = cookies[cookieName];
         if (!token) throw new Error();
 
+        const cookieError = new Error();
+        cookieError.cookieName = cookieName;
+
         const session = await Session.getSessionByToken(token);
-        if (!session) throw new Error({ cookieName });
+        if (!session) throw cookieError;
 
         const profile = await Profile.getProfileById(session.profileId);
-        if (!profile) throw new Error({ cookieName });
+        if (!profile) throw cookieError;
         if (cookieName === "token" && profile.type !== USERS_TYPE.DEFAULT) throw new Error();
 
-        if (integration && profile.type !== USERS_TYPE.DEFAULT && !integration._id.equals(profile.integrationId)) throw new Error({ cookieName });
-        if (integration && integration.type === INTEGRATIONS_TYPE.ANONYMOUS_AUTH && profile.type === USERS_TYPE.OAUTHED) throw new Error({ cookieName });
-        else if (integration && integration.type === INTEGRATIONS_TYPE.CUSTOM_AUTH && profile.type !== USERS_TYPE.OAUTHED) throw new Error({ cookieName });
-        if (!integration && profile.type !== USERS_TYPE.DEFAULT) throw new Error({ cookieName });
+        if (integration && profile.type !== USERS_TYPE.DEFAULT && !integration._id.equals(profile.integrationId)) throw cookieError;
+        if (integration && integration.type === INTEGRATIONS_TYPE.ANONYMOUS_AUTH && profile.type === USERS_TYPE.OAUTHED) throw cookieError;
+        else if (integration && integration.type === INTEGRATIONS_TYPE.CUSTOM_AUTH && profile.type !== USERS_TYPE.OAUTHED) throw cookieError;
+        if (!integration && profile.type !== USERS_TYPE.DEFAULT) throw cookieError;
 
         if(integration && !profile.integrations.includes(integration._id)) {
             profile.integrations.push(integration._id);
@@ -188,8 +191,8 @@ class Middleware {
             next();
         } catch (error) {
             console.error(error);
-            if (error.cookieName) res.clearCookie(cookieName, { sameSite: "none", secure: "true" });
-            res.sendStatus(401);
+            if (error.cookieName) res.clearCookie(error.cookieName, { sameSite: "none", secure: "true" }).status(401).send("refresh");
+            else res.sendStatus(401);
         }
     }
 

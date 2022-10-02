@@ -58,7 +58,13 @@ export default function Integration() {
 
     return (<>
         {
-            error ? <ErrorPopup message={error} canClose={false} /> : requestTerms ? <ConfirmPopup type="terms" onConfirm={() => { localStorage.setItem("terms", true); setRequestTerms(false); }} onClose={() => setRequestTerms(false)} /> : integration && logged === true ? <Home integrationId={id} logged={true} /> : <div className="position-absolute top-50 start-50 translate-middle"><Loading color="text-white" width="w-14" height="h-14" /></div>
+            error ?
+                <ErrorPopup message={error} onClose={() => { }} />
+                : requestTerms ?
+                    <ConfirmPopup title="Conditions d'utilisation" show={requestTerms} message={"Pour continuer, il vous faut accepter les conditions d'utilisation"} onConfirm={() => { localStorage.setItem("terms", true); setRequestTerms(false); }} onClose={() => setRequestTerms(false)} />
+                    : integration && logged === true ?
+                        <Home integrationId={id} logged={true} />
+                        : <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"><Loading color="text-white" width="w-14" height="h-14" /></div>
         }
     </>);
 }

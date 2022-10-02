@@ -19,10 +19,10 @@ export function api(endpoint, method, data = undefined, customHeader = undefined
         }).then(response => {
             res(response.data);
         }).catch(err => {
-            var response = err.response;
+            const response = err.response;
             if (!response) return rej();
-            var status = response.status;
-            var time = err.response.headers["retry-after"];
+            const status = response.status;
+            const time = err.response.headers["retry-after"];
             if (status === 429 && time && time * 1000 < 10000) {
                 setTimeout(() => {
                     api(endpoint, method, copyData, copyHeader).then(res).catch(rej);
@@ -30,10 +30,11 @@ export function api(endpoint, method, data = undefined, customHeader = undefined
             }
             else if (status === 401) {
                 resetSession();
+                if (response.data === "refresh") document.location.reload();
                 rej(response.data);
             }
             else {
-                var message = response.data;
+                const message = response.data;
                 rej(message);
             }
         }).finally(() => {

@@ -1,7 +1,5 @@
 const { Schema, model, Types } = require("mongoose");
 const bcrypt = require('bcrypt');
-const { default: isURL } = require("validator/lib/isURL");
-const { default: isDataURI } = require("validator/lib/isDataURI");
 const { Integration } = require("./integration.model");
 
 const USERS_TYPE = {
@@ -11,6 +9,8 @@ const USERS_TYPE = {
 };
 const USERNAMES_NOT_ALLOWED = ["system"];
 const FIELD_REGEX = /^[a-z0-9]{1,32}$/;
+const AVATAR_MIME_TYPE = ["image/png", "image/jpeg", "image/jpg"];
+const AVATAR_TYPE = [".png", ".jpeg", ".jpg"];
 
 const profileSchema = new Schema({
     userId: { type: String },
@@ -18,7 +18,6 @@ const profileSchema = new Schema({
     password: { type: String },
     integrationId: { type: Types.ObjectId },
     integrations: { type: [Types.ObjectId], default: [] },
-    avatarUrl: { type: String, validate: (e) => !e || isURL(e) || isDataURI(e) },
     type: { type: Number, default: USERS_TYPE.DEFAULT, min: 0, max: Object.values(USERS_TYPE).length - 1 },
     date: { type: Date, default: Date.now }
 });
@@ -34,9 +33,9 @@ profileSchema.path("userId").validate(async function (v) {
 const profileModel = model("Profile", profileSchema, "profiles");
 
 class Profile {
-    static create(username, password, id, avatarUrl, integrationId, type) {
+    static create(username, password, id, integrationId, type) {
         return new Promise(async (res, rej) => {
-            new profileModel({ username, password: password ? await bcrypt.hash(password, 10) : undefined, userId: id, avatarUrl, integrationId, integrations: integrationId ? [integrationId] : undefined, type }).save().then(res).catch((error) => {
+            new profileModel({ username, password: password ? await bcrypt.hash(password, 10) : undefined, userId: id, integrationId, integrations: integrationId ? [integrationId] : undefined, type }).save().then(res).catch((error) => {
                 if (error.code == 11000 && error.keyPattern.username) rej(new Error("Un compte est déjà asssocié à ce nom d'utilisateur."));
                 else rej(error);
             });
@@ -92,4 +91,4 @@ class Profile {
     }
 }
 
-module.exports = { Profile, USERS_TYPE, FIELD_REGEX };
+module.exports = { Profile, USERS_TYPE, FIELD_REGEX, AVATAR_MIME_TYPE, AVATAR_TYPE };
