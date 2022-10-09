@@ -47,7 +47,7 @@ export default function Header({ onlineCount, onlines, openProfileViewer, avatar
                 </div>
 
                 <div className="burger md:hidden">
-                    <button ref={burger} className="relative w-full h-full bg-transparent border-0 p-0">
+                    <button ref={burger} className="relative w-full h-full bg-transparent border-0 p-0 outline-none">
                         <span></span>
                     </button>
 

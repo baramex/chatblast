@@ -228,7 +228,7 @@ export default function Home({ integrationId = undefined, logged = false }) {
                                 required
                             />
                             <div className="absolute inset-y-0 right-0 flex items-center">
-                                <input type="submit" disabled={messages ? false : true} className="drop-shadow-[0_0_5px_rgba(52,211,153,.4)] transition-colors mr-1.5 cursor-pointer border-0 bg-emerald-300 rounded-full hover:bg-emerald-400 w-11 h-7 bg-[length:25px] bg-no-repeat bg-center" style={{ backgroundImage: "url('/images/send.svg')" }} value="" />
+                                <input type="submit" disabled={messages ? false : true} className="drop-shadow-[0_0_5px_rgba(52,211,153,.4)] outline-none transition-colors mr-1.5 cursor-pointer border-0 bg-emerald-300 rounded-full hover:bg-emerald-400 w-11 h-7 bg-[length:25px] bg-no-repeat bg-center" style={{ backgroundImage: "url('/images/send.svg')" }} value="" />
                             </div>
                         </div>
                     </form>

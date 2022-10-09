@@ -1,9 +1,9 @@
+import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useEffect, useState } from "react";
 import { isLoggedIntegration } from "../../lib/service/authentification";
 import { fetchIntegration, oauthProfile } from "../../lib/service/integration";
 import Home from "../Home";
 import ConfirmPopup from "../Misc/ConfirmPopup";
-import ErrorPopup from "../Misc/ErrorPopup";
 import Loading from "../Misc/Loading";
 
 export default function Integration() {
@@ -29,13 +29,11 @@ export default function Integration() {
         const callback = (message) => {
             const data = message.data;
             if (data?.name === "token") {
-                console.log("message received");
                 setToken(data.value);
             }
         }
 
         window.addEventListener("message", callback);
-        console.log("send message");
         window.parent.postMessage("chatblast:token", "*");
 
         return () => {
@@ -44,7 +42,7 @@ export default function Integration() {
     }, []);
 
     useEffect(() => {
-        if (integration && !error && logged !== -1 && !logged && !requestTerms) {
+        if (integration && (!error || token) && logged !== -1 && !logged && !requestTerms) {
             if (!localStorage.getItem("terms")) setRequestTerms(true);
             else {
                 if (!token) setError("Connectez-vous au site pour accéder à cette page.");
@@ -59,7 +57,12 @@ export default function Integration() {
     return (<>
         {
             error ?
-                <ErrorPopup message={error} onClose={() => { }} />
+                <div className="flex w-[100vw] h-[100vh] p-3 items-center justify-center">
+                    <div className="flex shadow-md gap-2 items-center justify-center p-4 bg-neutral-100 rounded-lg m-3">
+                        <ExclamationTriangleIcon className="stroke-orange-600" width="35" />
+                        <p className="font-medium text-center text-orange-600">{error}</p>
+                    </div>
+                </div>
                 : requestTerms ?
                     <ConfirmPopup title="Conditions d'utilisation" show={requestTerms} message={"Pour continuer, il vous faut accepter les conditions d'utilisation"} onConfirm={() => { localStorage.setItem("terms", true); setRequestTerms(false); }} onClose={() => setRequestTerms(false)} />
                     : integration && logged === true ?
@@ -86,6 +89,7 @@ async function oauthProfile_(id, token, setError, setLogged) {
         sessionStorage.setItem("username", profile.username);
         sessionStorage.setItem("type", profile.type);
 
+        setError(undefined);
         setLogged(true);
     } catch (error) {
         setError(error.message || error);

@@ -183,9 +183,9 @@ app.post("/api/integration/:int_id/profile/oauth", rateLimit({
 });
 
 // example route oauth
-/*app.get("/api/user/@me", (req, res) => {
+app.get("/api/user/@me", (req, res) => {
     res.send({ id: "abc123", username: "titout", avatar: "https://cdn.pixabay.com/photo/2015/04/23/22/00/tree-736885__480.jpg" });
-});*/
+});
 
 // utilisateurs en ligne
 app.get("/api/profiles/online", Middleware.requiresValidAuthExpress, async (req, res) => {
