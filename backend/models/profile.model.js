@@ -23,6 +23,7 @@ const profileSchema = new Schema({
 });
 
 profileSchema.path("username").validate(async function (v) {
+    // TODO: recheck
     return (this.isNew ? !(await Profile.usernameExists(this.type, v, this.integrationId)) : true) && !USERNAMES_NOT_ALLOWED.includes(v);
 });
 

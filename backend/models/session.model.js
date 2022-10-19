@@ -155,7 +155,7 @@ class Middleware {
         else if (integration && integration.type === INTEGRATIONS_TYPE.CUSTOM_AUTH && profile.type !== USERS_TYPE.OAUTHED) throw cookieError;
         if (!integration && profile.type !== USERS_TYPE.DEFAULT) throw cookieError;
 
-        if(integration && !profile.integrations.includes(integration._id)) {
+        if (integration && !profile.integrations.includes(integration._id)) {
             profile.integrations.push(integration._id);
             profile.save();
         }
