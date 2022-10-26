@@ -89,7 +89,7 @@ function Message(props) {
 
             <div className="ml-3 mr-4 grid grid-cols-[50px_1fr]">
                 <img className="rounded-full object-cover bg-white/25 aspect-square" width="50" height="50" alt="message-avatar" src={isSystem ? "/images/system.png" : isMy ? props.avatar || "/images/user.png" : `/profile/${props.author?._id || "deleted"}/avatar`} />
-                <p className="ml-3 m-0 break-words self-center" dangerouslySetInnerHTML={isSystem ? { __html: content } : null}>
+                <p className="ml-3 m-0 break-all self-center" dangerouslySetInnerHTML={isSystem ? { __html: content } : null}>
                     {!isSystem ? content : null}
                 </p>
             </div>
